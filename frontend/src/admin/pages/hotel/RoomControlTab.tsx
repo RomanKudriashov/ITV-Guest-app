@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
@@ -13,6 +14,7 @@ import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { SelectField } from '@/components/SelectField';
+import { WithHelp } from '../hotels/hotelsUi';
 import { BuilderTab } from '@/cms/roomControl/BuilderTab';
 import { DiagnosticsTab } from '@/cms/roomControl/DiagnosticsTab';
 import { ImportTab } from '@/cms/roomControl/ImportTab';
@@ -88,9 +90,7 @@ function JournalInner() {
   if (types.isLoading) return <Skeleton variant="rounded" height={240} />;
   if (types.isError && types.error instanceof ApiError && types.error.status === 403) {
     return (
-      <Alert severity="info" data-testid="admin-grms-module-off">
-        {types.error.detail}
-      </Alert>
+      <ModuleOff />
     );
   }
   if (types.isError || !types.data) return <Alert severity="error">{t('errors.generic')}</Alert>;
@@ -119,7 +119,7 @@ const SECTIONS: Section[] = ['import', 'builder', 'plan', 'versions', 'diagnosti
 const READ_ONLY_SECTIONS: Section[] = ['versions', 'diagnostics'];
 
 function Inner() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const grms = useGrms();
   const { canWrite } = useRights();
   const sections = canWrite ? SECTIONS : READ_ONLY_SECTIONS;
@@ -150,9 +150,7 @@ function Inner() {
   // этого формы — обещать работу, которой не будет.
   if (types.isError && types.error instanceof ApiError && types.error.status === 403) {
     return (
-      <Alert severity="info" data-testid="admin-grms-module-off">
-        {types.error.detail}
-      </Alert>
+      <ModuleOff />
     );
   }
   if (types.isError || !types.data) {
@@ -182,16 +180,22 @@ function Inner() {
           ))}
         </Tabs>
         {list.length > 0 && (
-          <SelectField
-            size="small"
-            fullWidth={false}
-            sx={{ minWidth: 200 }}
-            label={t('roomControl.type')}
-            value={typeCode}
-            onChange={setTypeCode}
-            testId="admin-grms-type-select"
-            options={list.map((type) => ({ value: type.code, label: type.title?.ru ?? type.code }))}
-          />
+          <WithHelp help={t('admin.card.roomControl.typeHelp')}>
+            <SelectField
+              size="small"
+              fullWidth={false}
+              sx={{ minWidth: 200 }}
+              label={t('roomControl.type')}
+              value={typeCode}
+              onChange={setTypeCode}
+              testId="admin-grms-type-select"
+              // Название варианта на языке экрана; без перевода — по-русски, кода на экране нет.
+              options={list.map((type) => ({
+                value: type.code,
+                label: (type.title as Record<string, string> | undefined)?.[i18n.language] || type.title?.ru || t('roomControl.untitledType'),
+              }))}
+            />
+          </WithHelp>
         )}
       </Stack>
 
@@ -210,5 +214,33 @@ function Inner() {
       {current && section === 'versions' && <VersionsTab type={current} readOnly={!canWrite} />}
       {current && section === 'diagnostics' && <DiagnosticsTab type={current} />}
     </Box>
+  );
+}
+
+/**
+ * Модуль выключен (партия 62-F): не просто «не подключён», а что здесь будет и
+ * как это получить — переход во вкладку «Модули».
+ */
+function ModuleOff() {
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const toModules = () => {
+    const next = new URLSearchParams(params);
+    next.set('tab', 'modules');
+    next.delete('sub');
+    setParams(next, { replace: true });
+  };
+  return (
+    <Alert
+      severity="info"
+      data-testid="admin-grms-module-off"
+      action={
+        <Button size="small" onClick={toModules} data-testid="admin-grms-module-off-open">
+          {t('admin.card.roomControl.toModules')}
+        </Button>
+      }
+    >
+      {t('admin.card.roomControl.moduleOff')}
+    </Alert>
   );
 }

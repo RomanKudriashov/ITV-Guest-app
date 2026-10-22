@@ -18,7 +18,7 @@ import { JournalTab } from './hotel/JournalTab';
 import { OverviewTab } from './hotel/OverviewTab';
 import { RoomsTab } from './hotel/RoomsTab';
 import { HistoryTab } from './hotel/HistoryTab';
-import { Dot, Empty, FilterBar, Help, Hl, Panel, Pill, ViewSwitch } from './hotels/hotelsUi';
+import { Dot, Empty, FilterBar, Help, HelpLine, Hl, Panel, Pill, ViewSwitch } from './hotels/hotelsUi';
 import { ConfirmChangesDialog } from './hotel/hotelDialogs';
 import { AddressPanel, GroupPanel } from './hotel/ProfileExtras';
 
@@ -32,7 +32,7 @@ import { accent, ink, panelSx, primaryButtonSx, secondaryButtonSx, shape, state,
 import { QueryState } from '@/components/QueryState';
 import { formGridSx, spanSx } from '@/kit/formLayout';
 import { MultiSelectField, SelectField } from '@/components/SelectField';
-import { currencyOptions, languageOptions, timezoneOptions } from '@/components/hotelFieldOptions';
+import { currencyOptions, languageName, languageOptions, timezoneOptions } from '@/components/hotelFieldOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -321,7 +321,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     () => currencyOptions((reference.data?.currencies ?? []).map((c) => c.code), uiLanguage),
     [reference.data, uiLanguage],
   );
-  const languageChoices = useMemo(() => languageOptions(reference.data?.languages ?? []), [reference.data]);
+  const languageChoices = useMemo(() => languageOptions(reference.data?.languages ?? [], i18n.language), [reference.data, i18n.language]);
 
   /*
     ФОРМУ ВИДИТ ТОТ, КОМУ СЕРВЕР РАЗРЕШИТ.
@@ -482,7 +482,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             <Box key={code} sx={{ ...formGridSx, columnGap: 1.25, rowGap: 1.25, mb: 1.25 }}>
               <TextField
                 size="small"
-                label={`${t('admin.hotel.field.name')} · ${code.toUpperCase()}${main ? ` · ${t('admin.profile.mainLanguage')}` : ''}`}
+                label={`${t('admin.hotel.field.name')} · ${languageName(code, i18n.language)}${main ? ` · ${t('admin.profile.mainLanguage')}` : ''}`}
                 value={draft.names[code] ?? ''}
                 placeholder={main ? '' : t('admin.profile.noTranslation')}
                 onChange={(event) => setDraft((prev) => ({ ...prev, names: { ...prev.names, [code]: event.target.value } }))}
@@ -491,7 +491,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
               />
               <TextField
                 size="small"
-                label={`${t('admin.hotel.field.city')} · ${code.toUpperCase()}`}
+                label={`${t('admin.hotel.field.city')} · ${languageName(code, i18n.language)}`}
                 value={draft.cities[code] ?? ''}
                 placeholder={t('admin.profile.noTranslation')}
                 onChange={(event) => setDraft((prev) => ({ ...prev, cities: { ...prev.cities, [code]: event.target.value } }))}
@@ -646,7 +646,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             />
             <Kv
               label={t('admin.hotel.field.languages')}
-              value={hotel.languages.map((lang) => lang.code.toUpperCase()).join(' · ')}
+              value={hotel.languages.map((lang) => languageName(lang.code, i18n.language)).join(' · ')}
             />
             <Typography sx={{ ...typo.caption, color: ink.low, mt: 1 }} data-testid="admin-hotel-readonly">
               {t('admin.hotel.readOnly')}
@@ -1152,6 +1152,7 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
               size="small"
               fullWidth
               label={t('admin.data.reason')}
+              helperText={<HelpLine text={t('admin.data.reasonHint')} help={t('admin.data.reasonHelp')} />}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               inputProps={{ 'data-testid': 'admin-data-reason' }}

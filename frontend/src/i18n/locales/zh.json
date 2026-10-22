@@ -1724,7 +1724,7 @@
       "bulkApply": "修改 {{count}} 间",
       "bulkEditDone": "已修改 {{changed}} / {{matched}}",
       "bulkSpec": "房号",
-      "bulkSpecHint": "用逗号分隔的区间与单个房号：「101-105、3А、Люкс-1」。已存在的会被跳过。",
+      "bulkSpecHint": "用逗号分隔的区间与单个房号：「101-105、3A、Suite-1」。已存在的会被跳过。",
       "bulkPreviewCounts": "将创建：{{create}}。已存在：{{exists}}。",
       "bulkPreviewRestore": "将连同历史记录一并恢复：{{list}}",
       "bulkSubmitCount": "创建 {{count}} 间",
@@ -2479,6 +2479,12 @@
         },
         "notification": {
           "escalation_step": "升级步骤"
+        },
+        "chat": {
+          "unanswered": "客人聊天回复"
+        },
+        "hotel": {
+          "enable": "按日期重新启用酒店"
         }
       },
       "bot_ok": "机器人 @{{name}} 在线",
@@ -2486,7 +2492,9 @@
       "bot_rejected": "Telegram 机器人：令牌被拒绝（{{tail}}）",
       "bot_conflict": "机器人 @{{name}}：另一台服务器正在轮询它（409）",
       "bot_down": "机器人服务已 {{count}} 分钟无响应",
-      "bot_error": "机器人 @{{name}}：Telegram 不可用 — {{error}}"
+      "bot_error": "机器人 @{{name}}：Telegram 不可用 — {{error}}",
+      "schedulerKindOther": "其他任务",
+      "otherSignal": "有未描述的信号"
     },
     "fleet": {
       "title": "酒店",
@@ -2809,7 +2817,11 @@
         "twofaYes": "已开启",
         "twofaNo": "未开启",
         "search": "按邮箱或姓名查找"
-      }
+      },
+      "emailHint": "邀请将发送到这里",
+      "emailHelp": "Control 登录邮件将发送到此邮箱。邮箱同时也是成员的登录名。",
+      "roleHint": "在 Control 中可以做什么",
+      "roleHelp": "所有者——全部权限，包括团队和危险操作。支持——酒店及进入酒店面板。只读——仅查看，不做更改。"
     },
     "audit": {
       "title": "操作日志",
@@ -3030,7 +3042,11 @@
       "filter": {
         "kind": "类别",
         "search": "按代码或名称查找"
-      }
+      },
+      "activeHelp": "未启用的模板在新建酒店时不提供。已用它创建的酒店不受影响。",
+      "dictKindHelp": "字典分类：过敏原或饮食标记。",
+      "dictCodeHelp": "不含空格的简短拉丁名称：酒店更新时据此识别条目。客人和员工看不到它。",
+      "dictTitleHelp": "客人和员工看到的条目名称。其他语言的翻译由酒店自行添加。"
     },
     "data": {
       "exportTitle": "数据导出",
@@ -3051,7 +3067,9 @@
       "delete": "从注册表移除",
       "deleteHint": "数据由停用清除，而这一项针对酒店本身：它从列表中消失，地址被释放并可再次使用。记录保留为软删除：平台仍须能够回答该酒店曾经存在。",
       "deleted": "酒店“{{subdomain}}”已移除，名称已释放",
-      "deleteFailed": "无法移除酒店"
+      "deleteFailed": "无法移除酒店",
+      "reasonHint": "仅在 Control 中可见",
+      "reasonHelp": "酒店离开平台的原因。原因记入日志，仅 Control 团队可见——酒店看不到。"
     },
     "support": {
       "title": "支持会话",
@@ -3066,7 +3084,9 @@
         "active": "当前在内",
         "history": "已结束",
         "all": "全部"
-      }
+      },
+      "emptyTitle": "尚无支持登录",
+      "emptyHint": "当团队成员通过“进入酒店”按钮进入酒店面板时会出现在这里——附原因和时限。"
     },
     "errors": {
       "http": "操作失败，请重试。",
@@ -3380,7 +3400,8 @@
         "off": "规则已关闭：加入的酒店保留原有模块。",
         "note1": "规则只在添加酒店时生效。已在分组中的酒店不变——请使用“操作”。",
         "note2": "需要连接的模块会被启用，但要等连接建立后才能工作。",
-        "note3": "不能选择开发中的模块。"
+        "note3": "不能选择开发中的模块。",
+        "switchHelp": "规则开启后，新加入分组的酒店会立即获得所选模块。已在分组中的酒店不变。"
       },
       "history": {
         "who": "谁",
@@ -3639,6 +3660,11 @@
           "room": "不再向设备发送指令；连接器保持连接",
           "control": "酒店在列表中标记为“已停用”，并显示原因、操作人和时间"
         }
+      },
+      "roomControl": {
+        "typeHelp": "下方配置的房型方案：上传、构建器、平面图、版本。房间在“房间库存”标签页绑定到方案。",
+        "moduleOff": "此酒店的房间控制已关闭。请在“模块”标签页开启该模块——之后这里会出现房型方案、调试文件上传、平面图和设备日志。",
+        "toModules": "模块 →"
       }
     },
     "profile": {
@@ -3743,7 +3769,8 @@
         "toVersion": "回到版本 {{version}}",
         "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节",
         "inDevelopment": "模块开发中——在改为无套餐模块时关闭"
-      }
+      },
+      "otherAction": "其他操作"
     },
     "history": {
       "title": "历史",
@@ -3836,7 +3863,8 @@
       "config": {
         "guest_entry_demo": "客人无需 PIN 进入（演示）"
       }
-    }
+    },
+    "listFilteredEmpty": "未找到：请移除部分筛选或点击“重置”。"
   },
   "roomControl": {
     "title": "房间控制",
@@ -4103,7 +4131,7 @@
       "emptyHint": "此处将显示本酒店的命令与读取记录 — 包含设备响应和失败原因。",
       "link": {
         "connector": "连接器",
-        "endpoint": "iRidi 端点",
+        "endpoint": "iRidi 地址",
         "readable": "状态读取"
       },
       "states": {
@@ -4122,12 +4150,27 @@
         "failed": "失败",
         "ok": "已读取"
       },
-      "depthHotel": "这里显示交互发生的时间、房间和元素，以及最终结果。交互本身的细节——设备、通道和设备返回的应答——由我们的工程师查看：酒店不会收到这些字段。"
+      "depthHotel": "这里显示交互发生的时间、房间和元素，以及最终结果。交互本身的细节——设备、通道和设备返回的应答——由我们的工程师查看：酒店不会收到这些字段。",
+      "durationMs": "{{ms}} 毫秒",
+      "unknownKind": "其他类型",
+      "kind": {
+        "dnd": "请勿打扰",
+        "mur": "清理房间",
+        "master_switch": "总开关",
+        "light_group": "灯光组",
+        "curtain": "窗帘",
+        "curtain_blackout": "遮光窗帘",
+        "air_conditioner": "空调",
+        "heating": "暖气",
+        "scene": "场景"
+      },
+      "unknownResult": "其他结果"
     },
     "roomsOnType_other": "{{count}} 间客房",
     "moved": "客房控制的配置由平台完成：PNR 导入、界面搭建、平面图与发布都在我们这边。此处保留客人访问、元件检查与连接状态。",
     "movedFromTab": "该板块已迁移：客房控制的配置由平台完成。此处保留客人访问、元件检查与连接状态 — 如需修改配置请联系我们。",
-    "cmsNoTypesHint": "房间配置（类型、控件、平面图）由 NaviRoom Control 在接入酒店时完成。配置就绪后，这里会出现客人访问、磁贴和检查。"
+    "cmsNoTypesHint": "房间配置（类型、控件、平面图）由 NaviRoom Control 在接入酒店时完成。配置就绪后，这里会出现客人访问、磁贴和检查。",
+    "untitledType": "未命名方案"
   },
   "cms": {
     "homeBlocks": {

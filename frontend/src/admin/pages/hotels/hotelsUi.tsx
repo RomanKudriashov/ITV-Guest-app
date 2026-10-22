@@ -87,6 +87,29 @@ export function Help({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Поле или выключатель с «?» рядом (партия 62-F): у каждой настройки Control
+ * есть пояснение — что она меняет и для кого.
+ */
+export function WithHelp({ help, children, testId }: { help: ReactNode; children: ReactNode; testId?: string }) {
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, minWidth: 0 }} data-testid={testId}>
+      {children}
+      <Help>{help}</Help>
+    </Box>
+  );
+}
+
+/** Строка под полем: короткое пояснение и «?» с подробностью. */
+export function HelpLine({ text, help }: { text: ReactNode; help: ReactNode }) {
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+      {text}
+      <Help>{help}</Help>
+    </Box>
+  );
+}
+
 /** Подсветка найденного куска текста. */
 export function Hl({ text, q }: { text: string; q: string }) {
   if (!q) return <>{text}</>;

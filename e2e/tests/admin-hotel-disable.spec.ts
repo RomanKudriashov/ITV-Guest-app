@@ -122,7 +122,10 @@ test.describe.serial('Отключение отеля и профиль', () => 
     await expect(page.getByTestId('admin-profile-confirm')).toHaveCount(0, { timeout: 20_000 })
 
     await page.getByTestId('admin-hotel-tab-history').click()
-    await expect(page.getByTestId('admin-journal-change-timezone').first()).toContainText('Asia/Tokyo', { timeout: 20_000 })
+    // Пояс в истории — словами, не кодом (партия 62-F): «Япония, … (UTC+9)».
+    const zone = page.getByTestId('admin-journal-change-timezone').first()
+    await expect(zone).toContainText('UTC+9', { timeout: 20_000 })
+    await expect(zone).not.toContainText('Asia/Tokyo')
   })
 
   test('УКУС: новый поддомен — старый адрес и старый QR ведут на новый с тем же путём', async ({ page, request }) => {

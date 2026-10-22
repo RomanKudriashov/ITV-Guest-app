@@ -108,7 +108,7 @@ function AuditLog() {
     {
       key: 'action',
       label: t('admin.audit.filterAction'),
-      options: (Array.isArray(actions.data) ? actions.data : []).map((code) => ({ value: code, label: t(`admin.action.${code}`, { defaultValue: code }) })),
+      options: (Array.isArray(actions.data) ? actions.data : []).map((code) => ({ value: code, label: t(`admin.action.${code}`, { defaultValue: t('admin.journal.otherAction') }) })),
       // Код из адреса, которого нет в списке видов, — словом, а не кодом.
       describe: (code) => t(`admin.action.${code}`, { defaultValue: t('admin.hotels.filter.unknownValue') }),
     },

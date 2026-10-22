@@ -125,6 +125,11 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
       toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
   });
 
+  // Вид элемента — словом на языке экрана: сервер отдаёт название только
+  // по-русски, свой словарь видов — у экрана (партия 62-F).
+  const kindTitles = new Map((values.data?.element_kinds ?? []).map((kind) => [kind.code, kind.title]));
+  const kindTitle = (code: string) =>
+    t(`roomControl.diagnostics.kind.${code}`, { defaultValue: kindTitles.get(code) ?? t('roomControl.diagnostics.unknownKind') });
   const formatAt = (value: string) =>
     new Intl.DateTimeFormat(i18n.language, { dateStyle: 'short', timeStyle: 'medium' }).format(
       new Date(value),
@@ -184,7 +189,7 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
               testId="diagnostics-filter-kind"
               options={[
                 { value: '', label: t('roomControl.diagnostics.anyKind') },
-                ...(values.data?.element_kinds ?? []).map((kind) => ({ value: kind.code, label: kind.title })),
+                ...(values.data?.element_kinds ?? []).map((kind) => ({ value: kind.code, label: kindTitle(kind.code) })),
               ]}
             />
             <SelectField
@@ -197,7 +202,7 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
                 { value: '', label: t('roomControl.diagnostics.anyOutcome') },
                 ...(values.data?.outcomes ?? []).map((outcome) => ({
                   value: outcome,
-                  label: t(`roomControl.diagnostics.results.${outcome}`, { defaultValue: outcome }),
+                  label: t(`roomControl.diagnostics.results.${outcome}`, { defaultValue: t('roomControl.diagnostics.unknownResult') }),
                 })),
               ]}
             />
@@ -278,6 +283,7 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
                     rechecking={recheckMutation.isPending}
                     recheck={recheck?.id === row.id ? recheck.result : null}
                     formatAt={formatAt}
+                    kindTitle={kindTitle}
                     deep={deep}
                   />
                 ))}
@@ -373,9 +379,12 @@ function JournalRow({
   rechecking,
   recheck,
   formatAt,
+  kindTitle,
   deep,
 }: {
   row: DiagnosticsRow;
+  /** Вид элемента словом (`air_conditioner` → «Кондиционер»), партия 62-F. */
+  kindTitle: (code: string) => string;
   expanded: boolean;
   onToggle: () => void;
   onRecheck: () => void;
@@ -409,25 +418,27 @@ function JournalRow({
             '—'
           )}
         </TableCell>
+        {/* Идентификаторы элемента, устройства и канала — из файла пусконаладки:
+            данные, а не слова экрана (`data-words`, сторож Control). */}
         <TableCell>
-          {row.element || '—'}
+          <Box component="span" data-words="data">{row.element || '—'}</Box>
           {row.element_kind ? (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              {row.element_kind}
+              {kindTitle(row.element_kind)}
             </Typography>
           ) : null}
         </TableCell>
-        {deep ? <TableCell>{row.device || '—'}</TableCell> : null}
-        {deep ? <TableCell>{channel || '—'}</TableCell> : null}
+        {deep ? <TableCell data-words="data">{row.device || '—'}</TableCell> : null}
+        {deep ? <TableCell data-words="data">{channel || '—'}</TableCell> : null}
         <TableCell>{row.sent ?? '—'}</TableCell>
         {deep ? (
-          <TableCell>{row.duration_ms == null ? '—' : `${row.duration_ms} ms`}</TableCell>
+          <TableCell>{row.duration_ms == null ? '—' : t('roomControl.diagnostics.durationMs', { ms: row.duration_ms })}</TableCell>
         ) : null}
         <TableCell>
           <Chip
             size="small"
             color={RESULT_COLOR[row.result] ?? 'default'}
-            label={t(`roomControl.diagnostics.results.${row.result}`, { defaultValue: row.result })}
+            label={t(`roomControl.diagnostics.results.${row.result}`, { defaultValue: t('roomControl.diagnostics.unknownResult') })}
             data-testid="diagnostics-cell-result"
           />
           {row.reason ? (
@@ -508,7 +519,7 @@ function JournalRow({
                       удалось»: диагностика, которая молчит про собственный
                       промах, бесполезна вдвойне.
                     */}
-                    {t(`roomControl.check.${recheck.outcome}`, { defaultValue: recheck.outcome })}
+                    {t(`roomControl.check.${recheck.outcome}`, { defaultValue: t('roomControl.diagnostics.unknownResult') })}
                     {recheck.note ? ` — ${recheck.note}` : ''}
                   </Alert>
                 ) : null}

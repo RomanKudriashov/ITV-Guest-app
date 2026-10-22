@@ -14,6 +14,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 
 import { accent, ink, panelSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
+import { WithHelp } from './hotels/hotelsUi';
 import { FilterBar, type Facet } from './hotels/hotelsUi';
 import { useRights } from '../useRights';
 import { QueryState } from '@/components/QueryState';
@@ -128,6 +129,7 @@ function TemplatesTab() {
                 за панель почти до края окна: замер видел отступ 3 px вместо 24.
                 Поле — по ползунку, а нажатие по всей дорожке даёт обёртка-label
                 (партия 55). */}
+            <WithHelp help={t('admin.templates.activeHelp')}>
             <Box component="label" sx={{ display: 'inline-flex', cursor: 'pointer' }}>
               <Switch
                 checked={template.is_active}
@@ -137,6 +139,7 @@ function TemplatesTab() {
                 sx={{ '& .MuiSwitch-input': { left: 0, width: '100%' } }}
               />
             </Box>
+            </WithHelp>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 1.25 }}>
@@ -164,7 +167,7 @@ function TemplatesTab() {
           {template.modules.length ? (
             <Typography sx={{ ...typo.caption, color: ink.low, mt: 1 }}>
               {t('admin.templates.modules')}:{' '}
-              {template.modules.map((code) => t(`admin.module.${code}`, { defaultValue: code })).join(' · ')}
+              {template.modules.map((code) => t(`admin.module.${code}`, { defaultValue: t('admin.hotels.filter.unknownValue') })).join(' · ')}
             </Typography>
           ) : null}
         </Box>
@@ -240,6 +243,7 @@ function DictionaryTab() {
 
       {canWrite ? (
       <Box sx={{ ...panelSx, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+        <WithHelp help={t('admin.templates.dictKindHelp')}>
         <SelectField
           size="small"
           fullWidth={false}
@@ -253,6 +257,8 @@ function DictionaryTab() {
             { value: 'marker', label: t('admin.templates.kind.marker') },
           ]}
         />
+        </WithHelp>
+        <WithHelp help={t('admin.templates.dictCodeHelp')}>
         <TextField
           size="small"
           label={t('admin.templates.dictCode')}
@@ -260,6 +266,8 @@ function DictionaryTab() {
           onChange={(e) => setCode(e.target.value)}
           inputProps={{ 'data-testid': 'admin-dict-code' }}
         />
+        </WithHelp>
+        <WithHelp help={t('admin.templates.dictTitleHelp')}>
         <TextField
           size="small"
           label={t('admin.templates.dictTitle')}
@@ -268,6 +276,7 @@ function DictionaryTab() {
           inputProps={{ 'data-testid': 'admin-dict-title' }}
           sx={{ minWidth: 220 }}
         />
+        </WithHelp>
         <Button
           disabled={!code.trim() || !title.trim() || save.isPending}
           onClick={() =>
@@ -289,7 +298,7 @@ function DictionaryTab() {
         query={dictionary}
         what={t('state.what.dictionary')}
         isEmpty={(page) => page.items.length === 0}
-        emptyText={t('admin.templates.dictEmpty')}
+        emptyText={Object.values(filters).some(Boolean) ? t('admin.listFilteredEmpty') : t('admin.templates.dictEmpty')}
       >
         {(page) => (
           <>

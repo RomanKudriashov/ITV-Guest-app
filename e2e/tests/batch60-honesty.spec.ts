@@ -117,8 +117,9 @@ test.describe('Control: роль «только чтение» не видит �
     await expect(page.getByTestId('admin-hotel-active')).toHaveCount(0)
     await expect(page.getByTestId('admin-hotel-active-label')).toBeVisible()
     await expect(page.getByTestId('admin-hotel-admin-reset')).toHaveCount(0)
-    // Ключ подписи тарифа больше не сырой.
-    await expect(page.getByTestId('admin-hotel')).not.toContainText('tariffOwnerOnly')
+    // Сырых ключей переводов на экране нет (тарифов нет с 62-E1; общий сторож
+    // слов — admin-words-guard.spec.ts).
+    await expect(page.getByTestId('admin-hotel')).not.toContainText(/\badmin\.[a-z]/)
 
     // Группы живут в «Отелях» (партия 62-A1): правки групп «только чтению» не видны.
     await page.goto('/admin?section=fleet')

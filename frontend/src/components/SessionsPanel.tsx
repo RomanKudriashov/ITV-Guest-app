@@ -240,7 +240,8 @@ function SessionRow({
           {' · '}
           {t('sessions.seen', { when: when(row.last_seen_at) })}
         </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap>
+        {/* Строка браузера — данные устройства, а не слова экрана (`data-words`). */}
+        <Typography variant="caption" color="text.secondary" noWrap data-words={row.user_agent ? 'data' : undefined}>
           {row.user_agent || t('sessions.unknownAgent')}
         </Typography>
       </Stack>

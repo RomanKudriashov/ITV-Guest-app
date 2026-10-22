@@ -15,7 +15,7 @@ import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { getMe, getTeam, inviteMember, patchMember, resetMemberTwoFactor, type TeamMember } from '../adminClient';
-import { FilterBar, type Facet } from './hotels/hotelsUi';
+import { FilterBar, Help, HelpLine, type Facet } from './hotels/hotelsUi';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
 
@@ -88,6 +88,7 @@ export function TeamPage() {
           <Field
             span={6}
             label={t('admin.team.email')}
+            helperText={<HelpLine text={t('admin.team.emailHint')} help={t('admin.team.emailHelp')} />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             inputProps={{ 'data-testid': 'admin-team-email' }}
@@ -95,6 +96,7 @@ export function TeamPage() {
           <ChoiceField
             span={4}
             label={t('admin.team.role')}
+            helperText={<HelpLine text={t('admin.team.roleHint')} help={t('admin.team.roleHelp')} />}
             value={role}
             onChange={setRole}
             testId="admin-team-role"
@@ -137,7 +139,8 @@ export function TeamPage() {
         query={team}
         what={t('state.what.team')}
         isEmpty={(page) => page.items.length === 0}
-        emptyText={t('admin.team.empty')}
+        // Под фильтрами пустота — «ничего не нашлось», а не «вы один» (партия 62-F).
+        emptyText={Object.values(filters).some(Boolean) ? t('admin.listFilteredEmpty') : t('admin.team.empty')}
       >
         {(page) => (
           <>
@@ -166,6 +169,7 @@ export function TeamPage() {
                   }}
                 >
                   {t(`admin.team.col.${key}`)}
+                  {key === 'role' ? <Help>{t('admin.team.roleHelp')}</Help> : null}
                 </Box>
               ))}
             </Box>

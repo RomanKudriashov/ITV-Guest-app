@@ -76,6 +76,27 @@ for (const [language, keys] of languages) {
   }
 }
 
+// --- 3. Русские слова в чужом языке (партия 62-F) ------------------------------
+//
+// Ключ, «переведённый» копией русской строки, сторож полноты пропускал: ключ
+// есть, значение не пустое. Кириллица в английском, арабском и китайском —
+// почти всегда недопереведённая строка.
+
+const CYRILLIC = /[А-Яа-яЁё]/;
+const russianLeft = [];
+for (const [language, keys] of languages) {
+  if (language === 'ru') continue;
+  for (const [key, value] of keys) {
+    if (typeof value === 'string' && CYRILLIC.test(value)) russianLeft.push(`${language}: ${key} — «${value.slice(0, 60)}»`);
+  }
+}
+if (russianLeft.length) {
+  console.error(`Русские буквы в переводе (${russianLeft.length}):`);
+  for (const line of russianLeft.slice(0, 40)) console.error(`  ${line}`);
+  console.error('');
+  process.exit(1);
+}
+
 if (missing.length || empty.length) {
   if (missing.length) {
     console.error(`Ключей нет в переводе (${missing.length}):`);
@@ -98,4 +119,4 @@ if (missing.length || empty.length) {
 const counts = [...languages]
   .map(([language, keys]) => `${language} ${new Set([...keys.keys()].map(base)).size}`)
   .join(', ');
-console.log(`Локали полны: ${languages.size} языка, основ ключей — ${counts}; пустых значений нет`);
+console.log(`Локали полны: ${languages.size} языка, основ ключей — ${counts}; пустых значений нет; русских букв в переводах нет`);

@@ -391,6 +391,7 @@ function Defaults({ group, canWrite }: { group: Page; canWrite: boolean }) {
               : t('admin.groupPage.defaults.onEmpty')
             : t('admin.groupPage.defaults.off')}
         </Box>
+        <Help>{t('admin.groupPage.defaults.switchHelp')}</Help>
       </Box>
       {ready.map((code) => (
         <ButtonBase

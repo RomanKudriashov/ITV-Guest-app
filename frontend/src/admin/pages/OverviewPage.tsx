@@ -193,7 +193,7 @@ function HealthRow({ signal }: { signal: OverviewHealth }) {
           name: signal.name ?? '',
           tail: signal.tail ?? '',
           error: signal.error ?? '',
-          defaultValue: signal.code,
+          defaultValue: t('admin.health.otherSignal'),
         })}
         {signal.kinds?.length ? (
           // У службы расписания несколько потребителей: одна общая цифра не
@@ -206,7 +206,7 @@ function HealthRow({ signal }: { signal: OverviewHealth }) {
             {signal.kinds
               .map((entry) =>
                 t('admin.health.schedulerKind', {
-                  name: t(`admin.health.schedulerKinds.${entry.kind}`, { defaultValue: entry.kind }),
+                  name: t(`admin.health.schedulerKinds.${entry.kind}`, { defaultValue: t('admin.health.schedulerKindOther') }),
                   pending: entry.pending,
                   overdue: entry.overdue,
                 }),

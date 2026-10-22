@@ -40,8 +40,8 @@ export function HistoryTab({ hotelId }: { hotelId: string }) {
           const items = data.pages.flatMap((page) => page.items);
           const sectionLabel = (value: string) => {
             const [section, field] = value.split(':');
-            const head = t(`admin.history.section.${section}`, { defaultValue: section });
-            return field ? `${head} · ${t(`admin.profile.field.${field}`, { defaultValue: field })}` : head;
+            const head = t(`admin.history.section.${section}`, { defaultValue: t('admin.hotels.filter.unknownValue') });
+            return field ? `${head} · ${t(`admin.profile.field.${field}`, { defaultValue: t('admin.hotels.filter.unknownValue') })}` : head;
           };
           const whoLabel = (value: string, label = '') =>
             value === 'system' ? t('admin.journal.system') : label || t('admin.hotels.filter.unknownValue');

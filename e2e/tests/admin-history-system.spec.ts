@@ -103,7 +103,18 @@ test.describe('Код действия — только подсказкой (п
       expect(shown).not.toMatch(/\b(platform|grms|impersonation)\.[a-z_]+/)
 
       await row.hover()
-      await expect(page.getByTestId('admin-journal-code')).toHaveText(code, { timeout: 5_000 })
+      const tip = page.getByTestId('admin-journal-code')
+      await expect(tip).toHaveText(code, { timeout: 5_000 })
+      // Подсказка — под курсором и не закрывает счётчик над списком (партия 62-F).
+      const tipBox = (await tip.boundingBox())!
+      const rowBox = (await row.boundingBox())!
+      expect(tipBox.y).toBeGreaterThanOrEqual(rowBox.y)
+      const counter = page.getByTestId(url === 'history' ? 'admin-history-count' : 'admin-audit-total')
+      if (await counter.count()) {
+        const c = (await counter.boundingBox())!
+        const overlap = tipBox.x < c.x + c.width && c.x < tipBox.x + tipBox.width && tipBox.y < c.y + c.height && c.y < tipBox.y + tipBox.height
+        expect(overlap, 'подсказка закрывает счётчик').toBeFalsy()
+      }
     })
   }
 })

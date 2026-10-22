@@ -115,6 +115,8 @@ export function ProfileMenu({
             },
             '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
           })}
+          // Монограмма — две буквы почты: данные, а не слово экрана.
+          data-words="data"
         >
           {initials}
           {warning ? (

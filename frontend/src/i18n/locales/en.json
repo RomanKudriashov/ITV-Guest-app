@@ -1743,7 +1743,7 @@
       "bulkApply": "Change {{count}}",
       "bulkEditDone": "Changed {{changed}} of {{matched}}",
       "bulkSpec": "Numbers",
-      "bulkSpecHint": "Ranges and single numbers, comma separated: “101-105, 3А, Suite-1”. Existing ones are skipped.",
+      "bulkSpecHint": "Ranges and single numbers, comma separated: “101-105, 3A, Suite-1”. Existing ones are skipped.",
       "bulkPreviewCounts": "To be created: {{create}}. Already exist: {{exists}}.",
       "bulkPreviewRestore": "Will come back with their history: {{list}}",
       "bulkSubmitCount": "Create {{count}}",
@@ -2505,6 +2505,12 @@
         },
         "notification": {
           "escalation_step": "escalation steps"
+        },
+        "chat": {
+          "unanswered": "guest chat replies"
+        },
+        "hotel": {
+          "enable": "scheduled hotel re-enabling"
         }
       },
       "bot_ok": "Bot @{{name}} is online",
@@ -2512,7 +2518,9 @@
       "bot_rejected": "Telegram bot: token rejected ({{tail}})",
       "bot_conflict": "Bot @{{name}}: another server is polling it (409)",
       "bot_down": "The bot service has not responded for {{count}} min",
-      "bot_error": "Bot @{{name}}: Telegram unreachable — {{error}}"
+      "bot_error": "Bot @{{name}}: Telegram unreachable — {{error}}",
+      "schedulerKindOther": "other jobs",
+      "otherSignal": "a signal without a description"
     },
     "fleet": {
       "title": "Hotels",
@@ -2837,7 +2845,11 @@
         "twofaYes": "on",
         "twofaNo": "off",
         "search": "Find by email or name"
-      }
+      },
+      "emailHint": "the invitation goes here",
+      "emailHelp": "A sign-in email for Control goes to this address. The email is also the member’s login.",
+      "roleHint": "what is allowed in Control",
+      "roleHelp": "Owner — everything, including the team and dangerous actions. Support — hotels and entering a hotel panel. Read only — look, change nothing."
     },
     "audit": {
       "title": "Activity log",
@@ -3059,7 +3071,11 @@
       "filter": {
         "kind": "Section",
         "search": "Find by code or title"
-      }
+      },
+      "activeHelp": "An inactive template is not offered when a new hotel is created. Hotels already created from it stay as they are.",
+      "dictKindHelp": "Dictionary section: allergens or dietary markers.",
+      "dictCodeHelp": "A short Latin name without spaces: hotels recognise the entry by it on updates. Guests and staff never see it.",
+      "dictTitleHelp": "How guests and staff will see the entry. A hotel adds translations to other languages itself."
     },
     "data": {
       "exportTitle": "Data export",
@@ -3080,7 +3096,9 @@
       "delete": "Remove from registry",
       "deleteHint": "Data is erased by the shutdown; this is about the hotel itself: it leaves the lists, the address is freed and becomes available again. The row stays soft-deleted: the platform must still be able to answer that the hotel existed.",
       "deleted": "Hotel “{{subdomain}}” removed, the name is free",
-      "deleteFailed": "Could not remove the hotel"
+      "deleteFailed": "Could not remove the hotel",
+      "reasonHint": "visible only in Control",
+      "reasonHelp": "Why the hotel is leaving the platform. The reason goes to the log and is visible only to the Control team — the hotel does not see it."
     },
     "support": {
       "title": "Support sessions",
@@ -3095,7 +3113,9 @@
         "active": "Inside now",
         "history": "Finished",
         "all": "All"
-      }
+      },
+      "emptyTitle": "No support sign-ins yet",
+      "emptyHint": "They appear when a team member enters the hotel panel with “Enter the hotel” — with a reason and a time limit."
     },
     "errors": {
       "http": "Something went wrong. Please try again.",
@@ -3432,7 +3452,8 @@
         "off": "Rule off: an added hotel keeps the modules it had.",
         "note1": "The rule fires only when a hotel is added. Hotels already in the group do not change — use “Actions” for them.",
         "note2": "A module that needs a connection is turned on but works once the connection appears.",
-        "note3": "Modules in development cannot be chosen."
+        "note3": "Modules in development cannot be chosen.",
+        "switchHelp": "When the rule is on, hotels added to the group get the selected modules right away. Hotels already in the group do not change."
       },
       "history": {
         "who": "Who",
@@ -3701,6 +3722,11 @@
           "room": "no commands go to the equipment; the connector stays connected",
           "control": "the hotel is marked “disabled” in the list with the reason, who and when"
         }
+      },
+      "roomControl": {
+        "typeHelp": "The room variant set up below: upload, builder, plan, versions. Rooms are bound to a variant on the “Room inventory” tab.",
+        "moduleOff": "Room control is off for this hotel. Switch the module on in the “Modules” tab — then room variants, the commissioning file upload, the plan and the equipment log appear here.",
+        "toModules": "Modules →"
       }
     },
     "profile": {
@@ -3807,7 +3833,8 @@
         "legacyCount_one": "{{count}} module changed — the old entry keeps no details",
         "legacyCount_other": "{{count}} modules changed — the old entry keeps no details",
         "inDevelopment": "module in development — switched off on the move to modules without plans"
-      }
+      },
+      "otherAction": "other action"
     },
     "history": {
       "title": "History",
@@ -3900,7 +3927,8 @@
       "config": {
         "guest_entry_demo": "Guest entry without PIN (demo)"
       }
-    }
+    },
+    "listFilteredEmpty": "Nothing found: remove some filters or press “Reset”."
   },
   "roomControl": {
     "title": "Room control",
@@ -4167,7 +4195,7 @@
       "emptyHint": "Commands and reads for this hotel will appear here — with the hardware response and the reason for failure.",
       "link": {
         "connector": "Connector",
-        "endpoint": "iRidi endpoint",
+        "endpoint": "iRidi address",
         "readable": "State readback"
       },
       "states": {
@@ -4186,13 +4214,28 @@
         "failed": "Failed",
         "ok": "Read"
       },
-      "depthHotel": "This shows when, in which room and with which element an exchange happened, and how it ended. The exchange itself — device, channel and the equipment's reply — is examined by our engineer: the hotel does not receive those fields."
+      "depthHotel": "This shows when, in which room and with which element an exchange happened, and how it ended. The exchange itself — device, channel and the equipment's reply — is examined by our engineer: the hotel does not receive those fields.",
+      "durationMs": "{{ms}} ms",
+      "unknownKind": "other kind",
+      "kind": {
+        "dnd": "Do not disturb",
+        "mur": "Make up room",
+        "master_switch": "Master switch",
+        "light_group": "Light group",
+        "curtain": "Curtains",
+        "curtain_blackout": "Blackout curtains",
+        "air_conditioner": "Air conditioner",
+        "heating": "Heating",
+        "scene": "Scene"
+      },
+      "unknownResult": "other outcome"
     },
     "roomsOnType_one": "{{count}} room",
     "roomsOnType_other": "{{count}} rooms",
     "moved": "Room control is configured by the platform: PNR import, the screen builder, the plan and publishing are on our side. Guest access, element checks and link health stay here.",
     "movedFromTab": "This section has moved: room control is configured by the platform. Guest access, element checks and link health stay here — write to us if the configuration needs a change.",
-    "cmsNoTypesHint": "The room configuration — types, controls, plan — is set up by NaviRoom Control when the hotel is connected. Once it is ready, guest access, tiles and the check will appear here."
+    "cmsNoTypesHint": "The room configuration — types, controls, plan — is set up by NaviRoom Control when the hotel is connected. Once it is ready, guest access, tiles and the check will appear here.",
+    "untitledType": "Untitled variant"
   },
   "cms": {
     "homeBlocks": {

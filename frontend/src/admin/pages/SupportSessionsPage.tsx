@@ -132,6 +132,8 @@ export function SupportSessionsPage({ hotelId, embedded = false }: { hotelId?: s
               isFiltered={isFiltered}
               onReset={reset}
               what={t('state.what.support')}
+              emptyTitle={t('admin.support.emptyTitle')}
+              emptyHint={t('admin.support.emptyHint')}
             />
           ) : (
           <Box sx={{ ...panelSx, mt: hotelId ? 0 : 2.25 }}>
@@ -193,7 +195,8 @@ function SessionRow({
           })}
         </Typography>
         {row.reason ? (
-          <Typography sx={{ color: ink.low, ...typo.caption }}>{row.reason}</Typography>
+          // Причину пишет человек — данные, а не слова экрана (сторож слов Control).
+          <Typography sx={{ color: ink.low, ...typo.caption }} data-words="data">{row.reason}</Typography>
         ) : null}
       </Box>
 
