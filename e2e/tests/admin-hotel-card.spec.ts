@@ -117,7 +117,8 @@ test.describe.serial('Карточка отеля', () => {
     await page.getByTestId('admin-node-name').fill('e2e-коробка')
     await page.getByTestId('admin-node-create-submit').click()
     await expect(page.getByTestId('admin-node-key')).toContainText(/один раз/)
-    await expect(page.getByTestId('admin-node-status-e2e-коробка')).toHaveText('офлайн', { timeout: 20_000 })
+    // Только что заведённый узел ни разу не подключался — так и подписан (партия 62-F-хвост).
+    await expect(page.getByTestId('admin-node-status-e2e-коробка')).toHaveText('ни разу не подключался', { timeout: 20_000 })
     await expect(page.getByTestId('admin-connections-vendor')).toHaveText('iRidi')
 
     // Узел ни разу не выходил на связь — обзор краснеет сразу, без минуты кэша.
