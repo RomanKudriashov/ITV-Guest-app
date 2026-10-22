@@ -3143,7 +3143,8 @@
         "group": "分组",
         "reset": "重置",
         "searchChip": "搜索：“{{text}}”",
-        "remove": "移除：{{label}}"
+        "remove": "移除：{{label}}",
+        "unknownValue": "未知值"
       },
       "state": {
         "problems": "有问题",
@@ -3740,7 +3741,8 @@
         "group": "通过分组操作“{{group}}”",
         "bulk": "通过“酒店”批量操作",
         "toVersion": "回到版本 {{version}}",
-        "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节"
+        "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节",
+        "inDevelopment": "模块开发中——在改为无套餐模块时关闭"
       }
     },
     "history": {

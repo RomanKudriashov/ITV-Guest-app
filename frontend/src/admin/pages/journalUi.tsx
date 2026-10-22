@@ -60,7 +60,10 @@ export function useJournalWords() {
   const details = (entry: JournalEntry): string[] => {
     const d = entry.details ?? {};
     const lines: string[] = [];
-    if (typeof d.reason === 'string') lines.push(t('admin.card.activation.reason', { reason: d.reason }));
+    // `in_development` — причина системной записи миграции 0049 (партия 62-E1):
+    // код на экран не выводится, у него своя фраза.
+    if (d.reason === 'in_development') lines.push(t('admin.journal.detail.inDevelopment'));
+    else if (typeof d.reason === 'string') lines.push(t('admin.card.activation.reason', { reason: d.reason }));
     if (typeof d.enable_on === 'string') lines.push(t('admin.card.activation.enableOn', { date: formatDate(d.enable_on) }));
     if (d.auto === true) lines.push(t('admin.card.activation.auto'));
     if (typeof d.ttl_minutes === 'number') lines.push(t('admin.journal.detail.ttl', { count: d.ttl_minutes }));

@@ -481,6 +481,8 @@ function useDescribe() {
 }
 
 const PERIODS: Array<[string, number]> = [['day', 1], ['week', 7], ['month', 30]];
+/** Значение фильтра «Кто» для записей без автора. */
+const SYSTEM = 'system';
 
 function History({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
@@ -495,13 +497,22 @@ function History({ id }: { id: string }) {
   const since = days ? Date.now() - days * 86_400_000 : 0;
   const shown = rows.filter(
     (r) =>
-      (!values.who.length || values.who.includes(r.row.actor)) &&
+      (!values.who.length || values.who.includes(r.row.actor || SYSTEM)) &&
       (!values.what.length || values.what.includes(r.kind)) &&
       Date.parse(r.row.at) >= since &&
       (!q || [r.row.actor, ...r.lines.flatMap((l) => [l.what, l.from, l.to, l.text])].some((s) => s?.toLowerCase().includes(q))),
   );
   const facets: Facet[] = [
-    { key: 'who', label: t('admin.groupPage.history.who'), options: actors.map((a) => ({ value: a, label: a })) },
+    {
+      key: 'who',
+      label: t('admin.groupPage.history.who'),
+      // «Система» — отдельным вариантом: у её записей автора нет (партия 62-E1).
+      options: [
+        ...actors.map((a) => ({ value: a, label: a })),
+        ...(rows.some((r) => !r.row.actor) ? [{ value: SYSTEM, label: t('admin.groupPage.history.system') }] : []),
+      ],
+      describe: (value) => (value === SYSTEM ? t('admin.groupPage.history.system') : value),
+    },
     { key: 'what', label: t('admin.groupPage.history.what'), options: (['created', 'updated', 'hotels', 'action', 'defaults'] as Kind[]).map((k) => ({ value: k, label: t(`admin.groupPage.history.kind.${k}`), count: rows.filter((r) => r.kind === k).length })) },
     { key: 'period', label: t('admin.groupPage.history.period'), options: PERIODS.map(([k]) => ({ value: k, label: t(`admin.groupPage.history.periods.${k}`) })) },
   ];

@@ -2753,7 +2753,7 @@
       "journalDev": "{{hotel}}: switched off — module in development",
       "journalEmpty": "No switches yet",
       "journalEmptyText": "When the module is switched on or off at a hotel, an entry appears here.",
-      "system": "system",
+      "system": "System",
       "devNote": "The module is still in development: it cannot be switched on. Once it works, it will get a switch.",
       "wasOn": "on, but does nothing — switch it off",
       "toggleHelp": "Turns the module on or off for this hotel. Other modules stay as they are; the change goes to the hotel history.",
@@ -3173,7 +3173,8 @@
         "group": "Group",
         "reset": "Reset",
         "searchChip": "Search: “{{text}}”",
-        "remove": "Remove: {{label}}"
+        "remove": "Remove: {{label}}",
+        "unknownValue": "unknown value"
       },
       "state": {
         "problems": "has problems",
@@ -3464,7 +3465,7 @@
         "on": "on",
         "off": "off",
         "someGroup": "another group",
-        "system": "system",
+        "system": "System",
         "modulesOn": "modules turned on: {{modules}}",
         "action": {
           "module_on": "Module “{{module}}” turned on",
@@ -3776,7 +3777,7 @@
       }
     },
     "journal": {
-      "system": "system",
+      "system": "System",
       "role": {
         "owner": "owner",
         "support": "support",
@@ -3804,7 +3805,8 @@
         "bulk": "by a bulk action in “Hotels”",
         "toVersion": "to version {{version}}",
         "legacyCount_one": "{{count}} module changed — the old entry keeps no details",
-        "legacyCount_other": "{{count}} modules changed — the old entry keeps no details"
+        "legacyCount_other": "{{count}} modules changed — the old entry keeps no details",
+        "inDevelopment": "module in development — switched off on the move to modules without plans"
       }
     },
     "history": {

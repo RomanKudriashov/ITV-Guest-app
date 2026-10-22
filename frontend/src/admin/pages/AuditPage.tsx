@@ -105,7 +105,13 @@ function AuditLog() {
 
   const facets: Facet[] = [
     { key: 'who', label: t('admin.history.who'), options: (Array.isArray(people.data) ? people.data : []).map((p) => ({ value: p.id ?? '', label: p.name })) },
-    { key: 'action', label: t('admin.audit.filterAction'), options: (Array.isArray(actions.data) ? actions.data : []).map((code) => ({ value: code, label: t(`admin.action.${code}`, { defaultValue: code }) })) },
+    {
+      key: 'action',
+      label: t('admin.audit.filterAction'),
+      options: (Array.isArray(actions.data) ? actions.data : []).map((code) => ({ value: code, label: t(`admin.action.${code}`, { defaultValue: code }) })),
+      // Код из адреса, которого нет в списке видов, — словом, а не кодом.
+      describe: (code) => t(`admin.action.${code}`, { defaultValue: t('admin.hotels.filter.unknownValue') }),
+    },
     { key: 'hotels', label: t('admin.audit.filterHotel'), options: (hotels.data?.items ?? []).map((h) => ({ value: h.id, label: h.name })) },
     { key: 'group', label: t('admin.audit.filterGroup'), options: (groups.data?.items ?? []).map((g) => ({ value: g.id, label: g.title })) },
     { key: 'period', label: t('admin.history.period'), options: PERIODS.map((p) => ({ value: p, label: t(`admin.history.periods.${p}`) })) },

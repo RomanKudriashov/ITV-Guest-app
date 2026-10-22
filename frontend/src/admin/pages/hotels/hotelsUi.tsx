@@ -170,6 +170,12 @@ export interface Facet {
   key: string;
   label: string;
   options: FacetOption[];
+  /**
+   * Слово для выбранного значения, которого нет среди вариантов: выдача
+   * пустая, справочник ещё грузится, значение пришло ссылкой. Без него чип
+   * показал бы код из адреса («Что: modules») — партия 62-E1.
+   */
+  describe?: (value: string) => string;
 }
 
 /** Выбранное из адреса: значения фильтров через запятую. */
@@ -204,7 +210,13 @@ export function FilterBar({ facets, placeholder, aside }: { facets: Facet[]; pla
     else now.add(value);
     write({ [key]: [...now].join(',') || null });
   };
-  const active = facets.flatMap((f) => values[f.key].map((value) => ({ facet: f, value, label: f.options.find((o) => o.value === value)?.label ?? value })));
+  const active = facets.flatMap((f) =>
+    values[f.key].map((value) => ({
+      facet: f,
+      value,
+      label: f.options.find((o) => o.value === value)?.label ?? f.describe?.(value) ?? t('admin.hotels.filter.unknownValue'),
+    })),
+  );
 
   return (
     <Box sx={{ mb: 1.5 }}>

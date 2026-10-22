@@ -43,13 +43,21 @@ export function HistoryTab({ hotelId }: { hotelId: string }) {
             const head = t(`admin.history.section.${section}`, { defaultValue: section });
             return field ? `${head} · ${t(`admin.profile.field.${field}`, { defaultValue: field })}` : head;
           };
+          const whoLabel = (value: string, label = '') =>
+            value === 'system' ? t('admin.journal.system') : label || t('admin.hotels.filter.unknownValue');
           const facets: Facet[] = [
             {
               key: 'who',
               label: t('admin.history.who'),
-              options: first.facets.who.map((f) => ({ value: f.value, label: f.value === 'system' ? t('admin.journal.system') : f.label || f.value, count: f.count })),
+              options: first.facets.who.map((f) => ({ value: f.value, label: whoLabel(f.value, f.label), count: f.count })),
+              describe: (value) => whoLabel(value),
             },
-            { key: 'what', label: t('admin.history.whatFilter'), options: first.facets.what.map((f) => ({ value: f.value, label: sectionLabel(f.value), count: f.count })) },
+            {
+              key: 'what',
+              label: t('admin.history.whatFilter'),
+              options: first.facets.what.map((f) => ({ value: f.value, label: sectionLabel(f.value), count: f.count })),
+              describe: sectionLabel,
+            },
             { key: 'period', label: t('admin.history.period'), options: PERIODS.map((p) => ({ value: p, label: t(`admin.history.periods.${p}`) })) },
           ];
           return (

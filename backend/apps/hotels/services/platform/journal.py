@@ -236,6 +236,15 @@ def serialize(row: AuditLog, people: dict) -> dict:
     }
 
 
+# Кто попадает в «Историю» отеля: люди Control и СИСТЕМА, когда она правит
+# отель от имени платформы (миграция 0049 выключила модули в разработке,
+# расписание включает отключённый отель). Системные записи отеля другого
+# рода — заказы, оборудование — в «Историю» правок не идут.
+HISTORY_ACTORS = Q(actor_type=AuditLog.ActorType.PLATFORM) | Q(
+    actor_type=AuditLog.ActorType.SYSTEM, action__startswith="platform."
+)
+
+
 def hotel_history(hotel, params: dict) -> dict:
     """«История» отеля: все правки из Control, с фильтрами и курсором."""
     from apps.core.context import platform_scope
@@ -246,7 +255,8 @@ def hotel_history(hotel, params: dict) -> dict:
     with platform_scope():
         base = (
             AuditLog.all_objects.using("platform")
-            .filter(hotel_id=hotel.pk, actor_type=AuditLog.ActorType.PLATFORM)
+            .filter(hotel_id=hotel.pk)
+            .filter(HISTORY_ACTORS)
             .exclude(action__in=LEGACY_DUPLICATES)
         )
         facets = _history_facets(base)
