@@ -67,6 +67,11 @@ const MyPointsPage = lazyFrom(trackerPart, 'MyPointsPage');
 const AdminApp = lazyFrom(consolePart, 'AdminApp');
 const LandingPage = lazyFrom(landingPart, 'LandingPage');
 const DevThemePage = lazyFrom(devThemePart, 'DevThemePage');
+// Песочница Control (партия 63-М): макеты на утверждение, только в dev-сборке.
+// Ветку `false ? … : null` сборщик вырезает вместе с динамическим импортом.
+const ControlSandbox = import.meta.env.DEV
+  ? lazyFrom(partLoader<typeof import('@/app/parts/controlSandbox')>(() => import('@/app/parts/controlSandbox')), 'SandboxApp')
+  : null;
 
 /**
  * Начать качать часть ТЕКУЩЕГО адреса, не дожидаясь первого рендера.
@@ -109,6 +114,11 @@ export function preloadPartFor(pathname: string): void {
 
 /** Экран части — под своей заглушкой на время, пока едет её файл. */
 const part = (screen: ReactNode) => <Part>{screen}</Part>;
+
+/** Маршрут песочницы Control — только в dev-сборке (см. `ControlSandbox`). */
+const controlSandboxRoutes: RouteObject[] = ControlSandbox
+  ? [{ path: '/admin/sandbox', element: part(<ControlSandbox />) }]
+  : [];
 
 /**
  * Data router — required for `useBlocker` (the unsaved-changes guard in the CMS).
@@ -363,6 +373,7 @@ function LegacyCmsRedirect() {
 /** Корень платформы: лендинг и наша консоль. Гостя и CMS здесь нет. */
 const platformRoutes: RouteObject[] = [
   { path: '/', element: part(<LandingPage />) },
+  ...controlSandboxRoutes,
   { path: '/admin', element: part(<AdminApp />) },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
   { path: '/dev/theme', element: part(<DevThemePage />) },
@@ -396,6 +407,7 @@ const hotelRoutes: RouteObject[] = [
 const singleHostRoutes: RouteObject[] = [
   { path: '/login', element: part(<LoginPage />) },
   { path: '/dev/theme', element: part(<DevThemePage />) },
+  ...controlSandboxRoutes,
   { path: '/admin', element: part(<AdminApp />) },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
   { element: <HotelGate kind="staff"><Outlet /></HotelGate>, children: [shellBranch] },

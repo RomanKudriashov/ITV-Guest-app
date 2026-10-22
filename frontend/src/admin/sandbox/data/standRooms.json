@@ -1,0 +1,3044 @@
+{
+ "taken_at": "2026-10-22T20:52:59.327Z",
+ "source": "стенд naviroom, GET /platform/hotels/{id}/rooms",
+ "hotels": {
+  "metropol": {
+   "name": "Metropol Hotel Moscow",
+   "city": "Moscow",
+   "room_control": true,
+   "rooms": [
+    {
+     "number": "2205",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2207",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2209",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2210",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2211",
+     "building": "",
+     "floor": "",
+     "category": "Bolshoi Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2212",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2213",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2214",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2216",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2218",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2220",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2222",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2223",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2224",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2225",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2226",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2227",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2228",
+     "building": "",
+     "floor": "",
+     "category": "Premier Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2229",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2230",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2231",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2232",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2233",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2234",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2235",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2236",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2237",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2238",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2239",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2240",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2241",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2242",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2243",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2260",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2262",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2272",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2273",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2274",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2275",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2276",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2277",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2278",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2279",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2280",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2281",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2282",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2283",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "2284",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3301",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3302",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3304",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3305",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3306",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3307",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3308",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3309",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3310",
+     "building": "",
+     "floor": "",
+     "category": "Bolshoi Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3311",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3312",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3314",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3315",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3316",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3317",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3318",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3319",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3320",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3321",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3322",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3323",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3324",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3325",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3326",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3327",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3328",
+     "building": "",
+     "floor": "",
+     "category": "Premier Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3329",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3330",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3331",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3332",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3333",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3334",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3335",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3336",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3337",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3338",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3339",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3340",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3341",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3342",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3343",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3350",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3351",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3353",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3356",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3357",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3358",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3359",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3360",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3361",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3362",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3363",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3364",
+     "building": "",
+     "floor": "",
+     "category": "Premier Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3365",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3368",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3369",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3370",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3371",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3372",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3373",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3374",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3375",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3376",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3377",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3378",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3379",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3380",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3381",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3382",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3383",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "3384",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4401",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4402",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4403",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4404",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4405",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4406",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4407",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4408",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4409",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4410",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4411",
+     "building": "",
+     "floor": "",
+     "category": "Bolshoi Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4412",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4413",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4414",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4415",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4416",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4417",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4418",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4419",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4420",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4421",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4422",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4423",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4424",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4425",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4426",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4427",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4428",
+     "building": "",
+     "floor": "",
+     "category": "Premier Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4429",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4430",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4431",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4432",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4433",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4434",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4435",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4436",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4437",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4438",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4439",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4440",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4441",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4442",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4443",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4449",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4450",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4455",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4456",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4457",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4458",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4459",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4460",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4461",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4462",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4463",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4464",
+     "building": "",
+     "floor": "",
+     "category": "Ambassador Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4468",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4469",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4470",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4471",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4472",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4473",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4474",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4475",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4476",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4477",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4478",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4479",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4480",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4481",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4482",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4483",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "4484",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5500",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5501",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5502",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5503",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5504",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5505",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5506",
+     "building": "",
+     "floor": "",
+     "category": "Historical Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5507",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5508",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5509",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5510",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5511",
+     "building": "",
+     "floor": "",
+     "category": "Bolshoi Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5512",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5513",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5514",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5515",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5516",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5517",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5518",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5519",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5520",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5521",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5522",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5523",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5524",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5525",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5526",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5527",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5528",
+     "building": "",
+     "floor": "",
+     "category": "Premier Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5529",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5530",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5531",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5532",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5533",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5534",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5535",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5536",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5537",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5538",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5539",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5549",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5550",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5551",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5552",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5553",
+     "building": "",
+     "floor": "",
+     "category": "Junior Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5554",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5555",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5556",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5557",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5558",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5559",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5560",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5561",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5562",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5563",
+     "building": "",
+     "floor": "",
+     "category": "Metropol Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5564",
+     "building": "",
+     "floor": "",
+     "category": "Ambassador Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5568",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5569",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5570",
+     "building": "",
+     "floor": "",
+     "category": "Deluxe Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5571",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5572",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5573",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5574",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5575",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5576",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5577",
+     "building": "",
+     "floor": "",
+     "category": "Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5578",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5579",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5580",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5581",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5582",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5583",
+     "building": "",
+     "floor": "",
+     "category": "Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "5584",
+     "building": "",
+     "floor": "",
+     "category": "Ambassador Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6601",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6602",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6603",
+     "building": "",
+     "floor": "",
+     "category": "Superior Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6609",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6610",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6611",
+     "building": "",
+     "floor": "",
+     "category": "Signature Executive Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6612",
+     "building": "",
+     "floor": "",
+     "category": "Signature Grand Superior",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "6613",
+     "building": "",
+     "floor": "",
+     "category": "Standard Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    }
+   ]
+  },
+  "sialia": {
+   "name": "Sialia",
+   "city": "Sochi",
+   "room_control": false,
+   "rooms": [
+    {
+     "number": "202",
+     "building": "Sales Office",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "204",
+     "building": "Sales Office",
+     "floor": "2",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1101",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1102",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1103",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1104",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1105",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1106",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1107",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1108",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1109",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1110",
+     "building": "Section 2.1",
+     "floor": "1",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1201",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1202",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1203",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1204",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1205",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1206",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1207",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1208",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1209",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1210",
+     "building": "Section 2.1",
+     "floor": "2",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1301",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1302",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1303",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1304",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1305",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1306",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1307",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1308",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1309",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1310",
+     "building": "Section 2.1",
+     "floor": "3",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1401",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1402",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1403",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1404",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1405",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1406",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1407",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1408",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1409",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1410",
+     "building": "Section 2.1",
+     "floor": "4",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1501",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1502",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1503",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1504",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1505",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1506",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Hotel Room",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1507",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1508",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Residence",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1509",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "1510",
+     "building": "Section 2.1",
+     "floor": "5",
+     "category": "Suite",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-1",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-2",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-3",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-4",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-5",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-6",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-7",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-8",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-9",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-10",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-11",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    },
+    {
+     "number": "Вилла-12",
+     "building": "Villas",
+     "floor": "1",
+     "category": "Villa",
+     "variant": null,
+     "pin": false,
+     "active": true
+    }
+   ]
+  }
+ }
+}
