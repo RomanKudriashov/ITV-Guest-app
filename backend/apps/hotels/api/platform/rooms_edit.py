@@ -46,6 +46,20 @@ class RoomsBulkIn(Schema):
     restore: bool = True
 
 
+class RoomsBatchIn(Schema):
+    # Что сделать (`room_batch.ACTIONS`) и с каким значением: код варианта,
+    # корпус или категория (`none` — снять), дата PIN, «вкл/выкл».
+    action: str = Field(max_length=32)
+    value: str | bool | None = None
+    room_ids: list[str] = Field(default_factory=list)
+
+
+class RoomsBatchRunIn(Schema):
+    # Билет показа — номера и действие из него; `room_ids` — что человек видел.
+    ticket: str = Field(max_length=40000)
+    room_ids: list[str] = Field(default_factory=list)
+
+
 class RoomPinIn(Schema):
     pin: str = Field(default="", max_length=12)
     generate: bool = False
@@ -80,6 +94,25 @@ def rooms_bulk_preview(request: HttpRequest, hotel_id: str, payload: RoomsBulkIn
 @requires(WRITE)
 def rooms_bulk(request: HttpRequest, hotel_id: str, payload: RoomsBulkIn):
     return edit.bulk_create(console.get_hotel(hotel_id), request.user, _bulk_data(payload))
+
+
+@router.post("/hotels/{hotel_id}/rooms/batch/preview", summary="Действие над многими номерами: что изменится")
+# Показ ничего не пишет, но это шаг правки: POST — правом правки (как у заведения).
+@requires(WRITE)
+def rooms_batch_preview(request: HttpRequest, hotel_id: str, payload: RoomsBatchIn):
+    from apps.hotels.services.platform import room_batch
+
+    return room_batch.preview(console.get_hotel(hotel_id), request.user, payload.action, payload.value, payload.room_ids)
+
+
+@router.post("/hotels/{hotel_id}/rooms/batch", summary="Действие над многими номерами: выполнить показанное")
+@requires(WRITE)
+def rooms_batch(request: HttpRequest, hotel_id: str, payload: RoomsBatchRunIn):
+    from apps.hotels.services.platform import room_batch
+
+    return room_batch.execute(
+        console.get_hotel(hotel_id), request.user, payload.ticket, payload.room_ids, ip=request.META.get("REMOTE_ADDR")
+    )
 
 
 @router.get("/hotels/{hotel_id}/rooms/{room_id}/detail", summary="Номер целиком — для окна правки")

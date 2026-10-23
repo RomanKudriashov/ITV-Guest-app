@@ -37,7 +37,10 @@ export function useJournalWords() {
   const { t, i18n } = useTranslation();
   const unknown = t('admin.hotels.filter.unknownValue');
   const field = (name: string) =>
-    name.startsWith('module:')
+    // Строка действия пачкой (63-2): «было → стало» по номеру.
+    name.startsWith('room:')
+      ? t('admin.journal.object.room', { number: name.slice(5) })
+      : name.startsWith('module:')
       ? t(`admin.module.${name.slice(7)}`, { defaultValue: unknown })
       : t(`admin.profile.field.${name}`, { defaultValue: t(`admin.journal.field.${name}`, { defaultValue: unknown }) });
   /*
@@ -119,6 +122,11 @@ export function useJournalWords() {
     if (typeof d.created === 'number' && d.created) lines.push(t('admin.journal.detail.created', { count: d.created }));
     if (typeof d.moved === 'number' && d.moved) lines.push(t('admin.journal.detail.moved', { count: d.moved }));
     if (typeof d.revoked === 'number' && d.revoked) lines.push(t('admin.journal.detail.revoked', { count: d.revoked }));
+    // Действие над многими номерами (63-2): какое и с каким значением.
+    if (typeof d.batch === 'string') {
+      const kind = t(`admin.card.rooms.batch.kind.${d.batch}`, { defaultValue: unknown });
+      lines.push(typeof d.value === 'string' && d.value ? t('admin.journal.detail.batchValue', { kind, value: d.value }) : t('admin.journal.detail.batch', { kind }));
+    }
     // Запись модулей до партии 62-D: только число, без «было → стало».
     if (typeof d.count === 'number' && !entry.changes.length) lines.push(t('admin.journal.detail.legacyCount', { count: d.count }));
     return lines;

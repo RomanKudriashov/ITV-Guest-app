@@ -543,7 +543,7 @@ def rename_impact(room_id, number: str) -> dict:
 
 
 @transaction.atomic
-def update_room(room_id, data: dict) -> Room:
+def update_room(room_id, data: dict, *, audit: bool = True) -> Room:
     """
     Правка номера. Переименование — ТОЛЬКО с явным подтверждением.
 
@@ -621,7 +621,7 @@ def update_room(room_id, data: dict) -> Room:
     room.save()
     changes = _room_changes(before, _room_snapshot(room))
     changes.pop("room_number", None)  # переименование записано выше, со своими последствиями
-    if changes:
+    if changes and audit:
         _audit_room("room.updated", room, {"room": room.number, "changes": changes})
     return room
 
@@ -653,7 +653,7 @@ def room_delete_impact(room_id) -> dict:
 
 
 @transaction.atomic
-def delete_room(room_id) -> dict:
+def delete_room(room_id, *, audit: bool = True) -> dict:
     """
     Мягкое удаление — и С НИМ снятие доступа (63-1, дыра из разведки 19.10).
 
@@ -670,6 +670,8 @@ def delete_room(room_id) -> dict:
     if link is not None:
         link.delete()
     room.delete()
+    if not audit:
+        return {**impact, "sessions": revoked}
     _audit_room(
         "room.deleted",
         room,
@@ -1112,7 +1114,7 @@ def resolve_selection(selection: dict):
 
 
 @transaction.atomic
-def bulk_update_rooms(payload: dict) -> dict:
+def bulk_update_rooms(payload: dict, *, audit: bool = True) -> dict:
     """
     Правка пачкой: этаж, корпус, категория, уборка, «вне продажи», активность.
 
@@ -1178,11 +1180,10 @@ def bulk_update_rooms(payload: dict) -> dict:
             room.save()
             changed += 1
 
-    AuditLog.record(
-        "room.bulk_updated",
-        object_type="room",
-        payload={"matched": len(rooms), "changed": changed, "patch": sorted(patch)},
-    )
+    # Действие пачкой из Control (63-2) пишет одну свою запись со списком
+    # номеров «было → стало» — общая здесь была бы второй о том же.
+    if audit:
+        _audit_room("room.bulk_updated", None, {"matched": len(rooms), "changed": changed, "patch": sorted(patch)})
     return {"matched": len(rooms), "changed": changed}
 
 

@@ -601,7 +601,8 @@
         "updated": "已修改客房",
         "deleted": "已删除客房",
         "variant_set": "已更改客房方案",
-        "device_set": "已更改客房设备名称"
+        "device_set": "已更改客房设备名称",
+        "batch": "对客房的操作"
       },
       "notification": {
         "event_settings_changed": "通知设置已更改",
@@ -1634,6 +1635,117 @@
             "moveNone": "无类别",
             "free": "该类别没有客房 — 将立即删除。"
           }
+        },
+        "sel": {
+          "count_other": "已选择 {{count}} 间客房",
+          "readOnly": "对客房的操作需要编辑权限。",
+          "clear": "取消选择",
+          "stack": "选择竖列 {{position}}",
+          "floor": "选择 {{floor}} 层",
+          "building": "整栋楼",
+          "shown": "全部显示的（{{count}}）",
+          "shownHelp": "选择当前屏幕上的所有客房——按当前搜索和筛选。",
+          "modeHint": "选择模式：点按即选择客房。“取消选择”退出该模式。",
+          "one": "选择客房 {{number}}",
+          "allShown": "选择全部显示的"
+        },
+        "batch": {
+          "group": {
+            "variant": "方案…",
+            "pin": "PIN…",
+            "category": "类别…",
+            "building": "楼栋…",
+            "state": "状态…",
+            "delete": "删除…"
+          },
+          "title": {
+            "variant": "控制方案 — 客房：{{count}}",
+            "pin": "PIN — 客房：{{count}}",
+            "category": "类别 — 客房：{{count}}",
+            "building": "楼栋 — 客房：{{count}}",
+            "state": "状态 — 客房：{{count}}",
+            "delete": "删除客房 — {{count}}"
+          },
+          "subtitle": "先显示每间客房将发生的变化。只执行显示的内容，一步完成。",
+          "help": {
+            "variant": "方案是客房的控制设置。方案改变后，客人会看到不同的控制界面。",
+            "pin": "发放：每间客房各自的随机 PIN，只显示一次。移除：客人失去控制。有效期：修改现有 PIN 的日期，代码不变。",
+            "category": "客房类别，来自酒店目录。",
+            "building": "客房所在楼栋。“移除楼栋”后客房将无楼栋。",
+            "state": "“停售”是给酒店的标记。“客人进入”——客房是否允许客人扫码进入。",
+            "delete": "删除为软删除：重新添加即可恢复客房。"
+          },
+          "variantSet": "分配方案",
+          "variantClear": "移除方案",
+          "pinIssue": "发放 PIN",
+          "pinClear": "移除 PIN",
+          "pinUntil": "PIN 有效期",
+          "issueHelp": "所有发放的 PIN 的有效期；留空 — 无期限。",
+          "clear": {
+            "building": "移除楼栋",
+            "category": "移除类别"
+          },
+          "outOn": "停售",
+          "outOff": "在售",
+          "activeOn": "客人进入已开启",
+          "activeOff": "客人进入已关闭",
+          "deleteLead": "客房将被软删除：PIN 将被移除，客人会话将关闭，方案绑定将解除。",
+          "noCategory": "无类别",
+          "noEnd": "无期限",
+          "exists": "存在",
+          "deleted": "已删除",
+          "newPin": "新 PIN",
+          "preview": "显示将发生的变化",
+          "run": "执行 — {{count}}",
+          "nothing": "没有需要更改的",
+          "close": "完成",
+          "sum": {
+            "change": "将更改 — {{count}}",
+            "same": "已是如此 — {{count}}",
+            "refused": "无法执行 — {{count}}"
+          },
+          "warn": {
+            "variant_changes_other": "{{count}} 间客房将更换方案 — 客人将看到不同的控制界面。",
+            "pin_replaces": "已有 PIN — 客房：{{count}}。将被替换，旧的失效。",
+            "pins": "将移除 PIN — 客房：{{count}}。",
+            "sessions": "将关闭客人会话 — 客房：{{count}}。",
+            "variants": "将解除方案绑定 — 客房：{{count}}。"
+          },
+          "outcome": {
+            "change": "将更改",
+            "same": "已是如此",
+            "refused": "无法执行"
+          },
+          "reason": {
+            "module_off": "未接入客房控制",
+            "no_pin": "没有 PIN — 无需设置期限",
+            "not_found": "未找到客房"
+          },
+          "done": "已完成：{{count}}。",
+          "skipped": "已跳过 — 已是如此：{{count}}。",
+          "pins": {
+            "once": "PIN 只显示一次。请立即下载或打印——关闭窗口后无法再查看，只能重新发放。",
+            "csv": "下载 CSV",
+            "print": "打印",
+            "colRoom": "房号",
+            "colPin": "PIN",
+            "cardRoom": "客房 {{number}}",
+            "cardHint": "客房控制代码",
+            "printTitle": "客房 PIN",
+            "closeWarning": "这些 PIN 将不再显示。再次点击“完成”以关闭。"
+          },
+          "kind": {
+            "variant_set": "已分配方案",
+            "variant_clear": "已移除方案",
+            "pin_issue": "已发放 PIN",
+            "pin_clear": "已移除 PIN",
+            "pin_until": "已更改 PIN 有效期",
+            "category": "已更改类别",
+            "building": "已更改楼栋",
+            "out_of_service": "已更改停售状态",
+            "active": "已更改客人进入",
+            "delete": "客房已删除"
+          }
         }
       },
       "journal": {
@@ -1799,7 +1911,9 @@
         "inDevelopment": "模块开发中——在改为无套餐模块时关闭",
         "created": "已添加客房：{{count}}",
         "moved": "已迁移客房：{{count}}",
-        "revoked": "已关闭客人会话：{{count}}"
+        "revoked": "已关闭客人会话：{{count}}",
+        "batch": "{{kind}}",
+        "batchValue": "{{kind}}：“{{value}}”"
       },
       "otherAction": "其他操作",
       "sort": {

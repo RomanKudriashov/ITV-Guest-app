@@ -603,7 +603,8 @@
         "updated": "Room changed",
         "deleted": "Room deleted",
         "variant_set": "Room variant changed",
-        "device_set": "Room device name changed"
+        "device_set": "Room device name changed",
+        "batch": "Action on rooms"
       },
       "notification": {
         "event_settings_changed": "Notification settings changed",
@@ -1672,6 +1673,119 @@
             "moveNone": "no category",
             "free": "The category has no rooms — it is deleted right away."
           }
+        },
+        "sel": {
+          "count_one": "{{count}} room selected",
+          "count_other": "{{count}} rooms selected",
+          "readOnly": "Actions on rooms require edit rights.",
+          "clear": "Clear selection",
+          "stack": "Select stack {{position}}",
+          "floor": "Select floor {{floor}}",
+          "building": "Whole building",
+          "shown": "All shown ({{count}})",
+          "shownHelp": "Select every room on screen — with the current search and filters.",
+          "modeHint": "Selection mode: a tap selects a room. “Clear selection” exits the mode.",
+          "one": "Select room {{number}}",
+          "allShown": "Select all shown"
+        },
+        "batch": {
+          "group": {
+            "variant": "Variant…",
+            "pin": "PIN…",
+            "category": "Category…",
+            "building": "Building…",
+            "state": "Status…",
+            "delete": "Delete…"
+          },
+          "title": {
+            "variant": "Control variant — rooms: {{count}}",
+            "pin": "PIN — rooms: {{count}}",
+            "category": "Category — rooms: {{count}}",
+            "building": "Building — rooms: {{count}}",
+            "state": "Status — rooms: {{count}}",
+            "delete": "Delete rooms — {{count}}"
+          },
+          "subtitle": "First we show what changes for each room. Exactly what is shown runs, in one step.",
+          "help": {
+            "variant": "A variant is the room control setup. If it changes, the guest sees a different control screen.",
+            "pin": "Issue: each room gets its own random PIN, shown once. Remove: the guest loses control. Validity: changes the date of the active PIN, the code stays.",
+            "category": "The room category from the hotel's list.",
+            "building": "The room's building. “Remove building” leaves the room without a building.",
+            "state": "“Out of order” is a note for the hotel. “Guest entry” — whether the room lets a guest in by QR.",
+            "delete": "Deletion is soft: a room can be restored by adding it again."
+          },
+          "variantSet": "Assign variant",
+          "variantClear": "Remove variant",
+          "pinIssue": "Issue PIN",
+          "pinClear": "Remove PIN",
+          "pinUntil": "PIN validity",
+          "issueHelp": "Validity for all issued PINs; empty — no end.",
+          "clear": {
+            "building": "Remove building",
+            "category": "Remove category"
+          },
+          "outOn": "Out of order",
+          "outOff": "In service",
+          "activeOn": "Guest entry on",
+          "activeOff": "Guest entry off",
+          "deleteLead": "Rooms are deleted softly: the PIN is removed, guest sessions are closed, the variant link is removed.",
+          "noCategory": "no category",
+          "noEnd": "no end",
+          "exists": "exists",
+          "deleted": "deleted",
+          "newPin": "new PIN",
+          "preview": "Show what changes",
+          "run": "Run — {{count}}",
+          "nothing": "Nothing to change",
+          "close": "Done",
+          "sum": {
+            "change": "Will change — {{count}}",
+            "same": "Already so — {{count}}",
+            "refused": "Not possible — {{count}}"
+          },
+          "warn": {
+            "variant_changes_one": "{{count}} room changes variant — the guest sees a different control screen.",
+            "variant_changes_other": "{{count}} rooms change variant — guests see a different control screen.",
+            "pin_replaces": "PIN already exists — rooms: {{count}}. It will be replaced; the old one stops working.",
+            "pins": "PIN removed — rooms: {{count}}.",
+            "sessions": "Guest sessions closed — rooms: {{count}}.",
+            "variants": "Variant link removed — rooms: {{count}}."
+          },
+          "outcome": {
+            "change": "will change",
+            "same": "already so",
+            "refused": "not possible"
+          },
+          "reason": {
+            "module_off": "room control is not connected",
+            "no_pin": "no PIN — nothing to date",
+            "not_found": "room not found"
+          },
+          "done": "Done: {{count}}.",
+          "skipped": "Skipped — already so: {{count}}.",
+          "pins": {
+            "once": "The PINs are shown once. Download or print them now — after closing they cannot be viewed, only issued again.",
+            "csv": "Download CSV",
+            "print": "Print",
+            "colRoom": "Room",
+            "colPin": "PIN",
+            "cardRoom": "Room {{number}}",
+            "cardHint": "Code to control the room",
+            "printTitle": "Room PINs",
+            "closeWarning": "These PINs will not be shown again. Press “Done” once more to close."
+          },
+          "kind": {
+            "variant_set": "variant assigned",
+            "variant_clear": "variant removed",
+            "pin_issue": "PINs issued",
+            "pin_clear": "PINs removed",
+            "pin_until": "PIN validity changed",
+            "category": "category changed",
+            "building": "building changed",
+            "out_of_service": "out of order changed",
+            "active": "guest entry changed",
+            "delete": "rooms deleted"
+          }
         }
       },
       "journal": {
@@ -1839,7 +1953,9 @@
         "inDevelopment": "module in development — switched off on the move to modules without plans",
         "created": "rooms added: {{count}}",
         "moved": "rooms moved: {{count}}",
-        "revoked": "guest sessions closed: {{count}}"
+        "revoked": "guest sessions closed: {{count}}",
+        "batch": "{{kind}}",
+        "batchValue": "{{kind}}: “{{value}}”"
       },
       "otherAction": "other action",
       "sort": {

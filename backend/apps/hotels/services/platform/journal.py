@@ -252,6 +252,9 @@ def changes_of(row: AuditLog) -> list[dict[str, Any]]:
     payload = row.payload or {}
     if row.action == "platform.hotel.modules_set" and "module" in payload:
         return [{"field": f"module:{payload['module']}", "from": payload.get("from"), "to": payload.get("to")}]
+    # Действие над многими номерами (63-2): «было → стало» по каждому номеру.
+    if row.action == "room.batch" and isinstance(payload.get("rows"), list):
+        return [{"field": f"room:{r.get('room')}", "from": r.get("from"), "to": r.get("to")} for r in payload["rows"]]
     changes = payload.get("changes")
     if isinstance(changes, dict):
         out = []
@@ -289,6 +292,8 @@ def details_of(row: AuditLog) -> dict:
         "reason", "enable_on", "auto", "bulk", "group", "to_version", "ttl_minutes", "count", "purpose", "types",
         # Номерной фонд (63-1): сколько заведено, перенесено, отозвано сессий.
         "created", "skipped", "moved", "revoked",
+        # Действие пачкой (63-2): какое, с каким значением и сколько номеров.
+        "batch", "value",
     )
     return {key: payload[key] for key in keep if key in payload and payload[key] not in (None, "")}
 

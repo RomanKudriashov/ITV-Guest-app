@@ -243,7 +243,7 @@ def _journal(hotel, session, *, ok: bool, note: str) -> None:
 # --- Заведение PIN (сторона отеля) -----------------------------------------
 
 
-def set_pin(hotel, room, *, pin: str, valid_until=None):
+def set_pin(hotel, room, *, pin: str, valid_until=None, journal: bool = True):
     """
     Завести или сменить PIN номера.
 
@@ -283,12 +283,13 @@ def set_pin(hotel, room, *, pin: str, valid_until=None):
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
             room_verified_at=None
         )
-        _journal_pin("grms.pin_set", room, {"room": room.number, "valid_until": valid_until.isoformat() if valid_until else None})
+        if journal:
+            _journal_pin("grms.pin_set", room, {"room": room.number, "valid_until": valid_until.isoformat() if valid_until else None})
     _reset("room", room.pk)
     return record
 
 
-def clear_pin(hotel, room) -> None:
+def clear_pin(hotel, room, *, journal: bool = True) -> None:
     """
     Снять PIN номера и подтверждения вместе с ним.
 
@@ -304,8 +305,20 @@ def clear_pin(hotel, room) -> None:
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
             room_verified_at=None
         )
-        if had:
+        if had and journal:
             _journal_pin("grms.pin_cleared", room, {"room": room.number})
+
+
+def set_validity(hotel, room, valid_until) -> bool:
+    """
+    Срок действующего PIN — без перевыпуска кода (63-2): гость продлил
+    проживание, код у него на карте прежний. Нет PIN — `False`, менять нечего.
+    """
+    from apps.grms.models import RoomPin
+
+    with tenant_context(hotel):
+        updated = RoomPin.objects.filter(room=room).exclude(pin_hash="").update(valid_until=valid_until, updated_at=timezone.now())
+    return bool(updated)
 
 
 def _journal_pin(action: str, room, payload: dict) -> None:

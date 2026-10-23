@@ -279,6 +279,8 @@ export function BuildingScheme({
   tile,
   zoom,
   onAdd,
+  selected,
+  onSelect,
 }: {
   building: MapBuilding;
   layer: Layer;
@@ -287,6 +289,9 @@ export function BuildingScheme({
   zoom: number;
   /** «+» в конце этажа: добавить номер на этот этаж этого корпуса; нет — нет кнопки. */
   onAdd?: (floor: string) => void;
+  /** Выбранные номера (63-2) и «выбрать эти»: весь этаж, весь стояк. */
+  selected?: Set<string>;
+  onSelect?: (ids: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [ref, width] = useWidth<HTMLDivElement>();
@@ -333,6 +338,8 @@ export function BuildingScheme({
                 swatches={swatches}
                 onAdd={i === chunks.length - 1 ? onAdd : undefined}
                 plusWidth={plusWidth}
+                selected={selected}
+                onSelect={onSelect}
               />
             </Box>
           ))
@@ -354,6 +361,8 @@ function Part({
   swatches,
   onAdd,
   plusWidth,
+  selected,
+  onSelect,
 }: {
   building: MapBuilding;
   positions: string[];
@@ -367,9 +376,31 @@ function Part({
   swatches: Swatches;
   onAdd?: (floor: string) => void;
   plusWidth: number;
+  selected?: Set<string>;
+  onSelect?: (ids: string[]) => void;
 }) {
   const { t } = useTranslation();
   const chess = tile === 'c';
+  // «Весь этаж» и «весь стояк» — по всему корпусу, а не только по этой части ряда.
+  const floorIds = (floor: string) => building.floors.find((f) => f.floor === floor)?.rooms.map((r) => r.id) ?? [];
+  const stackIds = (position: string) => building.floors.flatMap((f) => f.rooms.filter((r) => r.position === position).map((r) => r.id));
+  const picker = (label: ReactNode, title: string, ids: () => string[], testId: string, sx: object) =>
+    onSelect ? (
+      <ButtonBase
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(ids());
+        }}
+        title={title}
+        aria-label={title}
+        data-testid={testId}
+        sx={{ ...sx, justifyContent: 'center', '&:hover': { color: accent.soft, bgcolor: accent.washSoft } }}
+      >
+        {label}
+      </ButtonBase>
+    ) : (
+      <Box sx={sx}>{label}</Box>
+    );
   const line = `1px solid ${surface.line}`;
   const columns = `${label}px repeat(${positions.length}, ${w}px)${onAdd ? ` ${plusWidth + (chess ? 4 : 0)}px` : ''}`;
   const floorText = (floor: string) => (floor ? (phone ? floor : t('admin.card.rooms.floorShort', { floor })) : '—');
@@ -389,27 +420,36 @@ function Part({
     >
       <Box sx={chessCell({ bgcolor: surface.s2 })} />
       {positions.map((p) => (
-        <Box
-          key={`h-${p}`}
-          sx={{
-            ...typo.caption,
-            fontSize: 10.5,
-            fontWeight: chess ? 700 : 400,
-            color: ink.low,
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-            lineHeight: '20px',
-            ...chessCell({ bgcolor: surface.s2 }),
-          }}
-        >
-          {p || '—'}
+        <Box key={`h-${p}`} sx={{ display: 'flex', minWidth: 0 }}>
+          {picker(
+            p || '—',
+            t('admin.card.rooms.sel.stack', { position: p || '—' }),
+            () => stackIds(p),
+            `admin-rooms-select-stack-${building.key || 'none'}-${p || 'none'}`,
+            {
+              ...typo.caption,
+              fontSize: 10.5,
+              fontWeight: chess ? 700 : 400,
+              color: ink.low,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              lineHeight: '20px',
+              borderRadius: chess ? 0 : '4px',
+              flex: 1,
+              ...chessCell({ bgcolor: surface.s2 }),
+            },
+          )}
         </Box>
       ))}
       {onAdd ? <Box sx={chess ? { borderBottom: line, ml: '-1px' } : undefined} /> : null}
       {building.floors.map((floor) => (
         <FloorRow key={`f-${floor.floor}`}>
-          <Box
-            sx={{
+          {picker(
+            floorText(floor.floor),
+            t('admin.card.rooms.sel.floor', { floor: floor.floor || '—' }),
+            () => floorIds(floor.floor),
+            `admin-rooms-select-floor-${building.key || 'none'}-${floor.floor || 'none'}`,
+            {
               ...typo.caption,
               fontWeight: 700,
               color: ink.mid,
@@ -418,18 +458,21 @@ function Part({
               textOverflow: 'ellipsis',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'flex-start !important',
               px: chess ? 0.5 : 0,
+              borderRadius: chess ? 0 : '4px',
+              height: '100%',
               ...chessCell({ bgcolor: surface.s2 }),
-            }}
-          >
-            {floorText(floor.floor)}
-          </Box>
+            },
+          )}
           {positions.map((p) => {
             const here = floor.rooms.filter((r) => r.position === p);
             return (
               <Box key={`c-${floor.floor}-${p}`} sx={{ height: h, display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, ...chessCell() }}>
                 {here.length ? (
-                  here.map((room) => <RoomTile key={room.id} room={room} tile={tile} layer={layer} swatches={swatches} compact={here.length > 1} />)
+                  here.map((room) => (
+                    <RoomTile key={room.id} room={room} tile={tile} layer={layer} swatches={swatches} compact={here.length > 1} selected={Boolean(selected?.has(room.id))} />
+                  ))
                 ) : (
                   <Box sx={chess ? { flex: 1, bgcolor: surface.s2, opacity: 0.55 } : { flex: 1, borderRadius: '8px', border: `1px dashed ${surface.hair}` }} />
                 )}
@@ -479,16 +522,41 @@ const BADGE: Record<Tone, ReactNode> = {
   info: null,
 };
 
-function RoomTile({ room, tile, layer, swatches, compact }: { room: MapRoom; tile: Tile; layer: Layer; swatches: Swatches; compact: boolean }) {
+function RoomTile({ room, tile, layer, swatches, compact, selected }: { room: MapRoom; tile: Tile; layer: Layer; swatches: Swatches; compact: boolean; selected: boolean }) {
   const s = swatches.swatchOf(room, layer);
   const common = {
     role: 'button',
     tabIndex: 0,
     'aria-label': `${room.number}: ${s.label}`,
+    'aria-pressed': selected,
     'data-testid': `admin-room-${room.number}`,
     'data-room-id': room.id,
     'data-v': s.value,
+    'data-selected': selected ? 'true' : undefined,
   } as const;
+  // Выбранный номер (63-2): рамка цвета выбора и галочка — не только цвет.
+  const chosen = selected
+    ? {
+        outline: `3px solid ${accent.main}`,
+        outlineOffset: tile === 'c' ? '-3px' : '1px',
+        '&::before': {
+          content: '"✓"',
+          position: 'absolute',
+          left: -6,
+          top: -6,
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          bgcolor: accent.main,
+          color: surface.s1,
+          fontSize: 10,
+          fontWeight: 800,
+          display: 'grid',
+          placeItems: 'center',
+          zIndex: 2,
+        },
+      }
+    : {};
   const longNumber = room.number.length > 5;
   if (tile === 'c') {
     return (
@@ -507,6 +575,7 @@ function RoomTile({ room, tile, layer, swatches, compact }: { room: MapRoom; til
           position: 'relative',
           transition: 'opacity .12s',
           '&:hover, &:focus-visible': { outline: `2px solid ${accent.main}`, outlineOffset: '-1px', zIndex: 1 },
+          ...chosen,
         }}
       >
         <Box sx={{ fontSize: longNumber ? 9.5 : 11, fontWeight: 800, color: ink.hi, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', px: '2px' }}>
@@ -541,6 +610,7 @@ function RoomTile({ room, tile, layer, swatches, compact }: { room: MapRoom; til
           cursor: 'pointer',
           transition: 'transform .12s ease, box-shadow .12s ease, opacity .12s',
           '&:hover, &:focus-visible': { transform: 'translateY(-3px)', boxShadow: `0 10px 22px ${mix(ink.hi, 'transparent', 20)}`, outline: 'none' },
+          ...chosen,
         }}
       >
         <Box sx={{ position: 'absolute', top: 5, right: 5, color: TONE[s.tone], display: 'grid', '& svg': { fontSize: 16 } }} aria-hidden>
@@ -594,6 +664,8 @@ function RoomTile({ room, tile, layer, swatches, compact }: { room: MapRoom; til
         cursor: 'pointer',
         transition: 'transform .12s ease, box-shadow .12s ease, opacity .12s',
         '&:hover, &:focus-visible': { transform: 'translateY(-2px)', boxShadow: `0 6px 14px ${mix(ink.hi, 'transparent', 18)}`, borderColor: accent.main, outline: 'none' },
+        position: 'relative',
+        ...chosen,
       }}
     >
       <Box sx={{ fontSize: longNumber ? 12 : 15, fontWeight: 800, color: ink.hi, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{room.number}</Box>

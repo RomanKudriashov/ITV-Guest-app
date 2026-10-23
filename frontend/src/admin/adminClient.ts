@@ -1160,6 +1160,47 @@ export const clearRoomPin = (hotelId: string, roomId: string) => request<{ has: 
 export const getRoomHistory = (hotelId: string, roomId: string) => request<{ items: JournalEntry[] }>(`${roomsBase(hotelId)}/${roomId}/history`);
 export const previewRooms = (hotelId: string, body: BulkRequest) => request<BulkPreview>(`${roomsBase(hotelId)}/bulk/preview`, 'POST', body);
 export const createRooms = (hotelId: string, body: BulkRequest) => request<BulkResult>(`${roomsBase(hotelId)}/bulk`, 'POST', body);
+/* ── Действия над многими номерами (партия 63-2) ───────────────────────── */
+
+export type BatchAction =
+  | 'variant_set'
+  | 'variant_clear'
+  | 'pin_issue'
+  | 'pin_clear'
+  | 'pin_until'
+  | 'category'
+  | 'building'
+  | 'out_of_service'
+  | 'active'
+  | 'delete';
+export type BatchValue = string | boolean | null;
+export interface BatchRow {
+  id: string;
+  number: string | null;
+  outcome: 'change' | 'same' | 'refused';
+  reason: 'module_off' | 'no_pin' | 'not_found' | null;
+  from: string | boolean | null;
+  to: string | boolean | null;
+}
+export interface BatchPreview {
+  action: BatchAction;
+  rows: BatchRow[];
+  summary: { change: number; same: number; refused: number; warnings: Partial<Record<'variant_changes' | 'pin_replaces' | 'pins' | 'sessions' | 'variants', number>> };
+  /** Подписанный показ: выполнится ровно он. Нечего менять — `null`. */
+  ticket: string | null;
+}
+export interface BatchResult {
+  done: number;
+  skipped: number;
+  rows: Array<{ id: string; number: string; from: string | boolean | null; to: string | boolean | null }>;
+  /** Выданные PIN — только здесь и один раз. */
+  pins: Array<{ number: string; pin: string }>;
+}
+export const previewBatch = (hotelId: string, action: BatchAction, value: BatchValue, roomIds: string[]) =>
+  request<BatchPreview>(`/hotels/${hotelId}/rooms/batch/preview`, 'POST', { action, value, room_ids: roomIds });
+export const runBatch = (hotelId: string, ticket: string, roomIds: string[]) =>
+  request<BatchResult>(`/hotels/${hotelId}/rooms/batch`, 'POST', { ticket, room_ids: roomIds });
+
 export type DictKind = 'building' | 'category';
 const dictPath = (hotelId: string, kind: DictKind) => `/hotels/${hotelId}/${kind === 'building' ? 'buildings' : 'room-categories'}`;
 export const createDictItem = (hotelId: string, kind: DictKind, title: Record<string, string>) => request<DictItem>(dictPath(hotelId, kind), 'POST', { title });

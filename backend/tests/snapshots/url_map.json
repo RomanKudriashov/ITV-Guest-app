@@ -824,6 +824,12 @@
   "/api/v1/platform/hotels/{hotel_id}/rooms": [
     "GET"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/batch": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/batch/preview": [
+    "POST"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/rooms/bulk": [
     "POST"
   ],

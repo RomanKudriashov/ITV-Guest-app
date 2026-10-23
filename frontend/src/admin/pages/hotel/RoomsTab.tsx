@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
+import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
@@ -40,6 +41,7 @@ import {
   type Tile,
 } from './roomsMap';
 import { AddRoomsDialog, DictionaryDialog, RoomDialog } from './roomDialogs';
+import { BatchDialog, SelectionPanel, useMarquee, type Group } from './roomBatch';
 
 /**
  * НОМЕРНОЙ ФОНД (партия 63-1, вариант А макетов 63-М, с правкой).
@@ -143,6 +145,33 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
   const [adding, setAdding] = useState<null | { building_id?: string; floor?: string }>(null);
   const [dictKind, setDictKind] = useState<DictKind | null>(null);
   const [toast, setToast] = useState('');
+  /*
+    ВЫБОР НОМЕРОВ (63-2) — в памяти экрана, не в адресе: ссылка с выбором
+    открыла бы чужому те же «выбранные» и выполнила бы не то, что он видит.
+  */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [batch, setBatch] = useState<Group | null>(null);
+  const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const toggle = (ids: string[]) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const all = ids.length > 0 && ids.every((id) => next.has(id));
+      for (const id of ids) {
+        if (all) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  const clearSelection = () => {
+    setSelected(new Set());
+    setSelectMode(false);
+  };
+  const marquee = useMarquee(
+    useCallback((ids: string[], add: boolean) => {
+      setSelected((prev) => (add ? new Set([...prev, ...ids]) : new Set(ids)));
+    }, []),
+  );
   const dict = useQuery({ queryKey: ['admin', 'rooms-dictionaries', hotelId], queryFn: () => getRoomsDictionaries(hotelId) });
 
   const rooms = useMemo(() => data.buildings.flatMap((b) => b.floors.flatMap((f) => f.rooms)), [data]);
@@ -163,13 +192,47 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
 
   const openRoom = (event: React.MouseEvent | React.KeyboardEvent) => {
     if ('key' in event && event.key !== 'Enter' && event.key !== ' ') return;
+    if ((event.target as HTMLElement).closest('[role="checkbox"], input[type="checkbox"]')) return;
+    // Долгое нажатие уже выбрало номер — щелчок после него не открывает окно.
+    if (press.current?.fired) {
+      press.current = null;
+      return;
+    }
     const target = (event.target as HTMLElement).closest('[data-room-id]') as HTMLElement | null;
     const room = target ? byId.get(target.dataset.roomId ?? '') : undefined;
-    if (room) {
-      card.clear();
-      set({ room: room.id });
+    if (!room) return;
+    // Shift, Cmd или Ctrl — добавить к выбору; в режиме выбора — касание выбирает.
+    if (event.shiftKey || event.metaKey || event.ctrlKey || selectMode) {
+      event.preventDefault();
+      toggle([room.id]);
+      return;
     }
+    card.clear();
+    set({ room: room.id });
   };
+  /** На телефоне выбор включается долгим нажатием на номер. */
+  const onPointerDown = (event: React.PointerEvent) => {
+    marquee.onPointerDown(event);
+    if (event.pointerType === 'mouse') return;
+    const target = (event.target as HTMLElement).closest('[data-room-id]') as HTMLElement | null;
+    const id = target?.dataset.roomId;
+    if (!id) return;
+    const timer = window.setTimeout(() => {
+      if (!press.current) return;
+      press.current.fired = true;
+      setSelectMode(true);
+      setSelected((prev) => new Set(prev).add(id));
+    }, 500);
+    press.current = { timer, x: event.clientX, y: event.clientY, fired: false };
+  };
+  const cancelPress = (event: React.PointerEvent) => {
+    const p = press.current;
+    if (!p || p.fired) return;
+    if (event.type === 'pointermove' && Math.hypot(event.clientX - p.x, event.clientY - p.y) < 10) return;
+    window.clearTimeout(p.timer);
+    press.current = null;
+  };
+  const shownIds = rooms.map((r) => r.id);
   const addDone = (created?: number) => {
     setAdding(null);
     if (created) setToast(t('admin.card.rooms.add.done', { count: created }));
@@ -233,6 +296,9 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
           <Button sx={secondaryButtonSx} onClick={() => setDictKind('category')} data-testid="admin-rooms-categories">
             {t('admin.card.rooms.dict.category.title')}
           </Button>
+          <Button sx={secondaryButtonSx} onClick={() => setSelected((prev) => new Set([...prev, ...shownIds]))} data-testid="admin-rooms-select-shown" title={t('admin.card.rooms.sel.shownHelp')}>
+            {t('admin.card.rooms.sel.shown', { count: shownIds.length })}
+          </Button>
           {toast ? (
             <Box sx={{ ...typo.caption, color: state.ok, alignSelf: 'center' }} data-testid="admin-rooms-toast">
               {toast}
@@ -285,14 +351,20 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
           <Empty title={t('admin.card.rooms.noMatch')} testId="admin-rooms-nomatch">{t('admin.card.rooms.noMatchBody')}</Empty>
         ) : (
           <Box
-            sx={{ display: 'grid', gap: 2.5, minWidth: 0, ...highlightSx(highlight) }}
+            sx={{ display: 'grid', gap: 2.5, minWidth: 0, userSelect: marquee.dragging ? 'none' : undefined, ...highlightSx(highlight) }}
             {...card.handlers}
             onClick={openRoom}
             onKeyDown={openRoom}
+            onPointerDown={onPointerDown}
+            onPointerUp={cancelPress}
+            onPointerCancel={cancelPress}
+            onPointerMove={cancelPress}
+            onContextMenu={(e) => press.current && e.preventDefault()}
             data-testid="admin-rooms-body"
+            data-select-mode={selectMode ? 'true' : undefined}
           >
             {view === 'table' ? (
-              <RoomsTable data={data} byId={byId} search={search} sort={sort} narrow={narrow} layer={layer} swatches={swatches} />
+              <RoomsTable data={data} byId={byId} search={search} sort={sort} narrow={narrow} layer={layer} swatches={swatches} selected={selected} onToggle={toggle} />
             ) : (
               data.buildings.map((building) => (
                 <Box key={building.key || 'none'} sx={{ minWidth: 0 }} data-testid={`admin-rooms-building-${building.key || 'none'}`}>
@@ -301,6 +373,16 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
                       {building.title ? <span data-words="data">{building.title}</span> : t('admin.card.rooms.noBuilding')}
                     </Typography>
                     <Box sx={{ ...typo.caption, color: ink.low }}>{t('admin.card.rooms.roomsCount', { count: building.rooms })}</Box>
+                    <ButtonBase
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggle(building.floors.flatMap((f) => f.rooms.map((r) => r.id)));
+                      }}
+                      sx={{ ...typo.caption, color: accent.soft, fontWeight: 700, px: 0.5, borderRadius: 1 }}
+                      data-testid={`admin-rooms-select-building-${building.key || 'none'}`}
+                    >
+                      {t('admin.card.rooms.sel.building')}
+                    </ButtonBase>
                     {canWrite && building.key && !building.key.startsWith('zone:') ? (
                       <ButtonBase
                         onClick={(e) => {
@@ -320,6 +402,8 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
                     swatches={swatches}
                     tile={tile}
                     zoom={zoom}
+                    selected={selected}
+                    onSelect={toggle}
                     onAdd={
                       canWrite
                         ? (floor) => setAdding({ floor, building_id: building.key && !building.key.startsWith('zone:') ? building.key : undefined })
@@ -332,6 +416,14 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
           </Box>
         )}
       </Box>
+      {marquee.overlay}
+      {selectMode ? (
+        <Typography sx={{ ...typo.caption, color: accent.soft }} data-testid="admin-rooms-select-mode">{t('admin.card.rooms.sel.modeHint')}</Typography>
+      ) : null}
+      <SelectionPanel count={selected.size} canWrite={canWrite} onAction={setBatch} onClear={clearSelection} />
+      {batch ? (
+        <BatchDialog hotelId={hotelId} group={batch} roomIds={[...selected]} dict={dict.data} onClose={() => setBatch(null)} onDone={clearSelection} />
+      ) : null}
       <CursorCard hover={card.hover}>{card.hover ? <RoomFacts room={card.hover.room} swatches={swatches} /> : null}</CursorCard>
       {dialogs}
     </Box>
@@ -610,6 +702,8 @@ function RoomsTable({
   narrow,
   layer,
   swatches,
+  selected,
+  onToggle,
 }: {
   data: RoomsMap;
   byId: Map<string, MapRoom>;
@@ -618,16 +712,35 @@ function RoomsTable({
   narrow: boolean;
   layer: Layer;
   swatches: Swatches;
+  selected: Set<string>;
+  onToggle: (ids: string[]) => void;
 }) {
   const { t } = useTranslation();
   const rows = data.order.map((id) => byId.get(id)).filter(Boolean) as MapRoom[];
+  const allIds = rows.map((r) => r.id);
+  const allOn = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const box = (room: MapRoom) => (
+    <Checkbox
+      size="small"
+      checked={selected.has(room.id)}
+      onClick={(e) => e.stopPropagation()}
+      onChange={() => onToggle([room.id])}
+      inputProps={{ 'aria-label': t('admin.card.rooms.sel.one', { number: room.number }), 'data-testid': `admin-room-check-${room.number}` } as never}
+      sx={{ p: 0.5 }}
+    />
+  );
   const columns = SORT_KEYS.map((key) => ({ key, label: t(`admin.card.rooms.col.${key}`) }));
   if (narrow) {
     return (
       <Box sx={{ display: 'grid', gap: 1 }}>
         <SortBar columns={columns} state={sort} testId="admin-rooms-sort" />
+        <Box sx={{ display: 'flex', alignItems: 'center', ...typo.caption, color: ink.mid }}>
+          <Checkbox size="small" checked={allOn} onChange={() => onToggle(allIds)} inputProps={{ 'aria-label': t('admin.card.rooms.sel.allShown'), 'data-testid': 'admin-rooms-check-all' } as never} />
+          {t('admin.card.rooms.sel.allShown')}
+        </Box>
         {rows.map((room) => (
-          <Box key={room.id} role="button" tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} sx={{ ...panelSx, p: 1.25, display: 'flex', gap: 1, alignItems: 'center', cursor: 'pointer' }}>
+          <Box key={room.id} role="button" tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} data-selected={selected.has(room.id) ? 'true' : undefined} sx={{ ...panelSx, p: 1.25, display: 'flex', gap: 1, alignItems: 'center', cursor: 'pointer', outline: selected.has(room.id) ? `2px solid ${accent.main}` : 'none' }}>
+            {box(room)}
             <Dot room={room} layer={layer} swatches={swatches} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
@@ -649,12 +762,17 @@ function RoomsTable({
       <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }} data-testid="admin-rooms-table">
         <Box component="thead">
           <Box component="tr">
+            {/* Флажки выбора — столбец без сортировки (сторож сортировки 62-F). */}
+            <Box component="th" data-sort="none" sx={{ width: 40, borderBottom: `1px solid ${surface.line}` }}>
+              <Checkbox size="small" checked={allOn} indeterminate={!allOn && allIds.some((id) => selected.has(id))} onChange={() => onToggle(allIds)} inputProps={{ 'aria-label': t('admin.card.rooms.sel.allShown'), 'data-testid': 'admin-rooms-check-all' } as never} sx={{ p: 0.5 }} />
+            </Box>
             {columns.map((column) => <SortHeader key={column.key} column={column} state={sort} testId={`admin-rooms-sort-${column.key}`} />)}
           </Box>
         </Box>
         <Box component="tbody">
           {rows.map((room) => (
-            <Box component="tr" key={room.id} tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} sx={{ cursor: 'pointer', '&:hover, &:focus-visible': { bgcolor: surface.s2, outline: 'none' } }}>
+            <Box component="tr" key={room.id} tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} data-selected={selected.has(room.id) ? 'true' : undefined} sx={{ cursor: 'pointer', bgcolor: selected.has(room.id) ? accent.washSoft : undefined, '&:hover, &:focus-visible': { bgcolor: surface.s2, outline: 'none' } }}>
+              <Box component="td" sx={{ ...cell, width: 40 }}>{box(room)}</Box>
               <Box component="td" sx={{ ...cell, color: ink.hi, fontWeight: 700 }}>
                 <Box component="span" sx={{ display: 'inline-flex', gap: 1, alignItems: 'center' }}>
                   <Dot room={room} layer={layer} swatches={swatches} />
