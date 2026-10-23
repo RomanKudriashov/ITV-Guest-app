@@ -766,6 +766,9 @@
   "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/device-override": [
     "POST"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/diff": [
+    "GET"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/elements": [
     "POST"
   ],
@@ -796,6 +799,56 @@
   ],
   "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/zones": [
     "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/sources": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}": [
+    "DELETE",
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons-order": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons/{slug}": [
+    "DELETE",
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons/{slug}/channels": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons/{slug}/link": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/buttons/{slug}/unlink": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/publish": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/rollback": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/test": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/zones": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/zones-order": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/variants/{code}/zones/{zone}": [
+    "DELETE",
+    "PUT"
   ],
   "/api/v1/platform/hotels/{hotel_id}/history": [
     "GET"

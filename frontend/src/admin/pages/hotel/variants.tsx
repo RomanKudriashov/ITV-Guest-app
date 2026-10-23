@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -15,14 +15,13 @@ import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/api/queryKeys';
 import { fetchPlan, type GrmsType, type PlanState, type TypeStatus, type VersionRecord } from '@/api/grms';
 import { SelectField } from '@/components/SelectField';
-import { BuilderTab } from '@/cms/roomControl/BuilderTab';
 import { ImportTab } from '@/cms/roomControl/ImportTab';
 import { PlanEditor } from '@/cms/roomControl/PlanEditor';
-import { VersionsTab } from '@/cms/roomControl/VersionsTab';
 import { useGrms, useGrmsScope } from '@/cms/roomControl/scope';
 import { accent, fieldSx, ink, panelSx, primaryButtonSx, quietButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
 import {
   getConnection,
+  getRoomsDictionaries,
   getRoomsMap,
   getVariantDiff,
   getVariants,
@@ -35,7 +34,23 @@ import {
 } from '../../adminClient';
 import { useRights } from '../../useRights';
 import { Help, Panel, Pill, type Tone } from '../hotels/hotelsUi';
+import { BatchDialog } from './roomBatch';
 import { BuildingScheme, highlightSx, useSwatches } from './roomsMap';
+import {
+  BaseEdit,
+  ButtonsEdit,
+  DeleteVariant,
+  NewVariantDialog,
+  PublishButton,
+  RollbackButton,
+  TestCommand,
+  ZonesEdit,
+  buttonLabel,
+  pick,
+  useButtons,
+  useVariantRefresh,
+  useZoneCounts,
+} from './variantEdit';
 
 /**
  * ВАРИАНТЫ НОМЕРОВ (партия 63-4, макет 63-М «Варианты номеров» А).
@@ -45,9 +60,9 @@ import { BuildingScheme, highlightSx, useSwatches } from './roomsMap';
  * вкладок по видам работы (импорт, конструктор, план, версии) — варианты и
  * шаги внутри каждого.
  *
- * Шаг A — только чтение: каждый шаг показывает текущие данные словами. Правка
- * пока — прежними экранами за кнопкой «Править (прежний экран)»; её заменит
- * шаг B.
+ * Шаг A показал данные словами; шаг B — правка в тех же шагах (`variantEdit`).
+ * Роль «только чтение» видит то же самое, но без единой кнопки правки, а
+ * сервер ответит ей 403 на любую запись.
  */
 
 const STEPS = ['base', 'plan', 'buttons', 'rooms', 'check', 'publish'] as const;
@@ -65,46 +80,33 @@ export const LEGACY_SUB: Record<string, VariantStep | 'journal'> = {
   diagnostics: 'journal',
 };
 
-const pick = (title: Record<string, string> | undefined, lang: string) => (title ? title[lang] || title.ru || Object.values(title)[0] || '' : '');
-
-/** Образец второго варианта — только в разработке, чтобы был виден список. */
-const SAMPLE: VariantCard = {
-  code: '__sample__',
-  title: { ru: 'Стандарт', en: 'Standard', zh: '标准间', ar: 'قياسية' },
-  notes: '',
-  plan_level: 'tiles',
-  thumb: null,
-  rooms: 0,
-  room_ids: [],
-  state: 'empty',
-  elements: 0,
-  publishable: 0,
-  hidden: 0,
-  zones: 0,
-  version: null,
-  published_at: null,
-  has_plan: false,
-  sample: true,
-};
-
 export function VariantsScreen({ hotelId, types, onTypesChanged }: { hotelId: string; types: GrmsType[]; onTypesChanged: () => void }) {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
   const [params, setParams] = useSearchParams();
   const overview = useQuery({ queryKey: ['admin', 'variants', hotelId], queryFn: () => getVariants(hotelId) });
   const conn = useQuery({ queryKey: ['admin', 'connection', hotelId], queryFn: () => getConnection(hotelId) });
+  const [creating, setCreating] = useState(false);
   const code = params.get('variant');
-  const go = (next: Record<string, string | null>) => {
-    const out = new URLSearchParams(params);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null) out.delete(k);
-      else out.set(k, v);
-    }
-    setParams(out, { replace: true });
-  };
+  const go = useCallback(
+    (next: Record<string, string | null>) => {
+      setParams(
+        (prev) => {
+          const out = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(next)) {
+            if (v === null) out.delete(k);
+            else out.set(k, v);
+          }
+          return out;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
   if (overview.isLoading) return <Skeleton variant="rounded" height={320} />;
   if (!overview.data) return null;
   const data = overview.data;
-  const list = import.meta.env.DEV && data.variants.length < 2 ? [...data.variants, SAMPLE] : data.variants;
   const open = data.variants.find((v) => v.code === code);
   const type = types.find((x) => x.code === code);
   return (
@@ -126,21 +128,43 @@ export function VariantsScreen({ hotelId, types, onTypesChanged }: { hotelId: st
           }}
         />
       ) : (
-        <Panel title={t('admin.variants.listTitle')} aside={<Help>{t('admin.variants.idea')}</Help>}>
+        <Panel
+          title={t('admin.variants.listTitle')}
+          aside={
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Help>{t('admin.variants.idea')}</Help>
+              {canWrite ? (
+                <Button size="small" sx={primaryButtonSx} onClick={() => setCreating(true)} data-testid="admin-variant-new-open">
+                  {t('admin.variants.new.button')}
+                </Button>
+              ) : null}
+            </Box>
+          }
+        >
           <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>{t('admin.variants.ideaShort')}</Typography>
-          {list.length ? (
+          {data.variants.length ? (
             <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' } }}>
-              {list.map((v) => (
+              {data.variants.map((v) => (
                 <VariantCardView key={v.code} v={v} onOpen={() => go({ variant: v.code, step: 'base' })} />
               ))}
             </Box>
           ) : (
             <Box sx={{ ...typo.body, color: ink.mid }} data-testid="admin-variants-none">{t('admin.variants.none')}</Box>
           )}
-          {/* Старые редакторы до шага B: импорт — единственный путь завести вариант. */}
-          <LegacyImport onImported={() => { onTypesChanged(); void overview.refetch(); }} />
         </Panel>
       )}
+      {creating ? (
+        <NewVariantDialog
+          hotelId={hotelId}
+          variants={data.variants}
+          onClose={() => setCreating(false)}
+          onCreated={(created) => {
+            setCreating(false);
+            onTypesChanged();
+            if (created) go({ variant: created, step: 'base' });
+          }}
+        />
+      ) : null}
     </Box>
   );
 }
@@ -225,7 +249,7 @@ function VariantCardView({ v, onOpen }: { v: VariantCard; onOpen: () => void }) 
   const { t, i18n } = useTranslation();
   const k = 'admin.variants';
   return (
-    <Box sx={{ ...panelSx, p: 0, overflow: 'hidden', display: 'grid', gridTemplateRows: 'auto 1fr' }} data-testid={`admin-variant-${v.sample ? 'sample' : v.code}`} data-state={v.state}>
+    <Box sx={{ ...panelSx, p: 0, overflow: 'hidden', display: 'grid', gridTemplateRows: 'auto 1fr' }} data-testid={`admin-variant-${v.code}`} data-state={v.state}>
       <Box sx={{ height: 150, bgcolor: surface.s2, display: 'grid', placeItems: 'center', position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${surface.hair}` }}>
         {v.thumb ? (
           <Box component="img" src={v.thumb} alt="" sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -235,22 +259,17 @@ function VariantCardView({ v, onOpen }: { v: VariantCard; onOpen: () => void }) 
             <Box sx={{ ...typo.caption }}>{t(`${k}.noThumb.${v.plan_level}`)}</Box>
           </Box>
         )}
-        {v.sample ? (
-          <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8 }}>
-            <Pill tone="gold">{t(`${k}.sample`)}</Pill>
-          </Box>
-        ) : null}
       </Box>
       <Box sx={{ p: 1.5, display: 'grid', gap: 0.75, alignContent: 'start' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography sx={{ ...typo.panelTitle, color: ink.hi, flex: 1, minWidth: 0 }} data-words="data">{pick(v.title, i18n.language) || t(`${k}.untitled`)}</Typography>
-          <Pill tone={STATE_TONE[v.state]} testId={`admin-variant-state-${v.sample ? 'sample' : v.code}`}>{t(`${k}.state.${v.state}`)}</Pill>
+          <Pill tone={STATE_TONE[v.state]} testId={`admin-variant-state-${v.code}`}>{t(`${k}.state.${v.state}`)}</Pill>
         </Box>
         <Box sx={{ ...typo.caption, color: ink.mid }}>
-          {v.sample ? t(`${k}.sampleHint`) : `${t(`${k}.roomsCount`, { count: v.rooms })} · ${t(`${k}.buttonsCount`, { count: v.publishable })} · ${t(`${k}.view.${v.plan_level}`)}`}
+          {`${t(`${k}.roomsCount`, { count: v.rooms })} · ${t(`${k}.buttonsCount`, { count: v.publishable })} · ${t(`${k}.view.${v.plan_level}`)}`}
         </Box>
         <Box>
-          <Button size="small" sx={secondaryButtonSx} disabled={v.sample} onClick={onOpen} data-testid={`admin-variant-open-${v.sample ? 'sample' : v.code}`}>
+          <Button size="small" sx={secondaryButtonSx} onClick={onOpen} data-testid={`admin-variant-open-${v.code}`}>
             {t(`${k}.open`)}
           </Button>
         </Box>
@@ -284,6 +303,7 @@ function Variant({
 }) {
   const { t, i18n } = useTranslation();
   const grms = useGrms();
+  const { canWrite } = useRights();
   const { transport } = useGrmsScope();
   const phone = useMediaQuery('(max-width:899px)');
   const status = useQuery({ queryKey: queryKeys.grmsStatus(grms.base, v.code), queryFn: () => grms.status(v.code) });
@@ -292,7 +312,7 @@ function Variant({
   const k = 'admin.variants';
 
   const marks: Record<VariantStep, Mark> = {
-    base: pick(v.title, 'ru') ? 'ready' : 'attention',
+    base: !pick(v.title, 'ru') || !v.device_template ? 'attention' : 'ready',
     plan: v.plan_level === 'tiles' ? 'ready' : plan.data?.frames.lit && plan.data.geometry.zones?.length ? 'ready' : plan.data?.frames.lit ? 'attention' : 'todo',
     buttons: !v.elements ? 'todo' : v.hidden ? 'attention' : 'ready',
     rooms: v.rooms ? 'ready' : 'todo',
@@ -326,7 +346,7 @@ function Variant({
             bgcolor: s === step ? accent.washSoft : 'transparent',
           }}
         >
-          <Box component="span" aria-hidden sx={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, flex: 'none', color: marks[s] === 'todo' ? ink.mid : '#fff', bgcolor: marks[s] === 'ready' ? state.ok : marks[s] === 'attention' ? state.warn : surface.s3 }}>
+          <Box component="span" aria-hidden sx={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, flex: 'none', color: marks[s] === 'todo' ? ink.mid : accent.onAccent, bgcolor: marks[s] === 'ready' ? state.ok : marks[s] === 'attention' ? state.warn : surface.s3 }}>
             {marks[s] === 'ready' ? '✓' : marks[s] === 'attention' ? '!' : i + 1}
           </Box>
           <Box sx={{ display: 'grid' }}>
@@ -345,8 +365,9 @@ function Variant({
           {t(`${k}.back`)}
         </Button>
         <Typography component="h2" sx={{ ...typo.pageTitle, fontSize: 22, color: ink.hi }} data-words="data">{pick(v.title, i18n.language) || t(`${k}.untitled`)}</Typography>
-        <Pill tone={STATE_TONE[v.state]}>{t(`${k}.state.${v.state}`)}</Pill>
-        <Box sx={{ ...typo.caption, color: ink.mid }}>{t(`${k}.roomsCount`, { count: v.rooms })}</Box>
+        <Pill tone={STATE_TONE[v.state]} testId="admin-variant-state">{t(`${k}.state.${v.state}`)}</Pill>
+        <Box sx={{ ...typo.caption, color: ink.mid, flex: 1 }}>{t(`${k}.roomsCount`, { count: v.rooms })}</Box>
+        {canWrite ? <DeleteVariant hotelId={hotelId} v={v} onDeleted={onBack} onToRooms={() => onStep('rooms')} /> : null}
       </Box>
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: phone ? '1fr' : '230px minmax(0, 1fr)', alignItems: 'start' }}>
         {nav}
@@ -355,12 +376,12 @@ function Variant({
             <Typography component="h3" sx={{ ...typo.panelTitle, color: ink.hi, flex: 1 }}>{`${STEPS.indexOf(step) + 1}. ${t(`${k}.steps.${step}`)}`}</Typography>
             <Pill tone={MARK_TONE[marks[step]]}>{t(`${k}.mark.${marks[step]}`)}</Pill>
           </Box>
-          {step === 'base' ? <BaseStep v={v} origin={origin} onTypesChanged={onTypesChanged} /> : null}
-          {step === 'plan' ? <PlanStep v={v} plan={plan.data} status={status.data} types={types} /> : null}
-          {step === 'buttons' ? <ButtonsStep v={v} status={status.data} type={type} /> : null}
+          {step === 'base' ? <BaseStep hotelId={hotelId} v={v} origin={origin} onTypesChanged={onTypesChanged} /> : null}
+          {step === 'plan' ? <PlanStep hotelId={hotelId} v={v} plan={plan.data} status={status.data} types={types} /> : null}
+          {step === 'buttons' ? <ButtonsStep hotelId={hotelId} v={v} status={status.data} type={type} /> : null}
           {step === 'rooms' ? <RoomsStep hotelId={hotelId} v={v} /> : null}
           {step === 'check' ? <CheckStep hotelId={hotelId} v={v} result={check} onResult={setCheck} /> : null}
-          {step === 'publish' ? <PublishStep hotelId={hotelId} v={v} type={type} /> : null}
+          {step === 'publish' ? <PublishStep hotelId={hotelId} v={v} /> : null}
         </Box>
       </Box>
     </Box>
@@ -379,40 +400,29 @@ function Fact({ label, children, help }: { label: string; children: ReactNode; h
   );
 }
 
-/** Прежний редактор под кнопкой — до шага B, только с правом правки. */
-function Legacy({ label, children, testId }: { label: string; children: ReactNode; testId: string }) {
-  const { t } = useTranslation();
-  const { canWrite } = useRights();
-  const [open, setOpen] = useState(false);
-  if (!canWrite) return null;
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Box sx={{ mt: 2, pt: 1.5, borderTop: `1px dashed ${surface.line}` }}>
-      <Button size="small" sx={quietButtonSx} onClick={() => setOpen((x) => !x)} data-testid={testId}>
-        {open ? t('admin.variants.legacyHide') : `${t('admin.variants.legacy')} · ${label}`}
-      </Button>
-      {open ? <Box sx={{ mt: 1.5 }}>{children}</Box> : null}
+    <Box sx={{ mt: 2, pt: 1.5, borderTop: `1px dashed ${surface.line}`, display: 'grid', gap: 1 }}>
+      <Box sx={{ ...typo.label, color: ink.mid }}>{title}</Box>
+      {children}
     </Box>
-  );
-}
-
-function LegacyImport({ onImported }: { onImported: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <Legacy label={t('admin.variants.legacyImport')} testId="admin-variant-legacy-import">
-      <ImportTab onImported={onImported} />
-    </Legacy>
   );
 }
 
 /* 1) Основа */
 
-function BaseStep({ v, origin, onTypesChanged }: { v: VariantCard; origin: VariantsOverview['origin']; onTypesChanged: () => void }) {
+function BaseStep({ hotelId, v, origin, onTypesChanged }: { hotelId: string; v: VariantCard; origin: VariantsOverview['origin']; onTypesChanged: () => void }) {
   const { t, i18n } = useTranslation();
+  const { canWrite } = useRights();
+  const refresh = useVariantRefresh(hotelId, v.code);
+  const [editing, setEditing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const k = 'admin.variants.base';
   const ORDER = ['ru', 'en', 'zh', 'ar'];
   const langs = Object.entries(v.title)
     .filter(([, value]) => value)
     .sort(([a], [b]) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
+  if (editing) return <BaseEdit hotelId={hotelId} v={v} onDone={() => setEditing(false)} />;
   return (
     <Box>
       <Fact label={t(`${k}.title`)} help={t(`${k}.titleHelp`)}>
@@ -433,6 +443,9 @@ function BaseStep({ v, origin, onTypesChanged }: { v: VariantCard; origin: Varia
       <Fact label={t(`${k}.view`)} help={t(`${k}.viewHelp`)}>
         <b>{t(`admin.variants.view.${v.plan_level}`)}</b> — {t(`${k}.viewAbout.${v.plan_level}`)}
       </Fact>
+      <Fact label={t(`${k}.device`)} help={t(`${k}.deviceHelp`)}>
+        {v.device_template ? <span data-words="data">{v.device_template}</span> : <Box component="span" sx={{ color: state.warn }} data-testid="admin-variant-no-device">{t(`${k}.noDevice`)}</Box>}
+      </Fact>
       <Fact label={t(`${k}.origin`)} help={t(`${k}.originHelp`)}>
         {origin.kind === 'import' ? (
           <>
@@ -448,22 +461,43 @@ function BaseStep({ v, origin, onTypesChanged }: { v: VariantCard; origin: Varia
           t(`${k}.manual`)
         )}
       </Fact>
-      <LegacyImport onImported={onTypesChanged} />
+      {canWrite ? (
+        <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button sx={secondaryButtonSx} onClick={() => setEditing(true)} data-testid="admin-variant-base-edit">{t(`${k}.edit`)}</Button>
+          <Button sx={quietButtonSx} onClick={() => setImporting((x) => !x)} data-testid="admin-variant-import-open">{importing ? t(`${k}.importHide`) : t(`${k}.import`)}</Button>
+          <Help>{t(`${k}.importHelp`)}</Help>
+        </Box>
+      ) : null}
+      {importing ? (
+        <Section title={t(`${k}.import`)}>
+          <ImportTab
+            onImported={() => {
+              refresh();
+              onTypesChanged();
+            }}
+          />
+        </Section>
+      ) : null}
     </Box>
   );
 }
 
 /* 2) План */
 
-function PlanStep({ v, plan, status, types }: { v: VariantCard; plan: PlanState | undefined; status: TypeStatus | undefined; types: GrmsType[] }) {
+function PlanStep({ hotelId, v, plan, status, types }: { hotelId: string; v: VariantCard; plan: PlanState | undefined; status: TypeStatus | undefined; types: GrmsType[] }) {
   const { t, i18n } = useTranslation();
+  const { canWrite } = useRights();
+  const counts = useZoneCounts(hotelId, v.code);
+  const [markup, setMarkup] = useState(false);
   const k = 'admin.variants.plan';
-  if (!plan) return <Skeleton variant="rounded" height={240} />;
+  if (!plan || !status) return <Skeleton variant="rounded" height={240} />;
   const g = plan.geometry;
-  const zoneTitle = (code: string) => pick(status?.zones.find((z) => z.code === code)?.title, i18n.language) || t(`${k}.zoneUnnamed`);
+  const zones = [...status.zones].sort((a, b) => a.sort_order - b.sort_order);
+  const zoneTitle = (code: string) => pick(zones.find((z) => z.code === code)?.title, i18n.language) || t(`${k}.zoneUnnamed`);
   const frame = plan.frames.lit;
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
+      <ZonesEdit hotelId={hotelId} code={v.code} zones={zones} counts={counts} />
       {v.plan_level === 'tiles' ? <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.tiles`)}</Box> : null}
       {frame ? (
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 3fr) minmax(0, 2fr)' }, alignItems: 'start' }}>
@@ -486,7 +520,7 @@ function PlanStep({ v, plan, status, types }: { v: VariantCard; plan: PlanState 
                   placeItems: 'center',
                 }}
               >
-                <Box sx={{ ...typo.caption, fontWeight: 800, color: '#fff', bgcolor: accent.main, px: 0.75, borderRadius: '4px' }}>{zoneTitle(zone.code)}</Box>
+                <Box sx={{ ...typo.caption, fontWeight: 800, color: accent.onAccent, bgcolor: accent.main, px: 0.75, borderRadius: '4px' }}>{zoneTitle(zone.code)}</Box>
               </Box>
             ))}
           </Box>
@@ -502,45 +536,31 @@ function PlanStep({ v, plan, status, types }: { v: VariantCard; plan: PlanState 
       ) : v.plan_level !== 'tiles' ? (
         <Box sx={{ ...typo.body, color: state.warn }}>{t(`${k}.noFrame`)}</Box>
       ) : null}
-      <Legacy label={t(`${k}.legacy`)} testId="admin-variant-legacy-plan">
-        <PlanEditor code={v.code} types={types} />
-      </Legacy>
+      {canWrite && v.plan_level !== 'tiles' ? (
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          <Button sx={secondaryButtonSx} onClick={() => setMarkup((x) => !x)} data-testid="admin-variant-markup-open">{markup ? t(`${k}.markupHide`) : t(`${k}.markup`)}</Button>
+          <Help>{t(`${k}.markupHelp`)}</Help>
+        </Box>
+      ) : null}
+      {markup ? <PlanEditor code={v.code} types={types} /> : null}
     </Box>
   );
 }
 
 /* 3) Кнопки для гостя */
 
-function ButtonsStep({ v, status, type }: { v: VariantCard; status: TypeStatus | undefined; type: GrmsType }) {
+function ButtonsStep({ hotelId, v, status, type }: { hotelId: string; v: VariantCard; status: TypeStatus | undefined; type: GrmsType }) {
   const { t, i18n } = useTranslation();
   const k = 'admin.variants.buttons';
   const [engineer, setEngineer] = useState(false);
+  const list = useButtons(hotelId, v.code);
   if (!status) return <Skeleton variant="rounded" height={200} />;
-  const label = (el: TypeStatus['elements'][number]) => pick(el.title, i18n.language) || t(`admin.variants.kind.${el.kind}`, { defaultValue: t('admin.variants.kind.other') });
   const zones = [...status.zones].sort((a, b) => a.sort_order - b.sort_order);
-  const groups = [...zones.map((z) => ({ code: z.code, title: pick(z.title, i18n.language) })), { code: '', title: t(`${k}.noZone`) }]
-    .map((z) => ({ ...z, items: status.elements.filter((el) => (el.zone || '') === z.code) }))
-    .filter((z) => z.items.length);
   const vars = new Map(type.variables.map((x) => [x.key, x]));
   return (
     <Box sx={{ display: 'grid', gap: 1.5 }}>
-      {!status.elements.length ? <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.none`)}</Box> : null}
-      <Box sx={{ display: 'grid', gap: 0.75 }} data-testid="admin-variant-buttons">
-        {groups.map((z) => (
-          <Box key={z.code || '-'} sx={{ ...typo.body, color: ink.hi }} data-testid={`admin-variant-zone-${z.code || 'none'}`}>
-            <b data-words="data">{z.title}</b>:{' '}
-            {z.items.map((el, i) => (
-              <Box component="span" key={el.slug} sx={{ color: el.publishable ? ink.hi : state.warn }}>
-                {i ? ', ' : ''}
-                <span data-words="data">{label(el)}</span>
-                {!el.publishable ? ` (${t(`${k}.hiddenShort`)})` : ''}
-              </Box>
-            ))}
-          </Box>
-        ))}
-      </Box>
-      {v.hidden ? <Box sx={{ ...typo.caption, color: state.warn }}>{t(`${k}.hidden`, { count: v.hidden })}</Box> : null}
-      <Box>
+      <ButtonsEdit hotelId={hotelId} code={v.code} zones={zones} />
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
         <Button size="small" sx={quietButtonSx} onClick={() => setEngineer((x) => !x)} aria-expanded={engineer} data-testid="admin-variant-engineer">
           {engineer ? t(`${k}.engineerHide`) : t(`${k}.engineer`)}
         </Button>
@@ -552,24 +572,27 @@ function ButtonsStep({ v, status, type }: { v: VariantCard; status: TypeStatus |
           <Box component="table" sx={{ borderCollapse: 'collapse', width: '100%', ...typo.caption, '& td, & th': { borderBottom: `1px solid ${surface.hair}`, p: 0.75, textAlign: 'start', verticalAlign: 'top' }, '& th': { color: ink.mid, fontWeight: 700 } }}>
             <thead>
               <tr>
-                <th>{t(`${k}.col.button`)}</th>
-                <th>{t(`${k}.col.ability`)}</th>
-                <th>{t(`${k}.col.command`)}</th>
-                <th>{t(`${k}.col.feedback`)}</th>
-                <th>{t(`${k}.col.range`)}</th>
+                <th data-sort="none">{t(`${k}.col.button`)}</th>
+                <th data-sort="none">{t(`${k}.col.ability`)}</th>
+                <th data-sort="none">{t(`${k}.col.command`)}</th>
+                <th data-sort="none">{t(`${k}.col.feedback`)}</th>
+                <th data-sort="none">{t(`${k}.col.range`)}</th>
               </tr>
             </thead>
             <tbody>
-              {status.elements.flatMap((el) =>
-                (el.bindings.length ? el.bindings : [{ capability: '', variable: '' }]).map((b, i) => {
-                  const variable = vars.get(b.variable);
+              {(list.data?.buttons ?? []).flatMap((b) =>
+                b.abilities.map((a, i) => {
+                  const variable = a.variable ? vars.get(a.variable) : undefined;
                   return (
-                    <tr key={`${el.slug}-${i}`}>
-                      <td>{i === 0 ? `${label(el)} · ${el.slug}` : ''}{i === 0 && el.problems.length ? <Box sx={{ color: state.warn }}>{el.problems.join('; ')}</Box> : null}</td>
-                      <td>{b.capability || '—'}</td>
-                      <td>{variable?.command || '—'}</td>
-                      <td>{variable?.feedback || '—'}</td>
-                      <td>{variable ? `${variable.min_value}…${variable.max_value}` : '—'}</td>
+                    <tr key={`${b.slug}-${a.capability}`}>
+                      <td>{i === 0 ? `${buttonLabel(t, b, i18n.language)} · ${b.slug}` : ''}</td>
+                      <td>{a.capability}{a.required ? ' *' : ''}</td>
+                      <td>{a.command || '—'}</td>
+                      <td>{a.feedback || '—'}</td>
+                      <td>
+                        {variable ? `${variable.min_value}…${variable.max_value}` : '—'}
+                        {a.form ? <Box sx={{ color: state.warn }}>{a.form}</Box> : null}
+                      </td>
                     </tr>
                   );
                 }),
@@ -579,45 +602,88 @@ function ButtonsStep({ v, status, type }: { v: VariantCard; status: TypeStatus |
           <Box sx={{ ...typo.caption, color: ink.mid, mt: 1 }}>{`${t(`${k}.device`)} ${type.device_name_template || '—'}`}</Box>
         </Box>
       </Collapse>
-      <Legacy label={t(`${k}.legacy`)} testId="admin-variant-legacy-buttons">
-        <BuilderTab type={type} />
-      </Legacy>
     </Box>
   );
 }
 
-/* 4) Номера */
+/* 4) Номера: подсветка и назначение выделением (механизм 63-2) */
 
 function RoomsStep({ hotelId, v }: { hotelId: string; v: VariantCard }) {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
+  const refresh = useVariantRefresh(hotelId, v.code);
   const k = 'admin.variants.rooms';
   const map = useQuery({ queryKey: ['admin', 'hotel-rooms-map', hotelId, { variants: '1' }], queryFn: () => getRoomsMap(hotelId, {}) });
+  const dict = useQuery({ queryKey: ['admin', 'rooms-dictionaries', hotelId], queryFn: () => getRoomsDictionaries(hotelId) });
   const rooms = useMemo(() => (map.data?.buildings ?? []).flatMap((b) => b.floors.flatMap((f) => f.rooms)), [map.data]);
   const swatches = useSwatches(rooms);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [action, setAction] = useState<'set' | 'clear' | null>(null);
+  const toggle = useCallback((ids: string[]) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const all = ids.length > 0 && ids.every((id) => next.has(id));
+      for (const id of ids) {
+        if (all) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }, []);
   if (!map.data) return <Skeleton variant="rounded" height={240} />;
   const mine = rooms.filter((r) => r.variant?.code === v.code);
+  const picked = rooms.filter((r) => selected.has(r.id));
   return (
     <Box sx={{ display: 'grid', gap: 1.5 }}>
       <Box sx={{ ...typo.body, color: ink.hi }} data-testid="admin-variant-rooms-summary">
         {t(`${k}.summary`, { count: mine.length, total: rooms.length })}
         <Help>{t(`${k}.help`)}</Help>
       </Box>
-      {mine.length ? (
-        <Box sx={{ ...typo.caption, color: ink.mid }} data-words="data">{mine.map((r) => r.number).join(', ')}</Box>
-      ) : null}
-      <Box sx={{ display: 'grid', gap: 2, ...highlightSx(`v:${v.code}`) }} data-testid="admin-variant-rooms-scheme">
+      {mine.length ? <Box sx={{ ...typo.caption, color: ink.mid }} data-words="data">{mine.map((r) => r.number).join(', ')}</Box> : null}
+      {canWrite ? <Box sx={{ ...typo.caption, color: ink.mid }}>{t(`${k}.selectHint`)}</Box> : null}
+      <Box
+        sx={{ display: 'grid', gap: 2, ...(selected.size ? {} : highlightSx(`v:${v.code}`)) }}
+        data-testid="admin-variant-rooms-scheme"
+        onClick={(event) => {
+          if (!canWrite) return;
+          const target = (event.target as HTMLElement).closest('[data-room-id]') as HTMLElement | null;
+          if (target?.dataset.roomId) toggle([target.dataset.roomId]);
+        }}
+      >
         {map.data.buildings.map((building) => (
           <Box key={building.key}>
             <Box sx={{ ...typo.label, color: ink.mid, mb: 0.75 }} data-words="data">{building.title || t('admin.card.rooms.noBuilding')}</Box>
-            <BuildingScheme building={building} layer="variant" swatches={swatches} tile="a" zoom={0} />
+            <BuildingScheme building={building} layer="variant" swatches={swatches} tile="a" zoom={0} selected={canWrite ? selected : undefined} onSelect={canWrite ? toggle : undefined} />
           </Box>
         ))}
       </Box>
+      {canWrite && selected.size ? (
+        <Box sx={{ position: 'sticky', bottom: 12, zIndex: 20, ...panelSx, p: 1.25, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', border: `1px solid ${accent.main}` }} data-testid="admin-variant-rooms-selection">
+          <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi, flex: 1 }}>{t(`${k}.selected`, { count: selected.size })}</Box>
+          <Button size="small" sx={primaryButtonSx} onClick={() => setAction('set')} data-testid="admin-variant-rooms-assign">{t(`${k}.assign`)}</Button>
+          <Button size="small" sx={secondaryButtonSx} disabled={!picked.some((r) => r.variant?.code === v.code)} onClick={() => setAction('clear')} data-testid="admin-variant-rooms-clear">{t(`${k}.clear`)}</Button>
+          <Button size="small" sx={quietButtonSx} onClick={() => setSelected(new Set())}>{t(`${k}.unselect`)}</Button>
+        </Box>
+      ) : null}
+      {action ? (
+        <BatchDialog
+          hotelId={hotelId}
+          group="variant"
+          roomIds={action === 'clear' ? picked.filter((r) => r.variant?.code === v.code).map((r) => r.id) : [...selected]}
+          dict={dict.data}
+          preset={action === 'set' ? { action: 'variant_set', value: v.code } : { action: 'variant_clear', value: null }}
+          onClose={() => setAction(null)}
+          onDone={() => {
+            setSelected(new Set());
+            refresh();
+          }}
+        />
+      ) : null}
     </Box>
   );
 }
 
-/* 5) Проверка — только чтение */
+/* 5) Проверка: чтение — с правом правки; тестовая команда — с подтверждением */
 
 function CheckStep({ hotelId, v, result, onResult }: { hotelId: string; v: VariantCard; result: RoomRead | null; onResult: (r: RoomRead) => void }) {
   const { t } = useTranslation();
@@ -660,20 +726,32 @@ function CheckStep({ hotelId, v, result, onResult }: { hotelId: string; v: Varia
         </Box>
       ) : null}
       {read.isError ? <Typography sx={{ ...typo.caption, color: state.bad }}>{String((read.error as Error).message)}</Typography> : null}
+      {canWrite ? <TestCommand hotelId={hotelId} code={v.code} rooms={mine.map((r) => ({ id: r.id, number: r.number }))} /> : null}
     </Box>
   );
 }
 
 /* 6) Публикация */
 
-function PublishStep({ hotelId, v, type }: { hotelId: string; v: VariantCard; type: GrmsType }) {
+function PublishStep({ hotelId, v }: { hotelId: string; v: VariantCard }) {
   const { t, i18n } = useTranslation();
   const grms = useGrms();
   const { canWrite } = useRights();
   const k = 'admin.variants.publish';
   const diff = useQuery({ queryKey: ['admin', 'variant-diff', hotelId, v.code], queryFn: () => getVariantDiff(hotelId, v.code) });
   const versions = useQuery({ queryKey: queryKeys.grmsVersions(grms.base, v.code), queryFn: () => grms.versions(v.code) });
+  const map = useQuery({ queryKey: ['admin', 'hotel-rooms-map', hotelId, { variants: '1' }], queryFn: () => getRoomsMap(hotelId, {}) });
+  const numbers = useMemo(() => (map.data?.buildings ?? []).flatMap((b) => b.floors.flatMap((f) => f.rooms)).filter((r) => r.variant?.code === v.code).map((r) => r.number), [map.data, v.code]);
   const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(i18n.language) : '—');
+  const changes = diff.data ? (
+    <Box sx={{ display: 'grid', gap: 0.5 }}>
+      {diff.data.changes.map((c, i) => (
+        <Box key={i} sx={{ ...typo.body, color: ink.hi }} data-testid={`admin-variant-change-${c.what}`}>
+          • <ChangeLine c={c} />
+        </Box>
+      ))}
+    </Box>
+  ) : null;
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
       <Box>
@@ -693,25 +771,22 @@ function PublishStep({ hotelId, v, type }: { hotelId: string; v: VariantCard; ty
         ) : (
           <Box sx={{ display: 'grid', gap: 0.5 }}>
             <Box sx={{ ...typo.body, fontWeight: 700, color: state.warn }}>{t(`${k}.willChange`, { count: diff.data.rooms })}</Box>
-            {diff.data.changes.map((c, i) => (
-              <Box key={i} sx={{ ...typo.body, color: ink.hi }} data-testid={`admin-variant-change-${c.what}`}>
-                • <ChangeLine c={c} />
-              </Box>
-            ))}
+            {changes}
           </Box>
         )}
       </Box>
+      {canWrite ? <PublishButton hotelId={hotelId} v={v} diff={diff.data} roomNumbers={numbers} changes={changes} /> : null}
       <Box>
         <Box sx={{ ...typo.label, color: ink.mid, mb: 0.75 }}>{t(`${k}.history`)}</Box>
         {(versions.data?.versions ?? []).length ? (
           <Box sx={{ display: 'grid', gap: 0.5 }} data-testid="admin-variant-versions">
             {(versions.data?.versions ?? []).slice(0, 8).map((ver: VersionRecord) => (
-              <Box key={ver.version} sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', ...typo.body, color: ink.hi, py: 0.5, borderBottom: `1px solid ${surface.hair}` }}>
+              <Box key={ver.version} sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', ...typo.body, color: ink.hi, py: 0.5, borderBottom: `1px solid ${surface.hair}` }} data-testid={`admin-variant-version-${ver.version}`}>
                 <b>{t(`${k}.v`, { version: ver.version })}</b>
                 <Box component="span" sx={{ color: ink.mid }}>{when(ver.published_at)}</Box>
                 <Box component="span" sx={{ color: ink.mid }}>{t(`${k}.controls`, { count: ver.controls })}</Box>
                 {ver.rolled_back_from ? <Box component="span" sx={{ color: ink.mid }}>{t(`${k}.rolledBack`, { version: ver.rolled_back_from })}</Box> : null}
-                {ver.is_current ? <Pill tone="ok">{t(`${k}.isCurrent`)}</Pill> : null}
+                {ver.is_current ? <Pill tone="ok">{t(`${k}.isCurrent`)}</Pill> : canWrite ? <RollbackButton hotelId={hotelId} code={v.code} version={ver.version} rooms={v.rooms} /> : null}
               </Box>
             ))}
             {(versions.data?.versions ?? []).length > 8 ? <Box sx={{ ...typo.caption, color: ink.mid }}>{t(`${k}.more`, { count: (versions.data?.versions ?? []).length - 8 })}</Box> : null}
@@ -720,9 +795,6 @@ function PublishStep({ hotelId, v, type }: { hotelId: string; v: VariantCard; ty
           <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.noVersions`)}</Box>
         )}
       </Box>
-      <Legacy label={t(`${k}.legacy`)} testId="admin-variant-legacy-publish">
-        <VersionsTab type={type} readOnly={!canWrite} />
-      </Legacy>
     </Box>
   );
 }

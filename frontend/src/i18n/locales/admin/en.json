@@ -568,14 +568,25 @@
         "plan_level_changed": "Room plan level changed",
         "import_confirmed": "PNR import confirmed",
         "zone_added": "Zone added",
-        "element_added": "Element added",
+        "element_added": "Button added",
         "device_override": "Device name for a room",
         "plan_frames": "Plan frame uploaded",
         "plan_copied": "Plan geometry copied",
         "published": "Configuration published",
         "rolled_back": "Configuration rolled back",
         "pin_set": "Room PIN issued",
-        "pin_cleared": "Room PIN removed"
+        "pin_cleared": "Room PIN removed",
+        "variant_created": "Room variant created",
+        "variant_updated": "Variant basics changed",
+        "variant_deleted": "Room variant deleted",
+        "zone_updated": "Zone renamed",
+        "zone_removed": "Zone removed",
+        "zones_ordered": "Zone order changed",
+        "element_updated": "Button changed",
+        "element_removed": "Button removed",
+        "elements_ordered": "Button order changed",
+        "binding_set": "Button linked to a channel",
+        "binding_removed": "Button channel link removed"
       },
       "guest_session": {
         "created": "Guest opened the app",
@@ -2127,7 +2138,23 @@
         "control_timeout_ms": "Wait for reply, ms",
         "control_is_enabled": "Server enabled",
         "control_node": "Connector",
-        "control_secret": "Password or token"
+        "control_secret": "Password or token",
+        "binding": "Link: {{ability}}",
+        "variant": "Variant",
+        "title_ru": "Name in Russian",
+        "title_en": "Name in English",
+        "title_zh": "Name in Chinese",
+        "title_ar": "Name in Arabic",
+        "notes": "Description",
+        "plan_level": "Guest screen view",
+        "device_template": "Room device name",
+        "zone": "Zone",
+        "zone_title": "Zone name",
+        "zone_order": "Zone order",
+        "button": "Button",
+        "button_title": "Button name",
+        "button_zone": "Button zone",
+        "button_order": "Button order"
       },
       "object": {
         "node": "connector “{{name}}”",
@@ -2151,7 +2178,12 @@
         "revoked": "guest sessions closed: {{count}}",
         "batch": "{{kind}}",
         "batchValue": "{{kind}}: “{{value}}”",
-        "secretChanged": "changed"
+        "secretChanged": "changed",
+        "publishedRooms_one": "{{count}} room got the version",
+        "publishedRooms_other": "{{count}} rooms got the version",
+        "movedButtons_one": "{{count}} button moved to “No zone”",
+        "movedButtons_other": "{{count}} buttons moved to “No zone”",
+        "acceptedWarning": "linked despite the channel meaning warning"
       },
       "otherAction": "other action",
       "sort": {
@@ -2265,8 +2297,6 @@
       "idea": "A room variant is one setup: plan, zones, guest buttons, equipment channels. It applies at once to many identical rooms. A hotel usually has 5–10 variants.",
       "ideaShort": "One setup for many identical rooms: plan, zones, guest buttons, equipment.",
       "none": "No variants yet. They are created from the commissioning file.",
-      "sample": "sample",
-      "sampleHint": "A sample — shows what the list looks like with several variants.",
       "untitled": "Untitled",
       "open": "Open",
       "back": "All variants",
@@ -2304,9 +2334,6 @@
         "attention": "needs attention",
         "todo": "not started"
       },
-      "legacy": "Edit (previous screen)",
-      "legacyHide": "Hide previous screen",
-      "legacyImport": "upload a commissioning file",
       "journalLink": "Equipment log",
       "lang": {
         "ru": "in Russian",
@@ -2358,7 +2385,14 @@
         "origin": "Where it came from",
         "originHelp": "Variants are created from the commissioning file: it lists rooms and equipment channels.",
         "fromImport": "from the commissioning file, uploaded {{date}}",
-        "manual": "created manually"
+        "manual": "created manually",
+        "device": "Room device name",
+        "deviceHelp": "For the engineer: how the control server names the room device. The room number is {room}, for example “Room {room}”.",
+        "noDevice": "not set — without it commands will not reach the rooms",
+        "edit": "Edit basics",
+        "import": "Upload a commissioning file",
+        "importHide": "Hide file upload",
+        "importHelp": "Uploading the file updates equipment channels and room assignment from the file."
       },
       "plan": {
         "zoneUnnamed": "unnamed zone",
@@ -2375,7 +2409,9 @@
         "count_one": "{{count}}",
         "count_other": "{{count}}",
         "noFrame": "No plan frame — the guest will see buttons only.",
-        "legacy": "frame and zones"
+        "markup": "Frame and markup",
+        "markupHide": "Hide markup",
+        "markupHelp": "Upload the plan frame and mark zones, windows and points."
       },
       "buttons": {
         "noZone": "No zone",
@@ -2394,12 +2430,41 @@
           "range": "Range"
         },
         "device": "Room device name:",
-        "legacy": "buttons and links"
+        "missing": "link missing: {{list}} — the guest will not see the button",
+        "senseWarn": "linked to a channel that seems to be for something else — check",
+        "formWarn": "the channel does not fit — open the button",
+        "ready": "ready",
+        "add": "Add button",
+        "removeTitle": "Remove button “{{name}}”?",
+        "removeAbout": "The button and its channel links will be deleted; its points leave the plan. Guests will see this after publishing.",
+        "zone": "Zone",
+        "addTitle": "New guest button",
+        "addNext": "Next: equipment link",
+        "kindLabel": "What it is",
+        "kindHelp": "The kind sets the icon, state captions and which equipment links are needed.",
+        "guestTitle": "Name for the guest",
+        "guestTitleHelp": "Empty — the guest sees the kind name: “Light”, “Curtains”.",
+        "links": "Equipment link",
+        "linksHelp": "Each ability of the button has its own control server channel. Required ones must be linked, otherwise the guest will not see the button.",
+        "required": "required",
+        "optional": "optional",
+        "notLinkedRequired": "not linked — without it the button is not shown to the guest",
+        "notLinked": "not linked",
+        "sense": "The channel seems to be for: {{found}}, but the button is {{expected}}.",
+        "change": "Change channel",
+        "pick": "Choose channel",
+        "unlink": "Unlink"
       },
       "rooms": {
         "summary_one": "This variant has {{count}} of {{total}} rooms — highlighted on the layout.",
         "summary_other": "This variant has {{count}} of {{total}} rooms — highlighted on the layout.",
-        "help": "The layout is the same as on the “Rooms” tab. Rooms of other variants are dimmed."
+        "help": "The layout is the same as on the “Rooms” tab. Rooms of other variants are dimmed.",
+        "selectHint": "Tap rooms, a floor or a stack to select; then assign the variant or clear it.",
+        "selected_one": "{{count}} room selected",
+        "selected_other": "{{count}} rooms selected",
+        "assign": "Assign this variant",
+        "clear": "Clear variant",
+        "unselect": "Clear selection"
       },
       "check": {
         "lead": "Choose a room of this variant and read its state — read only, no commands to the equipment.",
@@ -2424,7 +2489,12 @@
         "more_one": "and {{count}} more version",
         "more_other": "and {{count}} more versions",
         "noVersions": "No versions yet.",
-        "legacy": "publishing and rollback"
+        "button": "Publish",
+        "noButtons": "No ready buttons — nothing to publish.",
+        "done": "Version {{version}} published.",
+        "confirmTitle": "Publish the changes?",
+        "go_one": "Publish for {{count}} room",
+        "go_other": "Publish for {{count}} rooms"
       },
       "change": {
         "title": "Name:",
@@ -2455,6 +2525,138 @@
         "heating": "Heating",
         "scene": "Scene",
         "other": "Button"
+      },
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save",
+      "edit": "Edit",
+      "remove": "Remove",
+      "up": "Up",
+      "down": "Down",
+      "done": "Done",
+      "err": {
+        "variant_has_rooms": "The variant has {{rooms}} rooms — first assign them another variant or clear the variant on the “Rooms” step.",
+        "binding_sense_warning": "This channel does not seem to be for this button.",
+        "publish_rooms_changed": "The variant rooms changed while you were looking: there are {{rooms}} now. Open the confirmation again.",
+        "test_needs_confirm": "The command was not sent: confirm the room, button and value.",
+        "device_template_no_room": "The device name needs the room number — put {room} where the room number goes.",
+        "title_required": "A name is needed in at least one language.",
+        "rollback_needs_confirm": "Confirm returning the version.",
+        "no_such_ability": "This button has no such ability.",
+        "unknown_kind": "No such button kind.",
+        "channel_taken": "The channel is already used by “{{button}}”: one channel — one button. Unlink it there or choose another channel.",
+        "plan_zone_unbound": "A plan zone has no button: {{zones}}. Open “Plan” → “Frame and markup” and link the zone to a light button.",
+        "plan_refs_broken": "Points or windows on the plan refer to removed buttons. Open “Plan” → “Frame and markup” and fix them."
+      },
+      "new": {
+        "button": "New variant",
+        "title": "New room variant",
+        "create": "Create variant",
+        "mode": {
+          "blank": "From scratch",
+          "file": "From the commissioning file",
+          "copy": "Copy of a variant of this hotel",
+          "copy_other": "Copy from another hotel"
+        },
+        "about": {
+          "blank": "An empty variant: add zones and buttons in its steps; channels appear after the commissioning file is uploaded.",
+          "file": "The commissioning file lists rooms and equipment channels. Variants are created from it and assigned to rooms right away.",
+          "copy": "A copy: zones, buttons, channels and plan markup. Rooms are not carried over — assign them on the “Rooms” step.",
+          "copy_other": "A copy from another hotel: only the setup — zones, buttons, channels, markup. That hotel's rooms, versions and plan frame are not carried over."
+        },
+        "source": "Variant to copy",
+        "copySuffix": "copy",
+        "otherHotel": "Hotel",
+        "noSources": "Other hotels have no variants yet.",
+        "copyNote": "Rooms, versions and the plan frame are not copied: assign rooms on the “Rooms” step, upload the frame on the “Plan” step."
+      },
+      "delete": {
+        "button": "Delete variant",
+        "title": "Delete variant “{{name}}”?",
+        "toRooms": "To the variant rooms",
+        "confirm": "Delete",
+        "hasRooms_one": "The variant has {{count}} room. It cannot be deleted: first assign another variant or clear the variant on the “Rooms” step.",
+        "hasRooms_other": "The variant has {{count}} rooms. It cannot be deleted: first assign them another variant or clear the variant on the “Rooms” step.",
+        "sure": "The variant, its buttons, channels and versions will be deleted. It has no rooms."
+      },
+      "zones": {
+        "title": "Zones",
+        "help": "Parts of the room: living room, bedroom, bathroom. Guest buttons are grouped by zone; on the plan a zone is the area the guest taps.",
+        "none": "No zones yet.",
+        "add": "Add zone",
+        "removeTitle": "Remove zone “{{name}}”?",
+        "removeAbout_one": "{{count}} button of the zone is not deleted — it moves to “No zone”. The zone and its markup leave the plan.",
+        "removeAbout_other": "{{count}} buttons of the zone are not deleted — they move to “No zone”. The zone and its markup leave the plan."
+      },
+      "ability": {
+        "toggle": "On/off",
+        "trigger": "Run",
+        "fan_speed": "Fan speed",
+        "setpoint": "Set temperature",
+        "current_temp": "Current temperature",
+        "position": "Position",
+        "level": "Level"
+      },
+      "subject": {
+        "light": "light",
+        "curtain": "curtains",
+        "climate": "climate",
+        "heating": "heating",
+        "dnd": "“do not disturb”",
+        "mur": "cleaning",
+        "scene": "scene",
+        "master": "all off"
+      },
+      "channels": {
+        "title": "{{button}}: channel for “{{ability}}”",
+        "subtitle": "Suitable ones first. Channels with an unsuitable value kind cannot be chosen.",
+        "range": "values {{min}}…{{max}}",
+        "taken": "taken by the button",
+        "senseShort": "seems to be a channel for: {{found}}",
+        "fit": {
+          "good": "fits",
+          "ok": "fits by kind",
+          "warn": "check",
+          "bad": "does not fit"
+        },
+        "none": "No channels — upload the commissioning file on the “Basics” step.",
+        "warnTitle": "This channel does not seem to be for this button",
+        "warnPickOther": "Choose another",
+        "warnAccept": "Link anyway",
+        "warnText": "The button is {{button}}, but the channel name looks like: {{found}}. If linked, the guest presses one thing and another happens in the room. Link anyway?"
+      },
+      "test": {
+        "nothing": "The test command appears once the variant has rooms and linked buttons.",
+        "title": "Test command to a room",
+        "help": "A real command to the equipment: there may be a guest in the room. It is sent only after confirming “room, what, value”.",
+        "button": "Button",
+        "ability": "What",
+        "number": "Value",
+        "value": {
+          "on": "turn on",
+          "off": "turn off",
+          "run": "run"
+        },
+        "send": "Send a test command",
+        "outcome": {
+          "confirmed": "Done: the equipment confirmed.",
+          "no_feedback_channel": "Sent; nothing to confirm with — the channel has no state.",
+          "feedback_dead": "Sent, but the state does not respond.",
+          "unconfirmed": "Sent, but the state did not change.",
+          "failed": "The command failed.",
+          "other": "Done."
+        },
+        "confirmTitle": "Send a command to the room?",
+        "confirmSend": "Send",
+        "confirmRoom": "Room",
+        "confirmWarn": "This is a real command: if a guest is in the room, they will see it."
+      },
+      "rollback": {
+        "button": "Return this version",
+        "title": "Return version {{version}}?",
+        "go": "Return",
+        "about_one": "The variant room ({{count}}) will get version {{version}}. A new version — a copy of {{version}} — appears; history is not erased.",
+        "about_other": "The variant rooms ({{count}}) will get version {{version}}. A new version — a copy of {{version}} — appears; history is not erased."
       }
     }
   }

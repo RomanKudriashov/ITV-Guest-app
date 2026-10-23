@@ -23,8 +23,15 @@ const RENDER = path.resolve(__dirname, '../../docs/design/grms-concept/render-ty
 
 /** Тип из файла ПНР, на котором собирается экран. Меньше всего комнат. */
 const TYPE_CODE = 'tip3'
-const ZONE = 'e2e-zone'
-const ELEMENT = 'e2e.light'
+/*
+  С партии 63-4 коды зоны и кнопки выдаёт сервер (из названия и вида), а не
+  вводит оператор: «Комната прогона» → зона `komnata-progona`, свет в ней —
+  кнопка `light.komnata-progona`.
+*/
+const ZONE_TITLE = 'Комната прогона'
+const ZONE = 'komnata-progona'
+const ELEMENT = `light.${ZONE}`
+const mark = Date.now().toString(36)
 
 interface PlanGeometryPayload {
   zones: Array<{ controlId: string; mask: unknown }>
@@ -72,10 +79,6 @@ test.afterAll(async () => {
   await page?.close()
 })
 
-async function fillField(testId: string, value: string): Promise<void> {
-  await page.getByTestId(testId).locator('input').fill(value)
-}
-
 /**
  * Открыть выпадающий список — в двух разных разметках.
  *
@@ -104,15 +107,41 @@ async function openSection(): Promise<void> {
   await expect(page.getByTestId('admin-hotel-room-control')).toBeVisible({ timeout: 20_000 })
 }
 
-async function openTab(key: string): Promise<void> {
-  await page.getByTestId(`admin-grms-tab-${key}`).click()
+/**
+ * Шаг варианта (партия 63-4): прежние подвкладки стали шагами внутри
+ * варианта, и вариант с шагом — в адресе.
+ */
+async function openStep(step: 'base' | 'plan' | 'buttons' | 'rooms' | 'check' | 'publish'): Promise<void> {
+  await page.goto(`/admin?section=fleet&hotel=${hotelId}&tab=roomControl&variant=${TYPE_CODE}&step=${step}`)
+  await expect(page.getByTestId(`admin-variant-pane-${step}`)).toBeVisible({ timeout: 20_000 })
 }
 
-async function pickType(): Promise<void> {
-  await openSection()
-  await expect(page.getByTestId('admin-grms-type-select')).toBeVisible()
-  await openSelect('admin-grms-type-select')
-  await page.locator(`li[data-value="${TYPE_CODE}"]`).click()
+/** Разметка плана — редактор внутри шага «План», за кнопкой «Кадр и разметка». */
+async function openPlanEditor(): Promise<void> {
+  await openStep('plan')
+  await page.getByTestId('admin-variant-markup-open').click()
+  await expect(page.getByTestId('grms-plan-editor')).toBeVisible({ timeout: 20_000 })
+}
+
+/**
+ * Изменить название кнопки прогона — чтобы черновик отличался от текущей
+ * версии: публиковать без изменений экран не даёт, и это правильно.
+ */
+async function touchButton(): Promise<void> {
+  await openStep('buttons')
+  await page.getByTestId(`admin-variant-button-open-${ELEMENT}`).click()
+  const dialog = page.getByTestId('admin-variant-button-dialog')
+  await dialog.getByTestId('admin-variant-button-title-ru').fill(`Свет прогона ${mark}-${Math.random().toString(36).slice(2, 6)}`)
+  await dialog.getByTestId('admin-variant-button-save').click()
+  await expect(dialog.getByTestId('admin-variant-button-save')).toHaveCount(0, { timeout: 15_000 })
+  await dialog.getByTestId('admin-variant-button-done').click()
+}
+
+/** Опубликовать через подтверждение «изменится у N номеров». */
+async function publishNow(): Promise<void> {
+  await openStep('publish')
+  await page.getByTestId('admin-variant-publish').click()
+  await page.getByTestId('admin-variant-publish-go').click()
 }
 
 /**
@@ -210,7 +239,9 @@ async function drawZone(stage: Locator): Promise<void> {
 test('импорт ПНР: разбор, сверка и сохранение', async ({ request }) => {
   test.setTimeout(120_000)
   await openSection()
-  await openTab('import')
+  // С 63-4 импорт — «Новый вариант» → «Из файла пусконаладки».
+  await page.getByTestId('admin-variant-new-open').click()
+  await page.getByTestId('admin-variant-new-mode-file').click()
 
   await page.getByTestId('grms-import-file').setInputFiles(PNR)
   await page.getByTestId('grms-import-preview').click()
@@ -246,10 +277,8 @@ test('импорт ПНР: разбор, сверка и сохранение', 
   // следствии — «нет типа» вместо «сервер не принял импорт».
   expect(confirmed.ok(), `подтверждение импорта отклонено: ${confirmed.status()}`).toBeTruthy()
 
-  // Второе: тип виден ОПЕРАТОРУ в списке. Ради этого экран и делали.
-  await openSelect('admin-grms-type-select')
-  await expect(page.locator(`li[data-value="${TYPE_CODE}"]`)).toBeVisible({ timeout: 20_000 })
-  await page.keyboard.press('Escape')
+  // Второе: вариант виден ОПЕРАТОРУ карточкой в списке. Ради этого экран и делали.
+  await expect(page.getByTestId(`admin-variant-${TYPE_CODE}`)).toBeVisible({ timeout: 20_000 })
 
   // Третье: результат на бэкенде — «видно на экране» и «записалось» разные
   // утверждения, и подменять одно другим нельзя.
@@ -260,64 +289,53 @@ test('импорт ПНР: разбор, сверка и сохранение', 
   expect(imported!.variables.length).toBeGreaterThan(0)
 })
 
-test('конструктор: зона, элемент, привязка — и элемент перестаёт быть скрытым', async ({
-  request,
-}) => {
+test('кнопки: зона, кнопка, связь с каналом — и кнопка готова для гостя', async ({ request }) => {
   test.setTimeout(120_000)
   const token = await consoleToken(request)
   const { types } = await apiGet<{ types: GrmsType[] }>(request, token, grmsPath('/types'))
-  const type = types.find((t) => t.code === TYPE_CODE)
-  // Называем, ЧТО пришло: «undefined.variables» ниже говорит только о
-  // следствии, а искать приходится причину — какой список отдал сервер.
+  // Называем, ЧТО пришло: искать приходится причину — какой список отдал сервер.
   expect(
-    type,
+    types.find((t) => t.code === TYPE_CODE),
     `тип ${TYPE_CODE} не найден; пришли: ${types.map((t) => t.code).join(', ') || '(пусто)'}`,
   ).toBeTruthy()
-  // Переменная под свет: двоичная, с командой И обратной связью — иначе
-  // привязка законно не пройдёт валидацию.
-  const variable = type!.variables.find(
-    (v) => v.value_kind === 'binary' && v.command && v.feedback,
-  )
-  expect(variable, 'двоичная переменная в типе').toBeTruthy()
 
-  await pickType()
-  await openTab('builder')
-  await expect(page.getByTestId('grms-builder')).toBeVisible()
-
-  if (!(await page.getByTestId(`grms-zone-${ZONE}`).isVisible().catch(() => false))) {
-    await fillField('grms-zone-code', ZONE)
-    await fillField('grms-zone-title', 'Комната прогона')
-    await page.getByTestId('grms-zone-add').click()
-    await expect(page.getByTestId(`grms-zone-${ZONE}`)).toBeVisible({ timeout: 20_000 })
+  // Зона — в шаге «План» (63-4). Стенд живёт между прогонами: есть — не дублируем.
+  await openStep('plan')
+  if (!(await page.getByTestId(`admin-variant-zone-row-${ZONE}`).isVisible().catch(() => false))) {
+    await page.getByTestId('admin-variant-zone-add').click()
+    await page.getByTestId('admin-variant-zone-new-ru').fill(ZONE_TITLE)
+    await page.getByTestId('admin-variant-zone-add-save').click()
+    await expect(page.getByTestId(`admin-variant-zone-row-${ZONE}`)).toBeVisible({ timeout: 20_000 })
   }
 
-  const element = page.getByTestId(`grms-element-${ELEMENT}`)
+  await openStep('buttons')
+  const element = page.getByTestId(`admin-variant-button-${ELEMENT}`)
   if (!(await element.isVisible().catch(() => false))) {
-    await openSelect('grms-element-kind')
-    // Именно группа света: у неё обязательная возможность `toggle`, под
-    // которую в файле ПНР заведомо есть двоичная переменная.
-    await page.locator('li[data-value="light_group"]').click()
-    await fillField('grms-element-slug', ELEMENT)
-    await fillField('grms-element-title', 'Свет прогона')
-    await page.getByTestId('grms-element-add').click()
-    await expect(element).toBeVisible({ timeout: 20_000 })
-    // Пока привязки нет — элемент честно говорит, что не опубликуется.
-    await expect(element).toHaveAttribute('data-publishable', 'false')
+    // Именно свет: у него обязательная возможность «вкл/выкл», под которую в
+    // файле ПНР заведомо есть двоичный канал.
+    await page.getByTestId('admin-variant-button-add').click()
+    const add = page.getByTestId('admin-variant-button-add-dialog')
+    await add.getByTestId('admin-variant-kind-light_group').click()
+    await openSelect('admin-variant-button-zone')
+    await page.locator(`li[data-value="${ZONE}"]`).click()
+    await add.getByTestId('admin-variant-button-title-ru').fill('Свет прогона')
+    await add.getByTestId('admin-variant-button-add-save').click()
+    await page.getByTestId('admin-variant-button-done').click()
+    // Пока связи нет — кнопка честно говорит, что гость её не увидит.
+    await expect(element).toHaveAttribute('data-ready', 'false', { timeout: 20_000 })
   }
 
-  // Стенд живёт между прогонами: привязка могла остаться с прошлого раза, и
-  // повторять её значило бы проверять поведение на дубле, а не на привязке.
-  if ((await element.getAttribute('data-publishable')) !== 'true') {
-    await openSelect('grms-bind-element')
-    await page.locator(`li[data-value="${ELEMENT}"]`).click()
-    await openSelect('grms-bind-capability')
-    await page.locator('li[data-value="toggle"]').click()
-    await openSelect('grms-bind-variable')
-    await page.locator(`li[data-value="${variable!.key}"]`).click()
-    await page.getByTestId('grms-bind-save').click()
+  // Связь могла остаться с прошлого раза: повторять её — проверять дубль.
+  if ((await element.getAttribute('data-ready')) !== 'true') {
+    await page.getByTestId(`admin-variant-button-open-${ELEMENT}`).click()
+    await page.getByTestId('admin-variant-pick-toggle').click()
+    // Первый подходящий канал: подходящие стоят сверху.
+    await page.getByTestId('admin-variant-channel-picker').locator('[data-fit="good"], [data-fit="ok"]').first().click()
+    await expect(page.getByTestId('admin-variant-ability-toggle')).toHaveAttribute('data-linked', 'true', { timeout: 20_000 })
+    await page.getByTestId('admin-variant-button-done').click()
   }
 
-  await expect(element).toHaveAttribute('data-publishable', 'true', { timeout: 20_000 })
+  await expect(element).toHaveAttribute('data-ready', 'true', { timeout: 20_000 })
 })
 
 test('публикация: элемент уезжает в снимок версией', async ({ request }) => {
@@ -327,13 +345,11 @@ test('публикация: элемент уезжает в снимок вер
   // от «версии №1»: на втором прогоне её давно перекрыли.
   const before = await versionNumbers(request, token)
 
-  await pickType()
-  await openTab('versions')
-  await page.getByTestId('grms-publish').click()
-  await page.getByTestId('grms-publish-confirm-confirm').click()
+  await touchButton()
+  await publishNow()
 
   const expected = Math.max(0, ...before) + 1
-  await expect(page.getByTestId(`grms-version-${expected}`)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId(`admin-variant-version-${expected}`)).toBeVisible({ timeout: 30_000 })
 
   const after = await versionList(request, token)
   expect(after.find((v) => v.is_current)?.version).toBe(expected)
@@ -356,9 +372,7 @@ test('план: кадр, разметка мышью, привязка к оп�
   */
   await setPlanLevel(request, TYPE_CODE, 'full')
 
-  await pickType()
-  await openTab('plan')
-  await expect(page.getByTestId('grms-plan-editor')).toBeVisible({ timeout: 20_000 })
+  await openPlanEditor()
 
   const stage = page.getByTestId('grms-plan-stage')
   if (!(await stage.isVisible().catch(() => false))) {
@@ -382,10 +396,8 @@ test('план: кадр, разметка мышью, привязка к оп�
       data: trimmed,
       headers: consoleHeaders(token),
     })
-    // ИМЕННО pickType, а не просто перезагрузка: после неё выбранным
-    // становится первый тип списка, и разметка поехала бы в чужой план.
-    await pickType()
-    await openTab('plan')
+    // Вариант — в адресе: разметка не уедет в чужой план.
+    await openPlanEditor()
     await expect(page.getByTestId('grms-plan-stage')).toBeVisible({ timeout: 60_000 })
   }
 
@@ -431,8 +443,7 @@ test('план: кадр, разметка мышью, привязка к оп�
 })
 
 test('предпросмотр плана: клик по зоне переключает свет', async () => {
-  await pickType()
-  await openTab('plan')
+  await openPlanEditor()
   await expect(page.getByTestId('grms-plan-stage')).toBeVisible({ timeout: 30_000 })
 
   await page.getByTestId('grms-plan-preview').click()
@@ -471,11 +482,10 @@ test('план блокирует публикацию, если ссылает�
   })
   expect(saved.ok(), await saved.text()).toBeTruthy()
 
-  await pickType()
-  await openTab('versions')
-  await page.getByTestId('grms-publish').click()
-  await page.getByTestId('grms-publish-confirm-confirm').click()
-  await expect(page.getByText(/План ссылается/)).toBeVisible({ timeout: 20_000 })
+  await touchButton()
+  await publishNow()
+  // С 63-4 отказ — словами и названием зоны, до обращения к публикации.
+  await expect(page.getByTestId('admin-variant-error')).toContainText('На плане зона без кнопки', { timeout: 20_000 })
 
   // Убираем битую ссылку: следующий шаг прогона должен публиковаться.
   const fixed = await request.put(`${API}${grmsPath(`/types/${TYPE_CODE}/plan`)}`, {
@@ -489,20 +499,20 @@ test('откат возвращает предыдущую версию', async 
   test.setTimeout(120_000)
   const token = await consoleToken(request)
   const before = await versionNumbers(request, token)
-  const target = Math.min(...before)
+  // Прежняя текущая: после новой публикации она в первых строках истории.
+  const target = Math.max(...before)
 
-  await pickType()
-  await openTab('versions')
-  await page.getByTestId('grms-publish').click()
-  await page.getByTestId('grms-publish-confirm-confirm').click()
+  await touchButton()
+  await publishNow()
 
   const published = Math.max(...before) + 1
-  await expect(page.getByTestId(`grms-version-${published}`)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByTestId(`admin-variant-version-${published}`)).toBeVisible({ timeout: 30_000 })
 
-  // Откат — это НОВАЯ версия с телом старой, а не переписанная история.
-  await page.getByTestId(`grms-rollback-${target}`).click()
-  await page.getByTestId('grms-publish-confirm-confirm').click()
-  await expect(page.getByTestId(`grms-version-${published + 1}`)).toBeVisible({ timeout: 30_000 })
+  // Откат — это НОВАЯ версия с телом старой, а не переписанная история; и
+  // только через подтверждение.
+  await page.getByTestId(`admin-variant-rollback-${target}`).click()
+  await page.getByTestId('admin-variant-rollback-go').click()
+  await expect(page.getByTestId(`admin-variant-version-${published + 1}`)).toBeVisible({ timeout: 30_000 })
 
   const after = await versionList(request, token)
   const current = after.find((v) => v.is_current)!
@@ -510,8 +520,8 @@ test('откат возвращает предыдущую версию', async 
 })
 
 test('УКУС: инженерная диагностика показывает разбор обмена, которого нет у отеля', async () => {
-  await pickType()
-  await openTab('diagnostics')
+  // С 63-4 журнал оборудования — во вкладке «Журнал» карточки.
+  await page.goto(`/admin?section=fleet&hotel=${hotelId}&tab=journal`)
   await expect(page.getByTestId('grms-diagnostics')).toBeVisible({ timeout: 20_000 })
 
   // Обратная сторона отельского укуса в `room-control-cms.spec`: та же вкладка,

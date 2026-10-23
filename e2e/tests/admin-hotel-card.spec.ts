@@ -84,12 +84,17 @@ test.describe.serial('Карточка отеля', () => {
   test('вкладка и подвкладка — в адресе; старые ключи ведут туда, куда переехало', async ({ page }) => {
     test.skip(!crystalId, 'на стенде нет «Кристалла»')
     await login(page)
+    // С 63-4 подвкладок нет: прежний адрес `sub=versions` ведёт на шаг
+    // «Публикация» первого варианта; шаг — в адресе и переживает перезагрузку.
     await page.goto(card(crystalId, 'roomControl', '&sub=versions'))
-    await expect(page.getByTestId('admin-grms-tab-versions')).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
-    await page.getByTestId('admin-grms-tab-plan').click()
-    await expect(page).toHaveURL(/sub=plan/)
+    await expect(page.getByTestId('admin-variant-pane-publish')).toBeVisible({ timeout: 20_000 })
+    await expect(page).toHaveURL(/step=publish/)
+    await page.getByTestId('admin-variant-step-plan').click()
+    await expect(page).toHaveURL(/step=plan/)
     await page.reload()
-    await expect(page.getByTestId('admin-grms-tab-plan')).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
+    await expect(page.getByTestId('admin-variant-pane-plan')).toBeVisible({ timeout: 20_000 })
+    await page.goto(card(crystalId, 'roomControl', '&sub=diagnostics'))
+    await expect(page.getByTestId('admin-hotel-tab-journal')).toHaveAttribute('data-active', 'true', { timeout: 20_000 })
 
     for (const [old, now] of [['support', 'journal'], ['activity', 'history'], ['tariff', 'modules'], ['usage', 'modules']]) {
       await page.goto(card(crystalId, old))

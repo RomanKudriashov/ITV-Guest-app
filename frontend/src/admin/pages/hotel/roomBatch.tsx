@@ -168,7 +168,7 @@ export function useMarquee(onPick: (ids: string[], add: boolean) => void) {
 
 /* ── Окно действия ──────────────────────────────────────────────────────── */
 
-interface Choice {
+export interface Choice {
   action: BatchAction;
   value: BatchValue;
 }
@@ -178,6 +178,7 @@ export function BatchDialog({
   group,
   roomIds,
   dict,
+  preset,
   onClose,
   onDone,
 }: {
@@ -185,12 +186,14 @@ export function BatchDialog({
   group: Group;
   roomIds: string[];
   dict: RoomsDictionaries | undefined;
+  /** Действие задано заранее (63-4, шаг «Номера» варианта): сразу к показу. */
+  preset?: Choice;
   onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
   const client = useQueryClient();
-  const [choice, setChoice] = useState<Choice>(() => initial(group, dict));
+  const [choice, setChoice] = useState<Choice>(() => preset ?? initial(group, dict));
   const [shown, setShown] = useState<BatchPreview | null>(null);
   const [result, setResult] = useState<BatchResult | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);

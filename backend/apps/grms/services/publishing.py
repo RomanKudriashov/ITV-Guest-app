@@ -160,7 +160,7 @@ def _plan(room_type, zones: list[dict]) -> dict:
     return geometry
 
 
-def publish(hotel, room_type_code: str, *, actor_type, actor_id=None) -> PublishedConfig:
+def publish(hotel, room_type_code: str, *, actor_type, actor_id=None, extra: dict | None = None) -> PublishedConfig:
     """
     Опубликовать текущее состояние как новую версию.
 
@@ -234,8 +234,12 @@ def publish(hotel, room_type_code: str, *, actor_type, actor_id=None) -> Publish
             object_id=room_type.pk,
             payload={
                 "type": room_type.code,
+                # Название — чтобы журнал говорил «вариант «Стандарт»», а не код (63-4).
+                "type_title": (room_type.title or {}).get("ru") or "",
                 "version": version,
                 "controls": sum(len(z["controls"]) for z in snapshot["zones"]),
+                # Сколько номеров получило версию (63-4) — то, что подтвердил оператор.
+                **(extra or {}),
             },
             hotel_id=hotel.pk,
         )
@@ -288,7 +292,7 @@ def rollback(
             actor_id=actor_id,
             object_type="grms.room_type",
             object_id=room_type.pk,
-            payload={"type": room_type.code, "to_version": to_version, "new_version": config.version},
+            payload={"type": room_type.code, "type_title": (room_type.title or {}).get("ru") or "", "to_version": to_version, "new_version": config.version},
             hotel_id=hotel.pk,
         )
     return config

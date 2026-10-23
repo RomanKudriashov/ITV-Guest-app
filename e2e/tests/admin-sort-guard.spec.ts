@@ -95,8 +95,7 @@ test.describe('Control: сортировка таблиц', () => {
       // С партии 63-1 по умолчанию — «Схема»; таблица — вид «Таблица».
       ['Номерной фонд', `/admin?section=fleet&hotel=${id}&tab=rooms&view=table`],
       ['Журнал оборудования', `/admin?section=fleet&hotel=${id}&tab=journal`],
-      ['Версии', `/admin?section=fleet&hotel=${id}&tab=roomControl&sub=versions`],
-      ['Конструктор: переменные', `/admin?section=fleet&hotel=${id}&tab=roomControl&sub=builder`],
+      // «Версии» и «Конструктор» с 63-4 — шаги варианта, без таблиц для сортировки.
     ]
     for (const [screen, url] of screens) {
       await page.goto(url)

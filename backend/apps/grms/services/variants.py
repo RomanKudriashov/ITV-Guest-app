@@ -74,6 +74,7 @@ def overview(hotel) -> dict:
                 "version": live.version if live else None,
                 "published_at": live.published_at.isoformat() if live and live.published_at else None,
                 "has_plan": bool(room_type.plan),
+                "device_template": room_type.device_name_template or "",
             }
         )
 

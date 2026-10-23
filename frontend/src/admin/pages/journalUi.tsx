@@ -21,7 +21,26 @@ const ROLE_TONE: Record<string, Tone> = { owner: 'gold', support: 'info', read_o
 export const PERIODS = ['day', 'week', 'month', 'quarter', 'year'] as const;
 
 // Значения, что ввёл человек (адрес и логин сервера управления, 63-3), — данные, не слова экрана.
-const DATA_FIELDS = new Set(['control_host', 'control_login']);
+const DATA_FIELDS = new Set([
+  'control_host',
+  'control_login',
+  // Варианты номеров (63-4): названия, описание, имена устройства и каналов — данные.
+  'variant',
+  'title_ru',
+  'title_en',
+  'title_zh',
+  'title_ar',
+  'notes',
+  'device_template',
+  'zone',
+  'zone_title',
+  'zone_order',
+  'button',
+  'button_title',
+  'button_zone',
+  'button_order',
+]);
+const isData = (field: string) => DATA_FIELDS.has(field) || field.startsWith('binding:');
 
 export function ActorLabel({ actor }: { actor: JournalActor }) {
   const { t } = useTranslation();
@@ -45,6 +64,9 @@ export function useJournalWords() {
       ? t('admin.journal.object.room', { number: name.slice(5) })
       : name.startsWith('module:')
       ? t(`admin.module.${name.slice(7)}`, { defaultValue: unknown })
+      : // Связь возможности кнопки с каналом (63-4): «Связь: вкл/выкл».
+        name.startsWith('binding:')
+      ? t('admin.journal.field.binding', { ability: t(`admin.variants.ability.${name.slice(8)}`, { defaultValue: unknown }) })
       : t(`admin.profile.field.${name}`, { defaultValue: t(`admin.journal.field.${name}`, { defaultValue: unknown }) });
   /*
     ЗНАЧЕНИЕ СЛОВОМ, А НЕ КОДОМ (партия 62-F): валюта — «евро», язык —
@@ -70,6 +92,8 @@ export function useJournalWords() {
     if (key === 'control_protocol') return t(`admin.card.conn.form.protocols.${item}`, { defaultValue: unknown });
     if (key === 'control_auth') return t(`admin.card.conn.form.auths.${item}`, { defaultValue: unknown });
     if (key === 'control_secret') return t('admin.journal.detail.secretChanged');
+    // Вид экрана гостя варианта (63-4): «Кнопки», «План», «Полный план».
+    if (key === 'plan_level') return t(`admin.variants.view.${item}`, { defaultValue: unknown });
     // Уборка — словом панели отеля, а не кодом из базы (63-1).
     if (key === 'room_housekeeping') return t(`entityCard.room.housekeeping.${item}`, { defaultValue: unknown });
     return item;
@@ -94,7 +118,11 @@ export function useJournalWords() {
     if (o.kind === 'room') return withData('admin.journal.object.room', 'number', String(o.number ?? ''));
     if (o.kind === 'building') return withData('admin.journal.object.building', 'name', String(o.name ?? ''));
     if (o.kind === 'category') return withData('admin.journal.object.category', 'name', String(o.name ?? ''));
-    if (o.kind === 'variant') return o.version ? t('admin.journal.object.variantVersion', { code: o.code, version: o.version }) : t('admin.journal.object.variant', { code: o.code });
+    // Вариант — названием (с 63-4 оно в записи); у старых записей — код, как данные.
+    if (o.kind === 'variant') {
+      const name = String(o.title || o.code || '');
+      return o.version ? withData('admin.journal.object.variantVersion', 'code', name, { version: o.version }) : withData('admin.journal.object.variant', 'code', name);
+    }
     return '';
   };
   /*
@@ -103,8 +131,8 @@ export function useJournalWords() {
     Control (партия 62-F). Перевод строки сохраняется целиком: на месте
     значения — метка, по ней строка режется.
   */
-  const withData = (key: string, name: string, data: string): ReactNode => {
-    const [before, after = ''] = t(key, { [name]: MARK }).split(MARK);
+  const withData = (key: string, name: string, data: string, extra: Record<string, unknown> = {}): ReactNode => {
+    const [before, after = ''] = t(key, { ...extra, [name]: MARK }).split(MARK);
     return (
       <>
         {before}
@@ -135,6 +163,10 @@ export function useJournalWords() {
       const kind = t(`admin.card.rooms.batch.kind.${d.batch}`, { defaultValue: unknown });
       lines.push(typeof d.value === 'string' && d.value ? t('admin.journal.detail.batchValue', { kind, value: d.value }) : t('admin.journal.detail.batch', { kind }));
     }
+    // Варианты номеров (63-4).
+    if (typeof d.rooms === 'number') lines.push(t('admin.journal.detail.publishedRooms', { count: d.rooms }));
+    if (typeof d.moved_buttons === 'number' && d.moved_buttons) lines.push(t('admin.journal.detail.movedButtons', { count: d.moved_buttons }));
+    if (d.accepted_warning === true) lines.push(t('admin.journal.detail.acceptedWarning'));
     // Запись модулей до партии 62-D: только число, без «было → стало».
     if (typeof d.count === 'number' && !entry.changes.length) lines.push(t('admin.journal.detail.legacyCount', { count: d.count }));
     return lines;
@@ -190,7 +222,7 @@ export function JournalRow({ entry, testId, aside }: { entry: JournalEntry; test
         {entry.changes.map((change) => (
           <Box key={change.field} data-testid={`admin-journal-change-${change.field}`} sx={{ color: ink.mid, overflowWrap: 'anywhere' }}>
             <b>{words.field(change.field)}:</b>{' '}
-            {DATA_FIELDS.has(change.field) ? (
+            {isData(change.field) ? (
               <>
                 <span data-words="data">{words.value(change, change.from)}</span> → <span data-words="data">{words.value(change, change.to)}</span>
               </>

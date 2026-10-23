@@ -807,7 +807,7 @@ export interface JournalEntry {
   section: string;
   actor: JournalActor;
   via_support: boolean;
-  object: { kind: string; code?: string; name?: string; number?: string; version?: number } | null;
+  object: { kind: string; code?: string; name?: string; title?: string; number?: string; version?: number } | null;
   changes: JournalChange[];
   details: Record<string, unknown>;
   payload: Record<string, unknown>;
@@ -1288,6 +1288,7 @@ export interface VariantCard {
   version: number | null;
   published_at: string | null;
   has_plan: boolean;
+  device_template: string;
   /** Только образец для показа списка (локально), не настоящий вариант. */
   sample?: boolean;
 }
@@ -1316,6 +1317,80 @@ export interface VariantDiff {
   changes: VariantChange[];
 }
 export const getVariants = (hotelId: string) => request<VariantsOverview>(`/hotels/${hotelId}/grms/variants`);
+export interface VariantAbility {
+  capability: string;
+  required: boolean;
+  variable: string | null;
+  command: string;
+  feedback: string;
+  /** Форма не сошлась — фраза сервера (для инженера). */
+  form: string;
+  sense: { code: string; expected: string; found: string } | null;
+}
+export interface VariantButton {
+  slug: string;
+  kind: string;
+  title: Record<string, string>;
+  zone: string;
+  sort_order: number;
+  abilities: VariantAbility[];
+  missing: string[];
+  publishable: boolean;
+  warnings: number;
+}
+export interface ChannelOption {
+  key: string;
+  command: string;
+  feedback: string;
+  range: [number, number];
+  value_kind: string;
+  fit: 'good' | 'ok' | 'warn' | 'bad';
+  form: string;
+  sense: VariantAbility['sense'];
+  taken_by: string | null;
+}
+export interface CopySource {
+  hotel_id: string;
+  hotel: string;
+  variants: Array<{ code: string; title: Record<string, string>; buttons: number }>;
+}
+const vbase = (hotelId: string, code?: string) => `/hotels/${hotelId}/grms/variants${code ? `/${encodeURIComponent(code)}` : ''}`;
+export const createVariant = (hotelId: string, body: { title: Record<string, string>; plan_level: string; notes?: string; source?: string; source_hotel?: string }) =>
+  request<{ code: string }>(vbase(hotelId), 'POST', body);
+export const updateVariantBase = (hotelId: string, code: string, body: { title: Record<string, string>; notes: string; plan_level: string; device_name_template?: string }) =>
+  request<{ ok: true }>(vbase(hotelId, code), 'PUT', body);
+export const deleteVariant = (hotelId: string, code: string) => request<{ ok: true }>(vbase(hotelId, code), 'DELETE');
+export const getCopySources = (hotelId: string) => request<{ hotels: CopySource[] }>(`${vbase(hotelId)}/sources`);
+export const addZone = (hotelId: string, code: string, title: Record<string, string>) => request<{ code: string }>(`${vbase(hotelId, code)}/zones`, 'POST', { title });
+export const renameZone = (hotelId: string, code: string, zone: string, title: Record<string, string>) =>
+  request<{ ok: true }>(`${vbase(hotelId, code)}/zones/${encodeURIComponent(zone)}`, 'PUT', { title });
+export const removeZone = (hotelId: string, code: string, zone: string) => request<{ moved: number }>(`${vbase(hotelId, code)}/zones/${encodeURIComponent(zone)}`, 'DELETE');
+export const orderZones = (hotelId: string, code: string, items: string[]) => request<{ ok: true }>(`${vbase(hotelId, code)}/zones-order`, 'POST', { items });
+export const getButtons = (hotelId: string, code: string) => request<{ buttons: VariantButton[] }>(`${vbase(hotelId, code)}/buttons`);
+export const addButton = (hotelId: string, code: string, body: { kind: string; zone: string; title: Record<string, string> }) =>
+  request<{ slug: string }>(`${vbase(hotelId, code)}/buttons`, 'POST', body);
+export const updateButton = (hotelId: string, code: string, slug: string, body: { title: Record<string, string>; zone: string }) =>
+  request<{ ok: true }>(`${vbase(hotelId, code)}/buttons/${encodeURIComponent(slug)}`, 'PUT', body);
+export const removeButton = (hotelId: string, code: string, slug: string) => request<{ ok: true }>(`${vbase(hotelId, code)}/buttons/${encodeURIComponent(slug)}`, 'DELETE');
+export const orderButtons = (hotelId: string, code: string, items: string[]) => request<{ ok: true }>(`${vbase(hotelId, code)}/buttons-order`, 'POST', { items });
+export const getChannels = (hotelId: string, code: string, slug: string, capability: string) =>
+  request<{ channels: ChannelOption[] }>(`${vbase(hotelId, code)}/buttons/${encodeURIComponent(slug)}/channels?capability=${encodeURIComponent(capability)}`);
+export const linkChannel = (hotelId: string, code: string, slug: string, body: { capability: string; variable: string; accept_warning?: boolean }) =>
+  request<{ sense: VariantAbility['sense'] }>(`${vbase(hotelId, code)}/buttons/${encodeURIComponent(slug)}/link`, 'POST', body);
+export const unlinkChannel = (hotelId: string, code: string, slug: string, capability: string) =>
+  request<{ ok: true }>(`${vbase(hotelId, code)}/buttons/${encodeURIComponent(slug)}/unlink`, 'POST', { capability, variable: '' });
+export interface TestResult {
+  outcome: string;
+  note: string;
+  device: string;
+  room: string;
+  steps: Array<{ step: string; channel: string; ok?: boolean; value?: unknown; sent?: unknown; observed?: unknown; error?: unknown; result?: unknown }>;
+}
+export const testCommand = (hotelId: string, code: string, body: { element: string; room_number: string; capability: string; value: number; confirm: { room: string; element: string; value: number } }) =>
+  request<TestResult>(`${vbase(hotelId, code)}/test`, 'POST', body);
+export const publishVariant = (hotelId: string, code: string, rooms: number) => request<{ version: number; rooms: number }>(`${vbase(hotelId, code)}/publish`, 'POST', { rooms });
+export const rollbackVariant = (hotelId: string, code: string, toVersion: number) =>
+  request<{ version: number; rooms: number }>(`${vbase(hotelId, code)}/rollback`, 'POST', { to_version: toVersion, confirm: true });
 export const getVariantDiff = (hotelId: string, code: string) => request<VariantDiff>(`/hotels/${hotelId}/grms/types/${encodeURIComponent(code)}/diff`);
 
 export type DictKind = 'building' | 'category';

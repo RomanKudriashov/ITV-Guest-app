@@ -565,15 +565,26 @@
         "command": "向客房设备发送指令",
         "plan_level_changed": "客房平面图级别已修改",
         "import_confirmed": "PNR 导入已确认",
-        "zone_added": "已添加分区",
-        "element_added": "已添加元件",
+        "zone_added": "已添加区域",
+        "element_added": "已添加按钮",
         "device_override": "房间设备名称",
         "plan_frames": "已上传平面图",
         "plan_copied": "已复制平面分区",
         "published": "配置已发布",
         "rolled_back": "配置已回滚",
         "pin_set": "已发放客房 PIN",
-        "pin_cleared": "已移除客房 PIN"
+        "pin_cleared": "已移除客房 PIN",
+        "variant_created": "已创建客房方案",
+        "variant_updated": "已修改方案基础",
+        "variant_deleted": "已删除客房方案",
+        "zone_updated": "已重命名区域",
+        "zone_removed": "已移除区域",
+        "zones_ordered": "已修改区域顺序",
+        "element_updated": "已修改按钮",
+        "element_removed": "已移除按钮",
+        "elements_ordered": "已修改按钮顺序",
+        "binding_set": "按钮已连接通道",
+        "binding_removed": "已取消按钮的通道连接"
       },
       "guest_session": {
         "created": "客人打开了应用",
@@ -2087,7 +2098,23 @@
         "control_timeout_ms": "等待回复（毫秒）",
         "control_is_enabled": "服务器已启用",
         "control_node": "连接器",
-        "control_secret": "密码或令牌"
+        "control_secret": "密码或令牌",
+        "binding": "连接：{{ability}}",
+        "variant": "方案",
+        "title_ru": "俄语名称",
+        "title_en": "英语名称",
+        "title_zh": "中文名称",
+        "title_ar": "阿拉伯语名称",
+        "notes": "描述",
+        "plan_level": "客人界面视图",
+        "device_template": "客房设备名称",
+        "zone": "区域",
+        "zone_title": "区域名称",
+        "zone_order": "区域顺序",
+        "button": "按钮",
+        "button_title": "按钮名称",
+        "button_zone": "按钮区域",
+        "button_order": "按钮顺序"
       },
       "object": {
         "node": "连接器“{{name}}”",
@@ -2109,7 +2136,10 @@
         "revoked": "已关闭客人会话：{{count}}",
         "batch": "{{kind}}",
         "batchValue": "{{kind}}：“{{value}}”",
-        "secretChanged": "已更改"
+        "secretChanged": "已更改",
+        "publishedRooms_other": "{{count}} 间客房获得了该版本",
+        "movedButtons_other": "{{count}} 个按钮移到“无区域”",
+        "acceptedWarning": "不顾通道含义警告仍已连接"
       },
       "otherAction": "其他操作",
       "sort": {
@@ -2223,8 +2253,6 @@
       "idea": "客房方案是一套设置：平面图、区域、客人按钮、设备通道。它同时应用于许多相同的客房。酒店通常有 5–10 个方案。",
       "ideaShort": "一套设置用于许多相同客房：平面图、区域、客人按钮、设备。",
       "none": "暂无方案。方案通过调试文件创建。",
-      "sample": "示例",
-      "sampleHint": "示例——展示有多个方案时列表的样子。",
       "untitled": "未命名",
       "open": "打开",
       "back": "全部方案",
@@ -2260,9 +2288,6 @@
         "attention": "需要注意",
         "todo": "未开始"
       },
-      "legacy": "编辑（旧界面）",
-      "legacyHide": "隐藏旧界面",
-      "legacyImport": "上传调试文件",
       "journalLink": "设备日志",
       "lang": {
         "ru": "俄语",
@@ -2309,7 +2334,14 @@
         "origin": "来源",
         "originHelp": "方案通过调试文件创建：其中列出客房和设备通道。",
         "fromImport": "来自调试文件，上传于 {{date}}",
-        "manual": "手动创建"
+        "manual": "手动创建",
+        "device": "客房设备名称",
+        "deviceHelp": "工程师用：控制服务器如何命名客房设备。房号为 {room}，例如“Room {room}”。",
+        "noDevice": "未设置——没有它指令无法到达客房",
+        "edit": "编辑基础",
+        "import": "上传调试文件",
+        "importHide": "隐藏文件上传",
+        "importHelp": "上传文件会根据文件更新设备通道和客房分配。"
       },
       "plan": {
         "zoneUnnamed": "未命名区域",
@@ -2325,7 +2357,9 @@
         "pointsHelp": "单独的点：例如区域上方的空调或灯具。",
         "count_other": "{{count}}",
         "noFrame": "没有平面图图像——客人只会看到按钮。",
-        "legacy": "图像和区域"
+        "markup": "图像和标注",
+        "markupHide": "隐藏标注",
+        "markupHelp": "上传平面图图像并标注区域、窗户和点位。"
       },
       "buttons": {
         "noZone": "无区域",
@@ -2343,11 +2377,39 @@
           "range": "范围"
         },
         "device": "客房设备名称：",
-        "legacy": "按钮和连接"
+        "missing": "缺少连接：{{list}}——客人看不到该按钮",
+        "senseWarn": "连接的通道似乎属于其他用途——请检查",
+        "formWarn": "通道不合适——请打开按钮",
+        "ready": "就绪",
+        "add": "添加按钮",
+        "removeTitle": "移除按钮“{{name}}”？",
+        "removeAbout": "按钮及其通道连接将被删除；其点位将从平面图上移除。发布后客人才会看到。",
+        "zone": "区域",
+        "addTitle": "新的客人按钮",
+        "addNext": "下一步：设备连接",
+        "kindLabel": "类型",
+        "kindHelp": "类型决定图标、状态文字以及需要哪些设备连接。",
+        "guestTitle": "给客人的名称",
+        "guestTitleHelp": "留空——客人看到类型名称：“灯光”“窗帘”。",
+        "links": "设备连接",
+        "linksHelp": "按钮的每项功能对应一个控制服务器通道。必需项必须连接，否则客人看不到该按钮。",
+        "required": "必需",
+        "optional": "可选",
+        "notLinkedRequired": "未连接——没有它按钮不会向客人显示",
+        "notLinked": "未连接",
+        "sense": "通道似乎用于：{{found}}，而按钮是 {{expected}}。",
+        "change": "更换通道",
+        "pick": "选择通道",
+        "unlink": "取消"
       },
       "rooms": {
         "summary_other": "此方案有 {{count}} / {{total}} 间客房——在布局中高亮显示。",
-        "help": "布局与“客房”标签中的相同。其他方案的客房会变暗。"
+        "help": "布局与“客房”标签中的相同。其他方案的客房会变暗。",
+        "selectHint": "点击客房、楼层或纵列进行选择；然后分配方案或取消方案。",
+        "selected_other": "已选择 {{count}} 间客房",
+        "assign": "分配此方案",
+        "clear": "取消方案",
+        "unselect": "取消选择"
       },
       "check": {
         "lead": "选择此方案的一间客房并读取其状态——只读，不向设备发送指令。",
@@ -2369,7 +2431,11 @@
         "isCurrent": "客人当前使用",
         "more_other": "还有 {{count}} 个版本",
         "noVersions": "暂无版本。",
-        "legacy": "发布和回滚"
+        "button": "发布",
+        "noButtons": "没有就绪的按钮——无需发布。",
+        "done": "已发布版本 {{version}}。",
+        "confirmTitle": "发布修改？",
+        "go_other": "为 {{count}} 间客房发布"
       },
       "change": {
         "title": "名称：",
@@ -2400,6 +2466,135 @@
         "heating": "供暖",
         "scene": "场景",
         "other": "按钮"
+      },
+      "close": "关闭",
+      "cancel": "取消",
+      "save": "保存",
+      "edit": "编辑",
+      "remove": "移除",
+      "up": "上移",
+      "down": "下移",
+      "done": "完成",
+      "err": {
+        "variant_has_rooms": "该方案有 {{rooms}} 间客房——请先为它们指定其他方案，或在“客房”步骤中取消方案。",
+        "binding_sense_warning": "该通道似乎不属于这个按钮。",
+        "publish_rooms_changed": "查看期间方案客房发生了变化：现在有 {{rooms}} 间。请重新打开确认。",
+        "test_needs_confirm": "指令未发送：请确认客房、按钮和数值。",
+        "device_template_no_room": "设备名称中需要房号——在房号的位置填入 {room}。",
+        "title_required": "至少需要一种语言的名称。",
+        "rollback_needs_confirm": "请确认恢复版本。",
+        "no_such_ability": "该按钮没有此功能。",
+        "unknown_kind": "没有这种按钮类型。",
+        "channel_taken": "该通道已被按钮“{{button}}”使用：一个通道只对应一个按钮。请在那里取消连接或选择其他通道。",
+        "plan_zone_unbound": "平面图上的区域没有按钮：{{zones}}。打开“平面图”→“图像和标注”，将区域连接到灯光按钮。",
+        "plan_refs_broken": "平面图上的点位或窗户引用了已移除的按钮。打开“平面图”→“图像和标注”进行修正。"
+      },
+      "new": {
+        "button": "新方案",
+        "title": "新客房方案",
+        "create": "创建方案",
+        "mode": {
+          "blank": "从头开始",
+          "file": "来自调试文件",
+          "copy": "复制本酒店的方案",
+          "copy_other": "从其他酒店复制"
+        },
+        "about": {
+          "blank": "空方案：在其步骤中添加区域和按钮；上传调试文件后会出现通道。",
+          "file": "调试文件列出客房和设备通道。由它创建方案并立即分配给客房。",
+          "copy": "复制：区域、按钮、通道和平面图标注。客房不会转移——请在“客房”步骤中分配。",
+          "copy_other": "从其他酒店复制：仅复制设置——区域、按钮、通道、标注。不转移该酒店的客房、版本和平面图图像。"
+        },
+        "source": "要复制的方案",
+        "copySuffix": "副本",
+        "otherHotel": "酒店",
+        "noSources": "其他酒店暂无方案。",
+        "copyNote": "不复制客房、版本和平面图图像：在“客房”步骤中分配客房，在“平面图”步骤中上传图像。"
+      },
+      "delete": {
+        "button": "删除方案",
+        "title": "删除方案“{{name}}”？",
+        "toRooms": "前往方案客房",
+        "confirm": "删除",
+        "hasRooms_other": "该方案有 {{count}} 间客房。无法删除：请先为它们指定其他方案，或在“客房”步骤中取消方案。",
+        "sure": "方案及其按钮、通道和版本将被删除。它没有客房。"
+      },
+      "zones": {
+        "title": "区域",
+        "help": "房间的各部分：客厅、卧室、浴室。客人按钮按区域分组；在平面图上区域是客人点击的范围。",
+        "none": "暂无区域。",
+        "add": "添加区域",
+        "removeTitle": "移除区域“{{name}}”？",
+        "removeAbout_other": "该区域的 {{count}} 个按钮不会删除——将移到“无区域”。区域及其标注将从平面图上移除。"
+      },
+      "ability": {
+        "toggle": "开/关",
+        "trigger": "启动",
+        "fan_speed": "风速",
+        "setpoint": "设定温度",
+        "current_temp": "当前温度",
+        "position": "位置",
+        "level": "强度"
+      },
+      "subject": {
+        "light": "灯光",
+        "curtain": "窗帘",
+        "climate": "空调",
+        "heating": "供暖",
+        "dnd": "“请勿打扰”",
+        "mur": "打扫",
+        "scene": "场景",
+        "master": "全部关闭"
+      },
+      "channels": {
+        "title": "{{button}}：“{{ability}}”的通道",
+        "subtitle": "合适的在上方。数值类型不合适的通道无法选择。",
+        "range": "数值 {{min}}…{{max}}",
+        "taken": "已被按钮占用",
+        "senseShort": "似乎是用于：{{found}} 的通道",
+        "fit": {
+          "good": "合适",
+          "ok": "类型合适",
+          "warn": "请检查",
+          "bad": "不合适"
+        },
+        "none": "没有通道——请在“基础”步骤中上传调试文件。",
+        "warnTitle": "该通道似乎不属于这个按钮",
+        "warnPickOther": "选择其他",
+        "warnAccept": "仍然连接",
+        "warnText": "按钮是 {{button}}，但通道名称看起来像：{{found}}。如果连接，客人按下一个，房间里却发生另一件事。仍然连接吗？"
+      },
+      "test": {
+        "nothing": "方案有客房和已连接按钮后才会出现测试指令。",
+        "title": "向客房发送测试指令",
+        "help": "这是发给设备的真实指令：房间里可能有客人。只有确认“客房、内容、数值”后才会发送。",
+        "button": "按钮",
+        "ability": "内容",
+        "number": "数值",
+        "value": {
+          "on": "开启",
+          "off": "关闭",
+          "run": "执行"
+        },
+        "send": "发送测试指令",
+        "outcome": {
+          "confirmed": "已完成：设备已确认。",
+          "no_feedback_channel": "已发送；无法确认——通道没有状态。",
+          "feedback_dead": "已发送，但状态无响应。",
+          "unconfirmed": "已发送，但状态没有变化。",
+          "failed": "指令未执行。",
+          "other": "完成。"
+        },
+        "confirmTitle": "向客房发送指令？",
+        "confirmSend": "发送",
+        "confirmRoom": "客房",
+        "confirmWarn": "这是真实指令：如果房间里有客人，他会看到。"
+      },
+      "rollback": {
+        "button": "恢复此版本",
+        "title": "恢复版本 {{version}}？",
+        "go": "恢复",
+        "about_other": "方案客房（{{count}}）将获得版本 {{version}}。将出现一个新版本——{{version}} 的副本；历史不会被删除。"
       }
     }
   }

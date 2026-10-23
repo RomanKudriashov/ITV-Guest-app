@@ -120,13 +120,11 @@ test('инженер видит отказ с причиной, фильтруе
   await page.getByTestId('admin-login-submit').click()
   await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 30_000 })
 
-  await page.goto(`/admin?section=fleet&hotel=${hotelId}&tab=roomControl`)
-  await expect(page.getByTestId('admin-hotel-room-control')).toBeVisible({ timeout: 20_000 })
-  // Тип выбираем ТОТ, у которого есть демо-комната: перечитывание строки идёт
-  // через выбранный тип, и на чужом проверять было бы нечего.
-  await page.getByTestId('admin-grms-type-select').click()
-  await page.locator(`li[data-value="${type.code}"]`).click()
-  await page.getByTestId('admin-grms-tab-diagnostics').click()
+  // С 63-4 журнал оборудования — вкладка «Журнал» карточки (подвкладки
+  // «Диагностика» больше нет). Перечитывание идёт через первый вариант отеля —
+  // проверяем, что это тот, у которого демо-комната.
+  expect(type.code, 'журнал перечитывает через первый вариант отеля').toBe('demo-suite')
+  await page.goto(`/admin?section=fleet&hotel=${hotelId}&tab=journal`)
   await expect(page.getByTestId('grms-diagnostics')).toBeVisible({ timeout: 20_000 })
 
   // 3. Три звена связи — ПОРОЗНЬ, а не одной строкой «недоступно».

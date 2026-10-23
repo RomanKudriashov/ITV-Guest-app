@@ -277,7 +277,7 @@ def object_of(row: AuditLog) -> dict | None:
     if row.action in NODE_ACTIONS and payload.get("node"):
         return {"kind": "node", "name": payload["node"]}
     if row.action.startswith("grms.") and payload.get("type"):
-        return {"kind": "variant", "code": payload["type"], "version": payload.get("version") or payload.get("new_version")}
+        return {"kind": "variant", "code": payload["type"], "title": payload.get("type_title") or "", "version": payload.get("version") or payload.get("new_version")}
     if (row.action in ("platform.hotel.room_place_set", "grms.pin_set", "grms.pin_cleared") or row.action.startswith("room.")) and payload.get("room"):
         return {"kind": "room", "number": payload["room"]}
     if row.action.startswith("building.") and payload.get("title"):
@@ -298,6 +298,9 @@ def details_of(row: AuditLog) -> dict:
         "created", "skipped", "moved", "revoked",
         # Действие пачкой (63-2): какое, с каким значением и сколько номеров.
         "batch", "value",
+        # Варианты номеров (63-4): сколько номеров получило версию, сколько
+        # кнопок ушло в «Без зоны», связь поставлена вопреки предупреждению.
+        "rooms", "moved_buttons", "accepted_warning",
     )
     return {key: payload[key] for key in keep if key in payload and payload[key] not in (None, "")}
 
