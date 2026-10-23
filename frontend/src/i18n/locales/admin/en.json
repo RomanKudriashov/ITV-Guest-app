@@ -211,7 +211,7 @@
         "overview": "What keeps the hotel from working right now and what to do about it. Checks update every minute.",
         "connections": "The connector on the hotel server and other external systems: online or not, version, key.",
         "rooms": "Buildings and floors at a glance: where rooms are, whether control is ready and what to fix. Rooms with the same position are stacked.",
-        "roomControl": "Room variants, commissioning file upload, builder, plan, versions and equipment diagnostics.",
+        "roomControl": "Room variants: plan, zones, guest buttons and equipment — step by step from basics to publishing.",
         "journal": "Support entries into the hotel panel and the room equipment log.",
         "history": "Every change made to the hotel in Control: profile, modules, connections, group, disabling, administrators, room control, support entries — who, when, what it was and what it became."
       },
@@ -2259,6 +2259,203 @@
       "by": "Sort by “{{column}}”",
       "default": "default order",
       "label": "Sort by"
+    },
+    "variants": {
+      "listTitle": "Room variants",
+      "idea": "A room variant is one setup: plan, zones, guest buttons, equipment channels. It applies at once to many identical rooms. A hotel usually has 5–10 variants.",
+      "ideaShort": "One setup for many identical rooms: plan, zones, guest buttons, equipment.",
+      "none": "No variants yet. They are created from the commissioning file.",
+      "sample": "sample",
+      "sampleHint": "A sample — shows what the list looks like with several variants.",
+      "untitled": "Untitled",
+      "open": "Open",
+      "back": "All variants",
+      "stepsLabel": "Variant steps",
+      "roomsCount_one": "{{count}} room",
+      "roomsCount_other": "{{count}} rooms",
+      "buttonsCount_one": "{{count}} button",
+      "buttonsCount_other": "{{count}} buttons",
+      "state": {
+        "published": "published",
+        "changed": "has unpublished changes",
+        "unpublished": "not published",
+        "empty": "not set up"
+      },
+      "view": {
+        "tiles": "Buttons",
+        "simple": "Plan",
+        "full": "Full plan"
+      },
+      "noThumb": {
+        "tiles": "“Buttons” view — no plan",
+        "simple": "no plan",
+        "full": "no plan"
+      },
+      "steps": {
+        "base": "Basics",
+        "plan": "Plan",
+        "buttons": "Guest buttons",
+        "rooms": "Rooms",
+        "check": "Check",
+        "publish": "Publishing"
+      },
+      "mark": {
+        "ready": "done",
+        "attention": "needs attention",
+        "todo": "not started"
+      },
+      "legacy": "Edit (previous screen)",
+      "legacyHide": "Hide previous screen",
+      "legacyImport": "upload a commissioning file",
+      "journalLink": "Equipment log",
+      "lang": {
+        "ru": "in Russian",
+        "en": "in English",
+        "zh": "in Chinese",
+        "ar": "in Arabic",
+        "other": "in another language"
+      },
+      "path": {
+        "connection": "Connection",
+        "variants": "Variants",
+        "rooms": "Rooms",
+        "published": "Published",
+        "connOk": "online",
+        "variantsValue_one": "{{count}} variant",
+        "variantsValue_other": "{{count}} variants",
+        "roomsValue": "{{bound}} of {{total}} with a variant",
+        "publishedAll": "all published",
+        "publishedValue": "{{count}} of {{total}}",
+        "why": {
+          "noConnector": "No connector set up — open “Connections”.",
+          "connectorSilent": "The connector is offline — guests cannot control rooms.",
+          "serverDown": "The connector is online, but the control server does not respond.",
+          "noVariants": "No variants — upload a commissioning file.",
+          "emptyVariants_one": "{{count}} variant without buttons",
+          "emptyVariants_other": "{{count}} variants without buttons",
+          "noRooms": "The hotel has no rooms.",
+          "roomsWithout_one": "{{count}} room without a variant",
+          "roomsWithout_other": "{{count}} rooms without a variant",
+          "changed_one": "{{count}} variant with unpublished changes",
+          "changed_other": "{{count}} variants with unpublished changes",
+          "unpublished_one": "{{count}} variant not published",
+          "unpublished_other": "{{count}} variants not published"
+        }
+      },
+      "base": {
+        "title": "Name",
+        "titleHelp": "What the variant is called in Control. Guests do not see it — they see their room.",
+        "noTitle": "No name set",
+        "notes": "Description",
+        "noNotes": "no description",
+        "view": "Guest screen view",
+        "viewHelp": "How the guest sees the room: a list of buttons, a plan with zones, or a full plan where light is shown as light.",
+        "viewAbout": {
+          "tiles": "the guest sees buttons by zone, without a picture of the room.",
+          "simple": "the guest sees the room plan, zones that are on are highlighted.",
+          "full": "the guest sees the room plan, light is shown as real light."
+        },
+        "origin": "Where it came from",
+        "originHelp": "Variants are created from the commissioning file: it lists rooms and equipment channels.",
+        "fromImport": "from the commissioning file, uploaded {{date}}",
+        "manual": "created manually"
+      },
+      "plan": {
+        "zoneUnnamed": "unnamed zone",
+        "tiles": "“Buttons” view: the plan is not shown to the guest, no frame is needed.",
+        "frame": "Frame",
+        "framePair": "a pair of frames: day and night",
+        "frameOne": "one frame — the night one is computed",
+        "zones": "Zones on the plan",
+        "zonesHelp": "Areas of the frame the guest taps: a tap switches the zone light.",
+        "noZones": "zones not marked",
+        "windows": "Windows (curtains)",
+        "points": "Points on the plan",
+        "pointsHelp": "Separate points: for example an air conditioner or a lamp over a zone.",
+        "count_one": "{{count}}",
+        "count_other": "{{count}}",
+        "noFrame": "No plan frame — the guest will see buttons only.",
+        "legacy": "frame and zones"
+      },
+      "buttons": {
+        "noZone": "No zone",
+        "none": "No buttons yet.",
+        "hiddenShort": "not shown to the guest",
+        "hidden_one": "{{count}} button is not shown to the guest: not linked to equipment.",
+        "hidden_other": "{{count}} buttons are not shown to the guest: not linked to equipment.",
+        "engineer": "For the engineer: equipment channels",
+        "engineerHide": "Hide equipment channels",
+        "engineerHelp": "Which control server channels stand behind each button — as they are named in the commissioning file.",
+        "col": {
+          "button": "Button",
+          "ability": "Ability",
+          "command": "Command",
+          "feedback": "State",
+          "range": "Range"
+        },
+        "device": "Room device name:",
+        "legacy": "buttons and links"
+      },
+      "rooms": {
+        "summary_one": "This variant has {{count}} of {{total}} rooms — highlighted on the layout.",
+        "summary_other": "This variant has {{count}} of {{total}} rooms — highlighted on the layout.",
+        "help": "The layout is the same as on the “Rooms” tab. Rooms of other variants are dimmed."
+      },
+      "check": {
+        "lead": "Choose a room of this variant and read its state — read only, no commands to the equipment.",
+        "noRooms": "The variant has no rooms — nothing to check.",
+        "readOnly": "The check is run by an operator with edit rights."
+      },
+      "publish": {
+        "current": "Current version",
+        "version": "version {{version}}, published {{date}}",
+        "never": "never published",
+        "diffTitle": "What changes on publishing",
+        "diffHelp": "Draft versus the current version: what guests will see after publishing.",
+        "same": "The draft matches the current version — nothing to publish.",
+        "willChange_one": "Changes in {{count}} room:",
+        "willChange_other": "Changes in {{count}} rooms:",
+        "history": "Version history",
+        "v": "version {{version}}",
+        "controls_one": "{{count}} button",
+        "controls_other": "{{count}} buttons",
+        "rolledBack": "rolled back to version {{version}}",
+        "isCurrent": "live for guests",
+        "more_one": "and {{count}} more version",
+        "more_other": "and {{count}} more versions",
+        "noVersions": "No versions yet.",
+        "legacy": "publishing and rollback"
+      },
+      "change": {
+        "title": "Name:",
+        "zone_added": "New zone:",
+        "zone_removed": "Zone removed:",
+        "control_added": "New button:",
+        "control_removed": "Button removed:",
+        "control_changed": "Button changed",
+        "field": {
+          "title": "name",
+          "abilities": "abilities",
+          "channels": "equipment link",
+          "zone": "zone",
+          "range": "range",
+          "other": "setting"
+        },
+        "plan_level": "Guest screen view:",
+        "plan": "Plan markup changed"
+      },
+      "kind": {
+        "dnd": "Do not disturb",
+        "mur": "Make up room",
+        "master_switch": "All off",
+        "light_group": "Light",
+        "curtain": "Curtains",
+        "curtain_blackout": "Blackout curtains",
+        "air_conditioner": "Air conditioner",
+        "heating": "Heating",
+        "scene": "Scene",
+        "other": "Button"
+      }
     }
   }
 }

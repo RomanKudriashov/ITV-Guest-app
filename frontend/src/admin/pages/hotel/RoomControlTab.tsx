@@ -1,29 +1,20 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
-import Stack from '@mui/material/Stack';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
-import { SelectField } from '@/components/SelectField';
-import { WithHelp } from '../hotels/hotelsUi';
-import { BuilderTab } from '@/cms/roomControl/BuilderTab';
 import { DiagnosticsTab } from '@/cms/roomControl/DiagnosticsTab';
-import { ImportTab } from '@/cms/roomControl/ImportTab';
-import { PlanEditor } from '@/cms/roomControl/PlanEditor';
-import { VersionsTab } from '@/cms/roomControl/VersionsTab';
 import { GrmsScopeProvider, useGrms } from '@/cms/roomControl/scope';
-import { useRights } from '../../useRights';
 import { contentLanguagesFrom } from '@/hooks/useBootstrap';
 import { getHotel } from '@/admin/adminClient';
+import { LEGACY_SUB, VariantsScreen } from './variants';
 
 /**
  * КОНФИГУРАЦИЯ УПРАВЛЕНИЯ НОМЕРОМ — В НАШЕЙ КОНСОЛИ.
@@ -42,7 +33,7 @@ import { getHotel } from '@/admin/adminClient';
 export function RoomControlTab({ hotelId }: { hotelId: string }) {
   return (
     <HotelGrmsScope hotelId={hotelId}>
-      <Inner />
+      <Inner hotelId={hotelId} />
     </HotelGrmsScope>
   );
 }
@@ -104,45 +95,32 @@ function JournalInner() {
   return <DiagnosticsTab type={first} />;
 }
 
-type Section = 'import' | 'builder' | 'plan' | 'versions' | 'diagnostics';
 /*
-  Диагностика стоит в консоли ПОСЛЕДНЕЙ и остаётся у отеля тоже — но глубина у
-  двух вкладок разная, и решает её сервер. Здесь инженер видит сырой ответ
-  оборудования, устройство и канал; в CMS отеля тот же экран показывает «когда,
-  что и чем закончилось». Экран один, ветвление одно — по `depth` из ответа.
+  ВАРИАНТЫ ВМЕСТО ПОДВКЛАДОК (партия 63-4). Четыре вкладки по видам работы
+  (импорт, конструктор, план, версии) сменил список вариантов с шагами внутри
+  каждого. Прежние адреса `sub=` ведут на нужный шаг первого варианта;
+  диагностика — во вкладку «Журнал» карточки, где журнал оборудования и живёт.
 */
-const SECTIONS: Section[] = ['import', 'builder', 'plan', 'versions', 'diagnostics'];
-
-// Роль «только чтение» (партия 60): импорт, конструктор и план — редакторы, и
-// каждое их нажатие сервер отвергал 403. Ей остаются история версий (без
-// публикации и отката) и диагностика.
-const READ_ONLY_SECTIONS: Section[] = ['versions', 'diagnostics'];
-
-function Inner() {
-  const { t, i18n } = useTranslation();
+function Inner({ hotelId }: { hotelId: string }) {
+  const { t } = useTranslation();
   const grms = useGrms();
-  const { canWrite } = useRights();
-  const sections = canWrite ? SECTIONS : READ_ONLY_SECTIONS;
-  /*
-    ПОДВКЛАДКА — В АДРЕСЕ (`sub`, партия 62-B): F5 и ссылка открывают ту же,
-    как и вкладку карточки. Неизвестное значение — первая доступная.
-  */
   const [params, setParams] = useSearchParams();
-  const chosen = params.get('sub') as Section | null;
-  const section = chosen && sections.includes(chosen) ? chosen : sections[0];
-  const setSection = (next: Section) => {
-    const out = new URLSearchParams(params);
-    out.set('sub', next);
-    setParams(out, { replace: true });
-  };
-  const [typeCode, setTypeCode] = useState('');
-
   const types = useQuery({ queryKey: queryKeys.grmsTypes(grms.base), queryFn: grms.types });
 
+  const legacy = params.get('sub');
+  const first = types.data?.types[0]?.code;
   useEffect(() => {
-    const list = types.data?.types ?? [];
-    if (list.length && !list.some((type) => type.code === typeCode)) setTypeCode(list[0].code);
-  }, [types.data, typeCode]);
+    if (!legacy || !types.data) return;
+    const out = new URLSearchParams(params);
+    out.delete('sub');
+    const target = LEGACY_SUB[legacy];
+    if (target === 'journal') out.set('tab', 'journal');
+    else if (target && first) {
+      out.set('variant', out.get('variant') || first);
+      out.set('step', target);
+    }
+    setParams(out, { replace: true });
+  }, [legacy, types.data, first, params, setParams]);
 
   if (types.isLoading) return <Skeleton variant="rounded" height={320} />;
 
@@ -157,62 +135,14 @@ function Inner() {
     return <Alert severity="error">{t('errors.generic')}</Alert>;
   }
 
-  const list = types.data.types;
-  const current = list.find((type) => type.code === typeCode) ?? null;
-
   return (
     <Box data-testid="admin-hotel-room-control">
-      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-        <Tabs
-          value={section}
-          onChange={(_, value: Section) => setSection(value)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{ flexGrow: 1 }}
-        >
-          {sections.map((key) => (
-            <Tab
-              key={key}
-              value={key}
-              label={t(`roomControl.tabs.${key}`)}
-              data-testid={`admin-grms-tab-${key}`}
-            />
-          ))}
-        </Tabs>
-        {list.length > 0 && (
-          <WithHelp help={t('admin.card.roomControl.typeHelp')}>
-            <SelectField
-              size="small"
-              fullWidth={false}
-              sx={{ minWidth: 200 }}
-              label={t('roomControl.type')}
-              value={typeCode}
-              onChange={setTypeCode}
-              testId="admin-grms-type-select"
-              // Название варианта на языке экрана; без перевода — по-русски, кода на экране нет.
-              options={list.map((type) => ({
-                value: type.code,
-                label: (type.title as Record<string, string> | undefined)?.[i18n.language] || type.title?.ru || t('roomControl.untitledType'),
-              }))}
-            />
-          </WithHelp>
-        )}
-      </Stack>
-
-      {section === 'import' && <ImportTab onImported={() => void types.refetch()} />}
-
-      {section !== 'import' && !current && (
-        <EmptyState
-          testId="admin-grms-no-types"
-          title={t('roomControl.noTypes')}
-          description={t('roomControl.noTypesHint')}
-        />
-      )}
-
-      {current && section === 'builder' && <BuilderTab type={current} />}
-      {current && section === 'plan' && <PlanEditor code={current.code} types={list} />}
-      {current && section === 'versions' && <VersionsTab type={current} readOnly={!canWrite} />}
-      {current && section === 'diagnostics' && <DiagnosticsTab type={current} />}
+      <VariantsScreen hotelId={hotelId} types={types.data.types} onTypesChanged={() => void types.refetch()} />
+      <Box sx={{ mt: 2 }}>
+        <Button size="small" onClick={() => setParams((prev) => { const out = new URLSearchParams(prev); out.set('tab', 'journal'); out.delete('variant'); out.delete('step'); return out; })} data-testid="admin-variants-journal">
+          {t('admin.variants.journalLink')}
+        </Button>
+      </Box>
     </Box>
   );
 }

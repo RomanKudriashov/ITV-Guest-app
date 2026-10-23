@@ -1269,6 +1269,55 @@ export const deleteControlServer = (hotelId: string) => request<ConnectionState>
 export const checkControlServer = (hotelId: string) => request<ConnectionState & { check: ServerCheck }>(`/hotels/${hotelId}/control-server/check`, 'POST', {});
 export const readRoomState = (hotelId: string, roomId: string) => request<RoomRead>(`/hotels/${hotelId}/control-server/room-check`, 'POST', { room_id: roomId });
 
+/* ── Варианты номеров (партия 63-4, шаг A — только чтение) ─────────────── */
+
+export type VariantState = 'published' | 'changed' | 'unpublished' | 'empty';
+export interface VariantCard {
+  code: string;
+  title: Record<string, string>;
+  notes: string;
+  plan_level: 'tiles' | 'simple' | 'full';
+  thumb: string | null;
+  rooms: number;
+  room_ids: string[];
+  state: VariantState;
+  elements: number;
+  publishable: number;
+  hidden: number;
+  zones: number;
+  version: number | null;
+  published_at: string | null;
+  has_plan: boolean;
+  /** Только образец для показа списка (локально), не настоящий вариант. */
+  sample?: boolean;
+}
+export interface VariantsOverview {
+  variants: VariantCard[];
+  rooms: { total: number; with_variant: number };
+  published: number;
+  changed: number;
+  origin: { kind: 'import' | 'manual'; at: string | null; file: string };
+}
+export interface VariantChange {
+  what: 'title' | 'zone_added' | 'zone_removed' | 'control_added' | 'control_removed' | 'control_changed' | 'plan_level' | 'plan';
+  from?: unknown;
+  to?: unknown;
+  zone?: Record<string, string>;
+  title?: Record<string, string>;
+  kind?: string;
+  control?: string;
+  fields?: string[];
+}
+export interface VariantDiff {
+  code: string;
+  current: number | null;
+  rooms: number;
+  same: boolean;
+  changes: VariantChange[];
+}
+export const getVariants = (hotelId: string) => request<VariantsOverview>(`/hotels/${hotelId}/grms/variants`);
+export const getVariantDiff = (hotelId: string, code: string) => request<VariantDiff>(`/hotels/${hotelId}/grms/types/${encodeURIComponent(code)}/diff`);
+
 export type DictKind = 'building' | 'category';
 const dictPath = (hotelId: string, kind: DictKind) => `/hotels/${hotelId}/${kind === 'building' ? 'buildings' : 'room-categories'}`;
 export const createDictItem = (hotelId: string, kind: DictKind, title: Record<string, string>) => request<DictItem>(dictPath(hotelId, kind), 'POST', { title });

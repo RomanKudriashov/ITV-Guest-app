@@ -209,7 +209,7 @@
         "overview": "当前影响酒店运行的问题以及处理办法。检查每分钟更新。",
         "connections": "酒店服务器上的连接器和其他外部系统：是否在线、版本、密钥。",
         "rooms": "楼栋和楼层一览：客房位置、控制是否就绪以及需要修复的内容。位置相同的客房上下对齐。",
-        "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
+        "roomControl": "客房方案：平面图、区域、客人按钮和设备——从基础到发布逐步进行。",
         "journal": "支持人员进入酒店面板的记录和客房设备日志。",
         "history": "在 Control 中对酒店的所有修改：资料、模块、连接、分组、停用、管理员、客房控制、支持登录——谁、何时、改前和改后。"
       },
@@ -2217,6 +2217,190 @@
       "by": "按“{{column}}”排序",
       "default": "默认顺序",
       "label": "排序方式"
+    },
+    "variants": {
+      "listTitle": "客房方案",
+      "idea": "客房方案是一套设置：平面图、区域、客人按钮、设备通道。它同时应用于许多相同的客房。酒店通常有 5–10 个方案。",
+      "ideaShort": "一套设置用于许多相同客房：平面图、区域、客人按钮、设备。",
+      "none": "暂无方案。方案通过调试文件创建。",
+      "sample": "示例",
+      "sampleHint": "示例——展示有多个方案时列表的样子。",
+      "untitled": "未命名",
+      "open": "打开",
+      "back": "全部方案",
+      "stepsLabel": "方案步骤",
+      "roomsCount_other": "{{count}} 间客房",
+      "buttonsCount_other": "{{count}} 个按钮",
+      "state": {
+        "published": "已发布",
+        "changed": "有未发布的修改",
+        "unpublished": "未发布",
+        "empty": "未设置"
+      },
+      "view": {
+        "tiles": "按钮",
+        "simple": "平面图",
+        "full": "完整平面图"
+      },
+      "noThumb": {
+        "tiles": "“按钮”视图——无平面图",
+        "simple": "无平面图",
+        "full": "无平面图"
+      },
+      "steps": {
+        "base": "基础",
+        "plan": "平面图",
+        "buttons": "客人按钮",
+        "rooms": "客房",
+        "check": "检查",
+        "publish": "发布"
+      },
+      "mark": {
+        "ready": "完成",
+        "attention": "需要注意",
+        "todo": "未开始"
+      },
+      "legacy": "编辑（旧界面）",
+      "legacyHide": "隐藏旧界面",
+      "legacyImport": "上传调试文件",
+      "journalLink": "设备日志",
+      "lang": {
+        "ru": "俄语",
+        "en": "英语",
+        "zh": "中文",
+        "ar": "阿拉伯语",
+        "other": "其他语言"
+      },
+      "path": {
+        "connection": "连接",
+        "variants": "方案",
+        "rooms": "客房",
+        "published": "已发布",
+        "connOk": "在线",
+        "variantsValue_other": "{{count}} 个方案",
+        "roomsValue": "有方案 {{bound}} / {{total}}",
+        "publishedAll": "全部已发布",
+        "publishedValue": "{{count}} / {{total}}",
+        "why": {
+          "noConnector": "未设置连接器——打开“连接”。",
+          "connectorSilent": "连接器离线——客人无法控制客房。",
+          "serverDown": "连接器在线，但控制服务器无响应。",
+          "noVariants": "没有方案——请上传调试文件。",
+          "emptyVariants_other": "{{count}} 个方案没有按钮",
+          "noRooms": "酒店没有客房。",
+          "roomsWithout_other": "{{count}} 间客房没有方案",
+          "changed_other": "{{count}} 个方案有未发布的修改",
+          "unpublished_other": "{{count}} 个方案未发布"
+        }
+      },
+      "base": {
+        "title": "名称",
+        "titleHelp": "方案在 Control 中的名称。客人看不到——他们看到的是自己的房间。",
+        "noTitle": "未设置名称",
+        "notes": "描述",
+        "noNotes": "无描述",
+        "view": "客人界面视图",
+        "viewHelp": "客人如何看到房间：按钮列表、带区域的平面图，或以真实灯光显示的完整平面图。",
+        "viewAbout": {
+          "tiles": "客人按区域看到按钮，没有房间图片。",
+          "simple": "客人看到房间平面图，开启的区域会高亮。",
+          "full": "客人看到房间平面图，灯光以真实灯光显示。"
+        },
+        "origin": "来源",
+        "originHelp": "方案通过调试文件创建：其中列出客房和设备通道。",
+        "fromImport": "来自调试文件，上传于 {{date}}",
+        "manual": "手动创建"
+      },
+      "plan": {
+        "zoneUnnamed": "未命名区域",
+        "tiles": "“按钮”视图：不向客人显示平面图，无需图像。",
+        "frame": "图像",
+        "framePair": "一对图像：白天和夜晚",
+        "frameOne": "一张图像——夜间图像自动计算",
+        "zones": "平面图上的区域",
+        "zonesHelp": "客人点击的图像区域：点击即可切换该区域的灯光。",
+        "noZones": "未标注区域",
+        "windows": "窗户（窗帘）",
+        "points": "平面图上的点",
+        "pointsHelp": "单独的点：例如区域上方的空调或灯具。",
+        "count_other": "{{count}}",
+        "noFrame": "没有平面图图像——客人只会看到按钮。",
+        "legacy": "图像和区域"
+      },
+      "buttons": {
+        "noZone": "无区域",
+        "none": "暂无按钮。",
+        "hiddenShort": "不向客人显示",
+        "hidden_other": "{{count}} 个按钮不向客人显示：未连接设备。",
+        "engineer": "工程师用：设备通道",
+        "engineerHide": "隐藏设备通道",
+        "engineerHelp": "每个按钮背后是哪些控制服务器通道——按调试文件中的名称。",
+        "col": {
+          "button": "按钮",
+          "ability": "功能",
+          "command": "指令",
+          "feedback": "状态",
+          "range": "范围"
+        },
+        "device": "客房设备名称：",
+        "legacy": "按钮和连接"
+      },
+      "rooms": {
+        "summary_other": "此方案有 {{count}} / {{total}} 间客房——在布局中高亮显示。",
+        "help": "布局与“客房”标签中的相同。其他方案的客房会变暗。"
+      },
+      "check": {
+        "lead": "选择此方案的一间客房并读取其状态——只读，不向设备发送指令。",
+        "noRooms": "方案没有客房——无可检查。",
+        "readOnly": "检查由具有编辑权限的操作员执行。"
+      },
+      "publish": {
+        "current": "当前版本",
+        "version": "版本 {{version}}，发布于 {{date}}",
+        "never": "尚未发布",
+        "diffTitle": "发布后会有哪些变化",
+        "diffHelp": "草稿与当前版本对比：发布后客人将看到的内容。",
+        "same": "草稿与当前版本一致——无需发布。",
+        "willChange_other": "将影响 {{count}} 间客房：",
+        "history": "版本历史",
+        "v": "版本 {{version}}",
+        "controls_other": "{{count}} 个按钮",
+        "rolledBack": "回滚到版本 {{version}}",
+        "isCurrent": "客人当前使用",
+        "more_other": "还有 {{count}} 个版本",
+        "noVersions": "暂无版本。",
+        "legacy": "发布和回滚"
+      },
+      "change": {
+        "title": "名称：",
+        "zone_added": "新区域：",
+        "zone_removed": "已删除区域：",
+        "control_added": "新按钮：",
+        "control_removed": "已删除按钮：",
+        "control_changed": "已修改按钮",
+        "field": {
+          "title": "名称",
+          "abilities": "功能",
+          "channels": "设备连接",
+          "zone": "区域",
+          "range": "范围",
+          "other": "设置"
+        },
+        "plan_level": "客人界面视图：",
+        "plan": "平面图标注已修改"
+      },
+      "kind": {
+        "dnd": "请勿打扰",
+        "mur": "请即打扫",
+        "master_switch": "全部关闭",
+        "light_group": "灯光",
+        "curtain": "窗帘",
+        "curtain_blackout": "遮光窗帘",
+        "air_conditioner": "空调",
+        "heating": "供暖",
+        "scene": "场景",
+        "other": "按钮"
+      }
     }
   }
 }

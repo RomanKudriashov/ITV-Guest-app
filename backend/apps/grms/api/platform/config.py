@@ -50,7 +50,7 @@ from apps.grms.schemas.cms import (
     RollbackIn,
     ZoneIn,
 )
-from apps.grms.services import builder, plan_editor, publishing, roomcheck
+from apps.grms.services import builder, plan_editor, publishing, roomcheck, variants
 from apps.hotels.services.platform import console
 
 # ПОЗДНИЙ ИМПОРТ ПРАВ. `hotels.api.platform` подключает этот роутер, а он тянет
@@ -345,6 +345,19 @@ def rollback(request: HttpRequest, hotel_id: str, code: str, payload: RollbackIn
     )
     # Запись в журнале одна — её пишет `publishing` с актором (партия 62-D).
     return {"version": config.version, "rolled_back_from": config.rolled_back_from}
+
+
+@router.get(f"{BASE}/variants", summary="Варианты номеров: сводка")
+@requires(READ)
+def variants_overview(request: HttpRequest, hotel_id: str):
+    # Партия 63-4: карточки вариантов и обзор-путь — только чтение.
+    return variants.overview(_hotel(hotel_id))
+
+
+@router.get(f"{BASE}/types/{{code}}/diff", summary="Что изменится при публикации")
+@requires(READ)
+def variant_diff(request: HttpRequest, hotel_id: str, code: str):
+    return variants.diff(_hotel(hotel_id), code)
 
 
 @router.get(f"{BASE}/types/{{code}}/versions", summary="История версий")
