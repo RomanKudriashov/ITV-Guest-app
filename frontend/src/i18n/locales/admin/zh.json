@@ -1,0 +1,1912 @@
+{
+  "admin": {
+    "brand": {
+      "name": "NaviRoom Control"
+    },
+    "nav": {
+      "overview": "概览",
+      "fleet": "酒店",
+      "platformGroup": "平台",
+      "modules": "模块",
+      "nodes": "On-premise",
+      "team": "团队",
+      "audit": "操作日志",
+      "templates": "字典",
+      "open": "打开菜单",
+      "support": "支持会话",
+      "security": "安全",
+      "groups": "分组",
+      "collapse": "收起菜单",
+      "expand": "展开菜单"
+    },
+    "role": {
+      "owner": "平台所有者",
+      "support": "支持",
+      "read_only": "只读"
+    },
+    "actor": {
+      "platform": "平台",
+      "staff": "员工",
+      "guest": "客人",
+      "system": "系统"
+    },
+    "security": {
+      "title": "安全",
+      "subtitle": "你本人账户的第二因素，以及登录过它的设备清单。当访问权限可能落入他人之手时来这里，关掉多余的登录。",
+      "on": "双重验证已开启",
+      "off": "双重验证未开启",
+      "enable": "开启双重验证",
+      "disable": "关闭双重验证",
+      "confirm": "用验证码确认",
+      "code": "应用中的验证码",
+      "secretHint": "将密钥导入验证器应用并输入验证码。仅显示一次。",
+      "enabled": "双重验证已开启",
+      "disabled": "双重验证已关闭",
+      "setupFailed": "无法开始设置",
+      "codeRejected": "验证码不正确",
+      "disableFailed": "无法关闭双重验证",
+      "disableConfirm": {
+        "title": "关闭双重验证？",
+        "body": "关闭后，仅凭密码即可进入控制台及平台上的所有酒店。请输入应用中的验证码以确认是您本人。",
+        "code": "应用中的验证码"
+      }
+    },
+    "actions": {
+      "logout": "退出",
+      "cancel": "取消",
+      "done": "完成"
+    },
+    "login": {
+      "title": "NaviRoom Control",
+      "email": "邮箱",
+      "password": "密码",
+      "code": "验证码",
+      "codeHint": "验证器应用中的六位数字",
+      "submit": "登录",
+      "confirm": "确认",
+      "failed": "登录失败"
+    },
+    "overview": {
+      "title": "平台概览",
+      "subtitle": "一眼看全平台：多少家酒店、打开页面时有多少订单在处理、一切是否有响应。每天先看这里，确认夜里没有卡住的地方。",
+      "loadFailed": "无法加载概览",
+      "growth": "每月新增酒店",
+      "health": "系统健康",
+      "kpi": {
+        "hotels": "酒店",
+        "hotelsHint": "{{active}} 个活跃 · {{disabled}} 个停用",
+        "orders": "今日订单",
+        "ordersHint": "全部酒店",
+        "gross": "今日流水",
+        "grossHint": "商品、服务费、配送、税、小费",
+        "sessions": "在线会话",
+        "sessionsHint": "当前浏览的客人"
+      },
+      "sort": {
+        "level": "重要性",
+        "text": "名称"
+      }
+    },
+    "health": {
+      "media_ok": "媒体处理正常",
+      "media_failed": "媒体：失败任务 {{count}} 个",
+      "media_stuck": "媒体：处理卡住 {{count}} 个",
+      "node_offline": "{{hotel}} 的节点离线",
+      "scheduler_down": "定时任务服务已 {{count}} 分钟无响应——计划的工作未执行",
+      "scheduler_overdue": "逾期的定时任务：{{count}}",
+      "scheduler_ok": "定时任务服务正常，等待中：{{count}}",
+      "schedulerKind": "{{name}}：等待 {{pending}}，逾期 {{overdue}}",
+      "schedulerKinds": {
+        "brand": {
+          "publish": "品牌外观发布"
+        },
+        "notification": {
+          "escalation_step": "升级步骤"
+        },
+        "chat": {
+          "unanswered": "客人聊天回复"
+        },
+        "hotel": {
+          "enable": "按日期重新启用酒店"
+        }
+      },
+      "bot_ok": "机器人 @{{name}} 在线",
+      "bot_no_token": "Telegram 机器人未连接：未设置令牌",
+      "bot_rejected": "Telegram 机器人：令牌被拒绝（{{tail}}）",
+      "bot_conflict": "机器人 @{{name}}：另一台服务器正在轮询它（409）",
+      "bot_down": "机器人服务已 {{count}} 分钟无响应",
+      "bot_error": "机器人 @{{name}}：Telegram 不可用 — {{error}}",
+      "schedulerKindOther": "其他任务",
+      "otherSignal": "有未描述的信号"
+    },
+    "fleet": {
+      "title": "酒店",
+      "subtitle": "平台上的所有酒店",
+      "export": "导出 CSV",
+      "create": "+ 新建酒店",
+      "searchPlaceholder": "名称或子域名…",
+      "sortByName": "按名称",
+      "selected": "已选 {{count}}",
+      "bulkEnable": "启用",
+      "bulkDisable": "停用",
+      "bulkResult": "已变更 {{changed}} / {{requested}}",
+      "loadFailed": "无法加载列表",
+      "empty": "未找到",
+      "prev": "上一页",
+      "next": "下一页",
+      "pageOf": "第 {{page}} / {{pages}} 页",
+      "nodeOffline": "节点离线",
+      "status": {
+        "all": "全部",
+        "active": "活跃",
+        "disabled": "停用"
+      },
+      "col": {
+        "hotel": "酒店",
+        "rooms": "客房",
+        "services": "服务",
+        "orders": "订单（7天）",
+        "status": "状态"
+      },
+      "allGroups": "全部分组",
+      "selectedGroup_other": "该分组内有 {{count}} 家酒店",
+      "bulkDisableConfirm": {
+        "title": "停用 {{count}} 家酒店？",
+        "body": "这些酒店的页面和后台将无法打开，也不会接收订单。可用“启用”恢复。"
+      }
+    },
+    "hotel": {
+      "crumb": "酒店详情",
+      "loadFailed": "无法加载酒店",
+      "tab": {
+        "overview": "概览",
+        "profile": "资料",
+        "modules": "模块",
+        "connections": "连接",
+        "rooms": "客房",
+        "roomControl": "客房控制",
+        "journal": "日志",
+        "history": "历史",
+        "data": "数据"
+      },
+      "field": {
+        "name": "名称",
+        "subdomain": "子域名",
+        "subdomainLocked": "不可更改",
+        "timezone": "时区",
+        "currency": "货币",
+        "languages": "语言",
+        "minorUnits": "小数位",
+        "minorUnitsHint": "卢布为 2，日元为 0",
+        "languagesHint": "用逗号分隔的代码，第一个为默认语言。",
+        "subdomainWhy": "子域是酒店的标识，并印在客房二维码上：更改会使其失效。",
+        "city": "城市",
+        "cityHint": "规则分组按此切分酒店"
+      },
+      "activeOn": "启用",
+      "activeOff": "已停用 — 门店页与后台均不可访问",
+      "adminTitle": "酒店管理员",
+      "adminEmail": "管理员邮箱",
+      "adminHint": "创建或重置访问权限。密码通过邮件发送给酒店管理员，操作员看不到密码。",
+      "adminReset": "创建 / 重置",
+      "activityEmpty": "暂无记录",
+      "viaSupport": "支持",
+      "adminPasswordSent": "密码已发送至 {{email}}",
+      "save": "保存",
+      "cancel": "取消",
+      "dirty_other": "已修改 {{count}} 项",
+      "saveFailed": "无法保存资料",
+      "readOnly": "仅所有者和支持角色可编辑资料。",
+      "adminMoveTitle": "更改管理员邮箱",
+      "adminMove": "更改邮箱",
+      "adminNewEmail": "新邮箱",
+      "adminMoveHint": "用于旧邮箱丢失的情况：更改邮箱不会发送任何邮件，之后重置密码将发往新邮箱。",
+      "adminFailed": "无法重置访问",
+      "adminMoveFailed": "无法更改邮箱",
+      "intro": {
+        "modules": "酒店已开启的内容。需要连接的模块没有连接就无法工作——卡片会提示。",
+        "data": "导出酒店积累的全部数据，以及停用并删除数据。酒店离开平台或依法要求其数据时来这里。",
+        "overview": "当前影响酒店运行的问题以及处理办法。检查每分钟更新。",
+        "connections": "酒店服务器上的连接器和其他外部系统：是否在线、版本、密钥。",
+        "rooms": "楼栋和楼层一览：客房位置、控制是否就绪以及需要修复的内容。位置相同的客房上下对齐。",
+        "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
+        "journal": "支持人员进入酒店面板的记录和客房设备日志。",
+        "history": "在 Control 中对酒店的所有修改：资料、模块、连接、分组、停用、管理员、客房控制、支持登录——谁、何时、改前和改后。"
+      },
+      "admins": {
+        "title": "酒店管理员",
+        "hint": "谁可以登录该酒店的 CMS。多出来的管理员通常是地址打错了。",
+        "remove": "撤销权限",
+        "lastHint": "最后一位无法撤销：酒店将失去对自己 CMS 的访问。",
+        "existing": "酒店已有管理员：{{list}}。请核对地址 — 第二位全权管理员通常是打错造成的。",
+        "never": "从未登录",
+        "sort": {
+          "email": "邮箱",
+          "login": "最后登录",
+          "added": "指派时间"
+        }
+      },
+      "crumbNamed": "酒店「{{name}}」",
+      "currencyConfirm": {
+        "title": "将货币改为 {{code}}？",
+        "body": "{{code}} 的小数位数为 {{next}}，当前为 {{current}}。价格以最小单位存储，更改小数位会改变所有价格：{{before}} 将变为 {{after}}。仅当价格已按新货币录入时才更改小数位；否则请保留并检查价格。",
+        "both": "同时更改小数位（{{next}}）",
+        "keep": "仅更改货币，保留 {{current}} 位小数"
+      },
+      "activeConfirm": {
+        "offTitle": "停用酒店「{{name}}」？",
+        "offBody": "酒店页面和后台将无法打开，所有员工将被登出，不再接收订单。",
+        "off": "停用",
+        "onTitle": "启用酒店「{{name}}」？",
+        "onBody": "页面将对客人开放，员工可重新登录，开始接收订单。",
+        "on": "启用"
+      },
+      "modules": {
+        "state": {
+          "works": "可用",
+          "broken": "已开启但不工作",
+          "off": "已关闭",
+          "dev": "开发中"
+        },
+        "needConnection": "需要连接：{{what}}",
+        "hasConnection": "已连接：{{what}}",
+        "connectionHelp": "该模块只有配合此连接才能工作。没有连接也可以开启——但模块不会工作，酒店概览会显示问题。",
+        "connect": "连接 →",
+        "about": "关于模块",
+        "devPanel": "开发中",
+        "devAside": "暂时无法开启",
+        "sort": {
+          "name": "名称",
+          "state": "状态"
+        }
+      }
+    },
+    "create": {
+      "title": "新建酒店",
+      "name": "名称",
+      "subdomain": "子域名",
+      "subdomainHint": "酒店地址，之后不可更改",
+      "adminEmail": "首位管理员邮箱",
+      "currency": "货币",
+      "languages": "语言",
+      "languagesHint": "第一个为酒店默认语言",
+      "timezone": "时区",
+      "preset": "预设",
+      "submit": "创建酒店",
+      "failed": "创建失败",
+      "doneTitle": "酒店已创建",
+      "doneAdmin": "管理员",
+      "doneHint": "酒店接下来在自己的后台完成配置。",
+      "template": "起始模板",
+      "doneServices": "已创建服务：{{count}}",
+      "donePasswordSent": "密码已发送给管理员：{{email}}",
+      "subdomainFree": "可用：{{host}}",
+      "subdomainChecking": "正在检查…",
+      "subdomain_format": "{{min}}–{{max}} 个字符：拉丁字母、数字，连字符不能在首尾",
+      "subdomain_reserved": "该名称已被平台保留",
+      "hotel_exists": "已存在使用该子域名的酒店",
+      "emailInvalid": "地址无效"
+    },
+    "module": {
+      "room_control": "房间控制",
+      "payment": "支付",
+      "pms": "酒店管理系统",
+      "mobile_key": "移动钥匙",
+      "multi_restaurant": "多个餐饮场所",
+      "marketing": "营销",
+      "extra_languages": "更多语言",
+      "native_app": "酒店应用",
+      "analytics_level": "高级分析"
+    },
+    "modules": {
+      "title": "模块",
+      "subtitle": "模块是为酒店单独开启的产品部分：房间控制、营销等。打开模块即可查看它提供什么以及在哪些酒店已开启。",
+      "search": "模块名称或其功能",
+      "facet": {
+        "state": "状态",
+        "need": "连接",
+        "on": "模块"
+      },
+      "status": {
+        "ready": "可用",
+        "dev": "开发中"
+      },
+      "need": {
+        "yes": "需要连接",
+        "no": "独立运行"
+      },
+      "view": {
+        "label": "视图",
+        "blocks": "卡片",
+        "list": "列表",
+        "table": "表格"
+      },
+      "enabledIn": "在 {{total}} 家酒店中的 {{count}} 家已开启",
+      "cannotEnable": "暂时无法开启",
+      "needs": "需要：{{what}}",
+      "connection": {
+        "grms": "房间控制连接器",
+        "pms": "酒店管理系统连接",
+        "locks": "门锁系统",
+        "payments": "银行卡收单"
+      },
+      "col": {
+        "module": "模块",
+        "gives": "功能",
+        "state": "状态",
+        "need": "所需连接",
+        "hotels": "已开启的酒店"
+      },
+      "emptyTitle": "未找到",
+      "emptyText": "没有符合搜索和筛选条件的模块。请点击“重置”。",
+      "back": "← 全部模块",
+      "opens": "开放的功能",
+      "needsNote": "没有“{{what}}”连接，该模块在酒店无法工作——酒店概览会将其显示为问题。",
+      "defaults": "默认设置",
+      "defaultsHelp": "酒店首次开启该模块时获得此值。单个酒店可在酒店卡片中修改。",
+      "defaultsEmpty": "暂无设置",
+      "defaultsEmptyText": "该模块没有新开启时获得的设置。",
+      "valueOn": "开启",
+      "valueOff": "关闭",
+      "hotels": "酒店",
+      "hotelsCount": "{{total}} 家中 {{on}} 家已开启",
+      "hotelsHelp": "开关为单个酒店开启或关闭该模块。要一次为多家开启，请在“酒店”中打开分组并选择“操作”。",
+      "hotelSearch": "查找酒店",
+      "on": "已开启",
+      "off": "已关闭",
+      "noHotels": "没有这样的酒店",
+      "noHotelsText": "请移除筛选或更改搜索。",
+      "more": "显示更多",
+      "disabledHotel": "已停用",
+      "journal": "开关日志",
+      "journalHelp": "谁在何时为酒店开启或关闭了该模块。完整记录见酒店的“历史”标签页。",
+      "journalOn": "{{hotel}}：已开启",
+      "journalOff": "{{hotel}}：已关闭",
+      "journalDev": "{{hotel}}：已关闭——模块开发中",
+      "journalEmpty": "尚无开关记录",
+      "journalEmptyText": "当酒店开启或关闭该模块时，记录会显示在这里。",
+      "system": "系统",
+      "devNote": "该模块仍在开发中，无法开启。一旦可用，就会出现开关。",
+      "wasOn": "已开启但不起作用——请关闭",
+      "toggleHelp": "为此酒店开启或关闭该模块。其他模块不变，变更会记入酒店历史。",
+      "devHelp": "该模块尚未就绪，无法开启。如果之前已开启，可以将其关闭。",
+      "toggleLabel": "{{module}}：{{hotel}}",
+      "notFound": "没有这个模块",
+      "catalogEmpty": "暂无模块。",
+      "sort": {
+        "name": "名称",
+        "subdomain": "子域名",
+        "state": "是否开启",
+        "at": "时间",
+        "hotel": "酒店",
+        "actor": "操作人",
+        "change": "开启或关闭"
+      }
+    },
+    "nodes": {
+      "title": "On-premise",
+      "subtitle": "安放在酒店内部的服务器。当启用客房控制或酒店管理系统（PMS）时需要：云端无法直接连到楼内设备。",
+      "empty": "暂无服务器。启用客房控制或酒店管理系统（PMS）的酒店会出现。",
+      "keyOnce": "密钥（仅显示一次）",
+      "online": "在线",
+      "offline": "离线",
+      "revoked": "密钥已吊销",
+      "never": "从未",
+      "secondsAgo": "{{seconds}} 秒前",
+      "revoke": "吊销密钥",
+      "reissue": "签发密钥",
+      "purpose": {
+        "grms": "客房控制",
+        "pms": "酒店管理系统（PMS）",
+        "both": "客房控制与 PMS"
+      },
+      "col": {
+        "hotel": "酒店",
+        "purpose": "用途",
+        "status": "状态",
+        "seen": "最后心跳",
+        "key": "密钥"
+      },
+      "create": "添加节点",
+      "hotel": "酒店",
+      "nodeName": "节点名称",
+      "createFailed": "无法添加节点",
+      "reissueFailed": "无法重新签发密钥",
+      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效。连接器不会自行重新读取密钥——请用新密钥重启连接器。",
+      "revokeConfirm": {
+        "title": "吊销节点「{{name}}」的密钥？",
+        "body": "酒店「{{hotel}}」的连接器会立即断开：在签发新密钥并用它重启连接器之前，客人无法控制房间。"
+      },
+      "reissueConfirm": {
+        "title": "为节点「{{name}}」签发新密钥？"
+      },
+      "neverConnected": "从未连接"
+    },
+    "team": {
+      "title": "团队",
+      "subtitle": "谁可以访问 /admin",
+      "email": "邮箱",
+      "role": "角色",
+      "invite": "邀请",
+      "inviteFailed": "邀请失败",
+      "changeFailed": "修改失败",
+      "issued": "{{email}} 的密码",
+      "disable": "停用",
+      "enable": "启用",
+      "col": {
+        "member": "用户",
+        "role": "角色",
+        "access": "访问",
+        "twofa": "2FA"
+      },
+      "empty": "目前平台上只有你一个用户。",
+      "roleConfirm": {
+        "title": "更改 {{email}} 的角色？",
+        "body": "「{{from}}」→「{{to}}」。此人可见的所有酒店的权限将立即更改。",
+        "confirm": "更改角色"
+      },
+      "twoFactorReset": {
+        "button": "重置双重验证",
+        "title": "重置 {{email}} 的双重验证？",
+        "body": "密钥将被清除，该成员的所有登录都会结束。其可用密码登录，并在“安全”中重新开启双重验证。此操作会记入日志。"
+      },
+      "filter": {
+        "role": "角色",
+        "active": "访问",
+        "activeYes": "启用",
+        "activeNo": "停用",
+        "twofa": "双重验证",
+        "twofaYes": "已开启",
+        "twofaNo": "未开启",
+        "search": "按邮箱或姓名查找"
+      },
+      "emailHint": "邀请将发送到这里",
+      "emailHelp": "Control 登录邮件将发送到此邮箱。邮箱同时也是成员的登录名。",
+      "roleHint": "在 Control 中可以做什么",
+      "roleHelp": "所有者——全部权限，包括团队和危险操作。支持——酒店及进入酒店面板。只读——仅查看，不做更改。"
+    },
+    "audit": {
+      "title": "操作日志",
+      "subtitle": "平台的全部操作 — 谁、做了什么、何时",
+      "empty": "暂无记录",
+      "filterAction": "操作",
+      "filterAny": "任意",
+      "filterSince": "起始日期",
+      "filterUntil": "结束日期",
+      "filterHotel": "酒店（子域）",
+      "counter": "显示 {{shown}} / {{total}}",
+      "prev": "上一页",
+      "next": "更多",
+      "viewLabel": "显示内容",
+      "viewAll": "全部操作",
+      "viewSupport": "支持登录",
+      "search": "查找：酒店、人员、内容",
+      "filterGroup": "分组"
+    },
+    "action": {
+      "platform": {
+        "login": "登录平台",
+        "2fa": {
+          "enabled": "启用 2FA",
+          "disabled": "停用 2FA"
+        },
+        "hotel": {
+          "created": "创建酒店",
+          "updated": "修改酒店资料",
+          "activated": "启用酒店",
+          "deactivated": "停用酒店",
+          "admin_set": "设置酒店管理员",
+          "modules_set": "修改模块",
+          "tariff_set": "记录套餐",
+          "entered": "进入酒店",
+          "exported": "导出酒店数据",
+          "offboard_marked": "酒店已标记为停用",
+          "offboard_cancelled": "停用标记已取消",
+          "purged": "删除酒店数据",
+          "deleted": "酒店已删除",
+          "admin_email_changed": "管理员邮箱已更改",
+          "modules_changed": "模块已更改",
+          "tariff_changed": "套餐已更改",
+          "admin_removed": "已移除酒店管理员",
+          "rooms_rule_set": "房号规则已修改",
+          "room_place_set": "已设置客房位置"
+        },
+        "node": {
+          "registered": "注册节点",
+          "revoked": "吊销节点密钥",
+          "reissued": "重新签发节点密钥"
+        },
+        "team": {
+          "invited": "已邀请用户",
+          "updated": "已修改用户"
+        },
+        "fleet": {
+          "bulk": "批量操作酒店",
+          "exported": "导出酒店列表"
+        },
+        "template": {
+          "created": "创建模板",
+          "updated": "修改模板"
+        },
+        "dictionary": {
+          "updated": "修改字典",
+          "reset": "副本已恢复为基准"
+        },
+        "logout": "退出平台",
+        "logout_all": "在所有设备退出",
+        "group": {
+          "created": "已创建酒店分组",
+          "updated": "已修改酒店分组",
+          "deleted": "已删除酒店分组",
+          "members_added": "已将酒店加入分组",
+          "member_removed": "已将酒店移出分组",
+          "hotels_moved": "酒店已在分组间移动",
+          "action": "分组整体操作",
+          "defaults_set": "分组默认设置已更改"
+        },
+        "publication": {
+          "started": "已启动发布"
+        }
+      },
+      "impersonation": {
+        "started": "以酒店管理员身份开始操作",
+        "revoked": "以酒店管理员身份的登录已终止"
+      },
+      "grms": {
+        "publish": "客房配置已发布",
+        "rollback": "客房配置已回滚",
+        "plan_saved": "客房平面图已保存",
+        "pin_attempt": "住宿 PIN 尝试",
+        "demo_entry": "未使用 PIN 进入客房",
+        "demo_entry_toggled": "切换免 PIN 进入",
+        "read": "读取客房状态",
+        "command": "向客房设备发送指令",
+        "plan_level_changed": "客房平面图级别已修改",
+        "import_confirmed": "PNR 导入已确认",
+        "zone_added": "已添加分区",
+        "element_added": "已添加元件",
+        "device_override": "房间设备名称",
+        "plan_frames": "已上传平面图",
+        "plan_copied": "已复制平面分区",
+        "published": "配置已发布",
+        "rolled_back": "配置已回滚",
+        "pin_set": "已发放客房 PIN",
+        "pin_cleared": "已移除客房 PIN"
+      },
+      "guest_session": {
+        "created": "客人打开了应用",
+        "checked_out": "已记录客人退房"
+      },
+      "order": {
+        "created": "订单已创建",
+        "accepted": "订单已接受",
+        "cancelled": "订单已取消",
+        "status_changed": "订单状态已更改",
+        "assigned": "已指派执行人",
+        "transferred": "订单已转到其他点位"
+      },
+      "brand": {
+        "publication_scheduled": "已安排品牌外观发布",
+        "published_on_schedule": "品牌外观已按计划发布",
+        "published_late": "品牌外观延迟发布",
+        "schedule_failed": "计划的品牌外观发布未完成",
+        "announce_failed": "品牌外观发布通知未发送"
+      },
+      "room": {
+        "renamed": "房间已重命名",
+        "restored": "已删除的房间已恢复",
+        "bulk_created": "已批量创建房间",
+        "bulk_updated": "已批量修改房间",
+        "created": "已添加客房",
+        "updated": "已修改客房",
+        "deleted": "已删除客房",
+        "variant_set": "已更改客房方案",
+        "device_set": "已更改客房设备名称"
+      },
+      "notification": {
+        "event_settings_changed": "通知设置已更改",
+        "telegram_switched": "已切换酒店 Telegram",
+        "escalation_rule_created": "已创建升级规则",
+        "escalation_rule_changed": "已更改升级规则",
+        "escalation_rule_deleted": "已删除升级规则",
+        "channel_created": "已创建通知渠道",
+        "channel_changed": "已更改通知渠道",
+        "channel_deleted": "已删除通知渠道",
+        "telegram_group_connected": "Telegram 群组已连接",
+        "telegram_group_removed": "机器人已被移出 Telegram 群组"
+      },
+      "staff": {
+        "session": {
+          "refresh_reused": "刷新令牌被重复使用——会话已撤销"
+        },
+        "contact": {
+          "phone_changed": "员工电话已更改",
+          "linked": "员工已连接即时通讯",
+          "unlinked": "员工已断开即时通讯",
+          "invited": "已发送 Telegram 邀请"
+        }
+      },
+      "bot": {
+        "take": "通过 Telegram 按钮接单",
+        "triage": "通过 Telegram 按钮处理评价"
+      },
+      "building": {
+        "created": "已添加楼栋",
+        "updated": "已更改楼栋名称",
+        "deleted": "已删除楼栋"
+      },
+      "room_category": {
+        "created": "已添加客房类别",
+        "updated": "已更改客房类别名称",
+        "deleted": "已删除客房类别"
+      }
+    },
+    "enter": {
+      "button": "进入酒店 →",
+      "title": "进入「{{hotel}}」",
+      "hint": "以平台身份打开酒店后台。必须填写原因，会话有时限，全部记入审计。",
+      "reason": "进入原因",
+      "ttl": "访问时长",
+      "minutes": "{{minutes}} 分钟",
+      "submit": "进入",
+      "failed": "进入失败",
+      "grantedTitle": "已授予「{{hotel}}」的访问权",
+      "asUser": "以此身份：{{email}}",
+      "left": "剩余 {{time}}",
+      "expired": "已过期",
+      "audited": "本次会话中的每个操作都会标记为支持人员的修改。",
+      "open": "打开后台"
+    },
+    "templates": {
+      "title": "字典",
+      "subtitle": "新酒店由此组装的模板：场所集合，以及所有酒店共用的过敏原与标记清单。开设酒店前来这里，确认它将以什么内容启用。",
+      "tab": {
+        "templates": "开通模板",
+        "dictionary": "系统字典"
+      },
+      "noServices": "无服务 — 由酒店自行添加",
+      "modules": "模块",
+      "note": "模板只决定起点。它与酒店不绑定：之后的修改不会改变已创建的酒店。",
+      "dictKind": "类型",
+      "dictCode": "代码",
+      "dictTitle": "名称",
+      "dictSave": "保存",
+      "dictFailed": "保存失败",
+      "kind": {
+        "allergen": "过敏原",
+        "marker": "膳食标记"
+      },
+      "dictNote": "酒店在创建时获得自己的副本，可自行停用条目。此处的修改对新酒店生效。",
+      "empty": "暂无入驻模板。",
+      "dictEmpty": "字典目前为空。",
+      "dictIntro": "过敏原与标记的基准清单，全平台共用。每家新酒店获得一份副本并自行修改：此处的改动只影响之后创建的酒店。",
+      "divergence": {
+        "title": "与基准的差异",
+        "count": "{{total}} 家中有 {{diverged}} 家存在差异",
+        "clean": "所有酒店都与基准一致：没有本地修改。",
+        "hint": "酒店的修改绝不会被自动覆盖。只有在这里才能把副本恢复为基准——针对单家酒店或所选酒店。",
+        "details": "具体内容",
+        "reset": "恢复为基准",
+        "resetPicked": "将所选恢复为基准",
+        "picked_other": "已选择 {{count}} 家酒店",
+        "states": {
+          "changed": "酒店已修改",
+          "missing": "缺少该条目",
+          "disabled": "被酒店关闭",
+          "extra": "酒店自有条目"
+        },
+        "resetConfirm": {
+          "title": "将 {{count}} 家酒店恢复为参考版本？",
+          "body": "酒店对系统条目的修改将被清除：修改过的恢复为参考，酒店关闭的重新对客人显示，删除的重新出现。酒店自建条目保留。此操作无法撤销。"
+        },
+        "sort": {
+          "hotel": "酒店",
+          "subdomain": "子域名",
+          "diverged": "差异数量"
+        }
+      },
+      "filter": {
+        "kind": "类别",
+        "search": "按代码或名称查找"
+      },
+      "activeHelp": "未启用的模板在新建酒店时不提供。已用它创建的酒店不受影响。",
+      "dictKindHelp": "字典分类：过敏原或饮食标记。",
+      "dictCodeHelp": "不含空格的简短拉丁名称：酒店更新时据此识别条目。客人和员工看不到它。",
+      "dictTitleHelp": "客人和员工看到的条目名称。其他语言的翻译由酒店自行添加。",
+      "sort": {
+        "title": "名称",
+        "active": "是否提供",
+        "services": "服务数量"
+      }
+    },
+    "data": {
+      "exportTitle": "数据导出",
+      "export": "下载 JSON",
+      "exportHint": "把数据交还酒店。可逆，可重复执行。",
+      "offboardTitle": "酒店停用（152-FZ）",
+      "offboardHint": "停止处理。分两步：标记会停用酒店，删除不可逆。",
+      "reason": "停用原因",
+      "mark": "标记为停用",
+      "markFailed": "标记失败",
+      "marked": "酒店已标记为停用并关闭。",
+      "confirmLabel": "输入「{{subdomain}}」以确认",
+      "purge": "删除数据",
+      "purgeFailed": "删除失败",
+      "purged": "已删除数据：{{count}} 条",
+      "cancel": "取消标记",
+      "deleteTitle": "从注册表移除酒店",
+      "delete": "从注册表移除",
+      "deleteHint": "数据由停用清除，而这一项针对酒店本身：它从列表中消失，地址被释放并可再次使用。记录保留为软删除：平台仍须能够回答该酒店曾经存在。",
+      "deleted": "酒店“{{subdomain}}”已移除，名称已释放",
+      "deleteFailed": "无法移除酒店",
+      "reasonHint": "仅在 Control 中可见",
+      "reasonHelp": "酒店离开平台的原因。原因记入日志，仅 Control 团队可见——酒店看不到。"
+    },
+    "support": {
+      "title": "支持会话",
+      "subtitle": "平台人员当前在酒店内的会话。被撤销的会话在下一次请求时即失效。",
+      "empty": "目前没有任何酒店里有人。",
+      "line": "以 {{user}} 身份，{{from}} 至 {{until}}",
+      "inside": "在内",
+      "notYet": "已发码",
+      "revoke": "撤销",
+      "revokeFailed": "无法撤销会话",
+      "state": {
+        "active": "当前在内",
+        "history": "已结束",
+        "all": "全部"
+      },
+      "emptyTitle": "尚无支持登录",
+      "emptyHint": "当团队成员通过“进入酒店”按钮进入酒店面板时会出现在这里——附原因和时限。",
+      "sort": {
+        "hotel": "酒店",
+        "actor": "登录人",
+        "asUser": "以谁的身份",
+        "started": "开始",
+        "expires": "结束",
+        "entered": "是否在内"
+      }
+    },
+    "errors": {
+      "http": "操作失败，请重试。",
+      "network": "无法连接服务器。",
+      "forbidden": "您无权执行此操作。"
+    },
+    "groups": {
+      "title": "酒店分组",
+      "subtitle": "用于批量操作的酒店切分：集团、城市、测试、活动",
+      "add": "新建分组",
+      "empty": "暂无分组。建立第一个分组即可为批量操作指定对象。",
+      "name": "名称",
+      "code": "代码",
+      "kind": "类型",
+      "mode": "方式",
+      "size": "酒店数",
+      "hotel": "酒店",
+      "addedBy": "添加人",
+      "addedAt": "时间",
+      "addHotel": "按名称查找酒店",
+      "byRule": "按规则",
+      "any": "任意",
+      "originLive": "正式",
+      "originDemo": "演示",
+      "listComposition": "人工组成",
+      "ruleComposition": "组成由规则即时计算",
+      "modes": {
+        "list": "名单",
+        "rule": "规则"
+      },
+      "modeHint": {
+        "list": "由您添加酒店，组成会被保存",
+        "rule": "每次都重新计算组成——新酒店会自动加入"
+      },
+      "kinds": {
+        "network": "集团",
+        "brand": "品牌",
+        "city": "城市",
+        "test": "测试",
+        "campaign": "活动",
+        "custom": "自定义"
+      },
+      "ruleFields": {
+        "city": "城市",
+        "origin": "来源",
+        "language": "语言"
+      },
+      "deleteConfirm": {
+        "title": "删除分组「{{name}}」？",
+        "body": "分组中的酒店：{{count}}。酒店保留；分组将从筛选和批量操作中消失，只能重新创建。"
+      }
+    },
+    "hotels": {
+      "title": "酒店",
+      "subtitle": "平台上的所有酒店。分组把同一业主的酒店归在一起：共用管理员、共用字典和汇总。打开酒店查看它遇到的问题，或选择多家酒店同时操作。",
+      "export": "下载列表",
+      "newGroup": "+ 新建分组",
+      "newHotel": "+ 新建酒店",
+      "searchPlaceholder": "酒店、子域名、城市或分组",
+      "more": "更多",
+      "cancel": "取消",
+      "save": "保存",
+      "pick": "选择：{{name}}",
+      "selected_other": "已选 {{count}} 家酒店",
+      "layout": {
+        "label": "列表视图",
+        "groups": "按分组",
+        "list": "统一列表"
+      },
+      "filter": {
+        "state": "状态",
+        "link": "连接",
+        "module": "模块",
+        "group": "分组",
+        "reset": "重置",
+        "searchChip": "搜索：“{{text}}”",
+        "remove": "移除：{{label}}",
+        "unknownValue": "未知值"
+      },
+      "state": {
+        "problems": "有问题",
+        "ready": "就绪",
+        "disabled": "已停用"
+      },
+      "link": {
+        "online": "在线",
+        "silent": "离线",
+        "none": "无连接器"
+      },
+      "color": {
+        "accent": "蓝色",
+        "ok": "绿色",
+        "warn": "琥珀色",
+        "bad": "红色",
+        "gold": "金色",
+        "info": "浅蓝色"
+      },
+      "col": {
+        "hotel": "酒店",
+        "group": "分组",
+        "rooms": "客房",
+        "modules": "模块",
+        "link": "连接",
+        "state": "状态"
+      },
+      "help": {
+        "link": "连接器的连接——酒店服务器上的程序，客人通过它控制灯光和空调。“离线”表示连接器超过 3 分钟没有响应。",
+        "state": "“就绪”表示酒店检查全部通过。问题数是未通过的检查数量。检查将在下一批次出现在酒店概览中。"
+      },
+      "summary": {
+        "hotels_other": "{{count}} 家酒店",
+        "rooms_other": "{{count}} 间客房",
+        "problems_other": "{{count}} 个问题",
+        "noProblems": "无问题",
+        "link": {
+          "online_other": "{{count}} 家在线",
+          "silent_other": "{{count}} 家离线",
+          "none_other": "{{count}} 家无连接器"
+        }
+      },
+      "ungrouped": {
+        "title": "未分组的酒店",
+        "short": "未分组",
+        "hint": "单独的酒店。选择它们并点击“移入分组…”，或拖到上方的分组。",
+        "empty": "所有酒店都已分组。"
+      },
+      "group": {
+        "edit": "编辑",
+        "delete": "删除",
+        "name": "名称",
+        "namePlaceholder": "例如“Metropol 酒店”",
+        "description": "描述",
+        "descriptionPlaceholder": "这些酒店属于谁，为什么放在一起",
+        "note": "团队备注",
+        "noteHint": "仅我们可见：约定、联系人、特殊情况。",
+        "color": "颜色标记",
+        "colorHint": "颜色标记——帮助在酒店列表中认出分组",
+        "emptyHint": "分组中还没有酒店。选择酒店并点击“移入分组…”，或把它们拖到这里。"
+      },
+      "create": {
+        "title": "新建分组",
+        "subtitle": "分组把同一业主的酒店归在一起。只有我们的团队能看到——客人和酒店员工看不到。",
+        "hotelsHint": "分组中的酒店——可以现在选择，也可以稍后添加",
+        "submit": "创建",
+        "submitWith_other": "创建并加入 {{count}} 家酒店"
+      },
+      "edit": {
+        "title": "编辑分组",
+        "subtitle": "名称、描述、备注和颜色仅我们的团队可见。"
+      },
+      "delete": {
+        "title": "删除分组“{{title}}”？",
+        "subtitle": "只删除分组。酒店保持原样——模块、客房和数据都保留——并移到“未分组的酒店”。",
+        "released_other": "将移到“未分组的酒店”——{{count}} 家",
+        "emptyGroup": "分组中没有酒店",
+        "confirm": "输入分组名称",
+        "confirmHint": "名称一致时按钮才会启用。",
+        "submit": "删除分组"
+      },
+      "move": {
+        "title_other": "把 {{count}} 家酒店移入分组",
+        "subtitle": "一家酒店最多属于一个分组：会自动离开原来的分组。",
+        "submit": "移动"
+      },
+      "picker": {
+        "search": "查找酒店：名称、子域名、城市",
+        "none": "没有这样的酒店。请检查拼写。",
+        "inGroup": "目前在“{{title}}”",
+        "willMove": "将从分组“{{title}}”移出",
+        "picked_other": "已选 {{count}} 家。一家酒店最多属于一个分组——会自动离开原来的分组。"
+      },
+      "bulk": {
+        "move": "移入分组…",
+        "enable": "启用",
+        "disable": "停用…",
+        "clear": "取消选择",
+        "disableTitle_other": "停用 {{count}} 家酒店？",
+        "disableBody": "客人会看到酒店不可用，员工会被登出。数据和设置会保留。"
+      },
+      "empty": {
+        "title": "没有找到",
+        "body": "没有酒店或分组符合搜索和筛选条件。请检查拼写或去掉部分筛选。",
+        "reset": "重置搜索和筛选",
+        "noneTitle": "还没有酒店",
+        "noneBody": "用“新建酒店”按钮创建第一家酒店——它会显示在这里。"
+      }
+    },
+    "groupPage": {
+      "what": "分组",
+      "back": "所有酒店",
+      "crumb": "分组“{{title}}”",
+      "noDescription": "没有描述——可以在分组资料中添加。",
+      "addHotels": "+ 添加酒店",
+      "loading": "加载中…",
+      "expand": "展开",
+      "collapse": "收起",
+      "tab": {
+        "summary": "汇总",
+        "hotels": "酒店",
+        "profile": "资料",
+        "actions": "操作",
+        "defaults": "默认设置",
+        "history": "历史"
+      },
+      "about": {
+        "summary": "分组内酒店的整体情况：连接状态、启用了哪些模块。",
+        "hotels": "分组成员。添加酒店即把它从其他分组或“未分组”移到这里。",
+        "profile": "分组在酒店列表中的名称和样式。只有我们的团队能看到。",
+        "actions": "一次在分组内所有酒店执行同一操作。执行前会显示每家酒店的变化。",
+        "defaults": "酒店加入分组时自动启用的内容。",
+        "history": "谁在什么时候改了分组的什么——包括修改前后。"
+      },
+      "summary": {
+        "hotels": "酒店",
+        "active_other": "运行中 {{count}} 家",
+        "rooms": "客房",
+        "roomsHint": "分组内所有酒店",
+        "problems": "问题",
+        "problemsHint": "来自酒店就绪检查",
+        "link": "连接",
+        "linkValue": "{{online}} / {{total}}",
+        "linkHint": "离线 {{silent}} 家，无连接器 {{none}} 家",
+        "modules": "分组的模块",
+        "modulesHelp": "分组中有多少家酒店使用该模块。在“操作”中可一次为所有酒店启用或停用。",
+        "ofTotal": "{{on}} / {{total}}",
+        "devOn": "已启用但仍在开发中、不起作用：{{modules}}。",
+        "emptyTitle": "分组中还没有酒店",
+        "emptyBody": "分组中至少有一家酒店后才会显示汇总。",
+        "modulesCount": "已开启的酒店"
+      },
+      "hotels": {
+        "search": "在分组中查找酒店",
+        "remove": "移出分组",
+        "removeHint": "“移出分组”不影响酒店：它会带着所有模块和数据移到“未分组的酒店”。",
+        "emptyBody": "点击“添加酒店”——可以选择未分组的酒店或从其他分组移来。",
+        "noMatch": "去掉部分筛选或修改搜索。"
+      },
+      "profile": {
+        "title": "分组",
+        "nameHelp": "分组在酒店列表和“分组”筛选中的名称。",
+        "descriptionHelp": "这些酒店属于谁、为什么在一起。显示在分组标题和酒店列表中。",
+        "colorHelp": "分组名称旁的彩色标记——便于在酒店列表中找到它。",
+        "order": "列表中的顺序",
+        "orderHelp": "分组在“酒店”页面上的排列顺序。“未分组的酒店”始终在最下方。",
+        "position": "第 {{n}} / {{total}}",
+        "up": "上移",
+        "down": "下移",
+        "parent": "所属分组",
+        "parentHelp": "例如“Metropol 酒店”下的“莫斯科”。目前分组只有一级。",
+        "parentNote": "嵌套分组已在数据结构中预留；需要时会出现选择。",
+        "topLevel": "无——顶级",
+        "autosave": "离开字段时即自动保存。",
+        "deleteTitle": "删除分组",
+        "delete": "删除分组…"
+      },
+      "actions": {
+        "module": "在所有酒店启用模块",
+        "disable": "停用所有酒店",
+        "enable": "启用所有酒店",
+        "moduleButton": "选择模块…",
+        "disableButton": "全部停用…",
+        "enableButton": "全部启用…",
+        "moduleText_other": "一次为 {{count}} 家酒店启用或停用模块。窗口会显示每家的变化。",
+        "disableText_other": "对客人和员工关闭 {{count}} 家运行中的酒店。必须填写原因；数据会保留。",
+        "enableText_other": "向客人和员工重新开放分组中 {{count}} 家已停用的酒店。",
+        "journal": "每个操作都会记录在分组历史和每家相关酒店的日志中。"
+      },
+      "action": {
+        "title": {
+          "module": "“{{title}}”所有酒店的模块",
+          "disable": "停用“{{title}}”的所有酒店？",
+          "enable": "启用“{{title}}”的所有酒店？"
+        },
+        "subtitle": {
+          "module": "模块会在分组每家酒店启用或停用。已处于该状态的酒店不变。",
+          "disable": "酒店将对客人关闭，员工登录将结束。数据会保留，可随时重新启用。",
+          "enable": "酒店将重新对客人和员工开放。"
+        },
+        "module": "模块",
+        "devHidden": "开发中的模块不显示——暂时不能启用。",
+        "on": "启用",
+        "off": "停用",
+        "reason": "原因",
+        "reasonHint": "仅在 Control 中可见——在分组历史和每家酒店的日志中。",
+        "plan_other": "分组酒店——{{count}} 家",
+        "same": "已是如此——不变",
+        "will": {
+          "module_on": "将启用",
+          "module_off": "将停用",
+          "disable": "将停用",
+          "enable": "将启用"
+        },
+        "submit": {
+          "module_on_other": "为 {{count}} 家酒店启用",
+          "module_off_other": "为 {{count}} 家酒店停用",
+          "disable_other": "停用 {{count}} 家酒店",
+          "enable_other": "启用 {{count}} 家酒店"
+        }
+      },
+      "add": {
+        "title": "向“{{title}}”添加酒店",
+        "ruleOn": "分组已启用规则：加入的酒店将启用 {{modules}}。",
+        "ruleOff": "未分组和其他分组的酒店。该分组的“新酒店默认设置”规则已关闭。",
+        "submit_other": "添加 {{count}} 家",
+        "movers_other": "{{count}} 家酒店将从其他分组移来。在那里启用的模块不会自动停用。"
+      },
+      "defaults": {
+        "title": "分组新酒店的模块",
+        "switch": "规则已启用",
+        "on": "规则已启用：加入分组的酒店将启用 {{modules}}。",
+        "onEmpty": "规则已启用，但未选择模块——不会启用任何内容。",
+        "off": "规则已关闭：加入的酒店保留原有模块。",
+        "note1": "规则只在添加酒店时生效。已在分组中的酒店不变——请使用“操作”。",
+        "note2": "需要连接的模块会被启用，但要等连接建立后才能工作。",
+        "note3": "不能选择开发中的模块。",
+        "switchHelp": "规则开启后，新加入分组的酒店会立即获得所选模块。已在分组中的酒店不变。"
+      },
+      "history": {
+        "who": "谁",
+        "what": "什么",
+        "period": "时间",
+        "search": "搜索：酒店、字段、成员",
+        "periods": {
+          "day": "最近一天",
+          "week": "最近一周",
+          "month": "最近一月"
+        },
+        "kind": {
+          "created": "创建",
+          "updated": "资料",
+          "hotels": "成员",
+          "action": "操作",
+          "defaults": "默认设置",
+          "deleted": "删除"
+        },
+        "field": {
+          "title": "名称",
+          "description": "描述",
+          "note": "备注",
+          "color": "颜色标记",
+          "sort_order": "顺序",
+          "parent": "所属分组",
+          "auto_enabled": "默认规则",
+          "auto_modules": "新酒店的模块"
+        },
+        "on": "开",
+        "off": "关",
+        "someGroup": "其他分组",
+        "system": "系统",
+        "modulesOn": "已启用模块：{{modules}}",
+        "action": {
+          "module_on": "模块“{{module}}”已启用",
+          "module_off": "模块“{{module}}”已停用",
+          "disable": "酒店已停用",
+          "enable": "酒店已启用"
+        },
+        "changed_other": "已变更 {{count}} 家酒店",
+        "reason": "原因：“{{reason}}”",
+        "createdWhat": "分组已创建",
+        "createdWith": "包含酒店：{{hotels}}",
+        "createdEmpty": "不含酒店",
+        "deletedWhat": "分组已删除",
+        "emptyTitle": "还没有变更",
+        "emptyBody": "分组被重命名、成员变动或执行操作后，这里会出现记录：谁、何时以及修改前的内容。",
+        "noMatch": "没有符合筛选的内容",
+        "noMatchBody": "去掉部分筛选或修改搜索。",
+        "createdCount_other": "包含 {{count}} 家酒店"
+      }
+    },
+    "card": {
+      "what": "酒店就绪情况",
+      "state": {
+        "disabled": "已停用",
+        "ready": "就绪",
+        "problems_other": "{{count}} 个问题"
+      },
+      "metric": {
+        "rooms": "客房",
+        "roomsBound": "已设控制方案 — {{count}}",
+        "roomControlOff": "客房控制已关闭",
+        "staff": "员工",
+        "admins_other": "{{count}} 名管理员",
+        "services": "服务",
+        "menuServices": "有菜单和送达地点 — {{count}}；商品 — {{items}}",
+        "connector": "连接器",
+        "online": "在线",
+        "silent": "无响应",
+        "noConnector": "无",
+        "noConnectorHint": "未配置",
+        "commands": "24 小时指令",
+        "commandsValue": "{{ok}} / {{total}}",
+        "commandsHint": "成功；失败 — {{count}}"
+      },
+      "ago": {
+        "never": "从未连接",
+        "seconds": "{{count}} 秒前响应",
+        "minutes": "{{count}} 分钟前响应",
+        "hours": "{{count}} 小时前响应",
+        "days": "{{count}} 天前响应"
+      },
+      "problemsTitle": "影响酒店运行的问题",
+      "everyMinute": "每分钟更新",
+      "problemsHelp": "检查由服务器计算——同一数字也显示在“酒店”列表和分组摘要中。红色：客人现在就无法完成某事；黄色：需要注意；蓝色：值得检查。右侧按钮会带你去修复的地方。",
+      "disabledNote": "酒店已停用。以下检查供重新启用时参考；酒店列表不计入。",
+      "noProblems": "没有问题",
+      "noProblemsBody": "酒店已准备好接待客人。如有故障，一分钟内会在此显示。",
+      "passed": "已通过",
+      "roomRulesSkipped_other": "客房控制已关闭 — 无需 {{count}} 项客房检查。",
+      "severity": {
+        "bad": "影响客人",
+        "warn": "需要注意",
+        "info": "建议检查"
+      },
+      "rule": {
+        "module_without_connection": {
+          "title": "“{{module}}”已开启但没有连接",
+          "detail": "需要酒店服务器上的连接器。没有它，客人能看到模块但无法使用。",
+          "fix": "添加连接",
+          "passed": "已开启的模块都有连接"
+        },
+        "connector_silent": {
+          "title": "连接器“{{node}}”不在线",
+          "detail": "最后一次{{ago}}。客人的指令无法到达客房。",
+          "never": "从未连接——现场未安装密钥。",
+          "fix": "打开连接",
+          "passed": "连接器在线"
+        },
+        "rooms_without_variant": {
+          "title_other": "{{count}} 间客房没有控制方案",
+          "detail": "这些客房的客人会看到“客房不受控制”。",
+          "fix": "分配方案",
+          "passed": "所有客房都有控制方案"
+        },
+        "variant_unpublished": {
+          "title": "方案“{{variant}}”未发布",
+          "detail_other": "{{count}} 间客房在等待第一个版本。",
+          "fix": "发布",
+          "passed": "方案已发布"
+        },
+        "failed_commands": {
+          "title_other": "24 小时内 {{count}} 次设备调用失败",
+          "detail": "最常见：{{reason}}（{{reasonCount}}）。客房：{{rooms}}。",
+          "fix": "打开设备日志",
+          "passed": "指令正常执行"
+        },
+        "no_menu_service": {
+          "title": "没有带菜单和送达地点的服务",
+          "detail": "客人无可点：没有任何场所接受送到客人可取的地点的订单。",
+          "fix": "打开酒店面板",
+          "passed": "有带菜单和送达地点的服务"
+        },
+        "rooms_without_pin": {
+          "title_other": "{{count}} 间客房没有 PIN",
+          "detail": "在发放 PIN 之前，客人无法确认客房或开灯。",
+          "fix": "打开客房列表",
+          "passed": "客房都有 PIN"
+        },
+        "admin_never_logged_in": {
+          "title_other": "{{count}} 名管理员都从未登录",
+          "detail": "{{emails}} — 密码可能未送达或已丢失。",
+          "fix": "重新发送密码",
+          "passed": "管理员已登录过"
+        }
+      },
+      "reason": {
+        "CONNECTOR_OFFLINE": "连接器不在线",
+        "ENDPOINT_UNKNOWN": "客房控制服务器不可达",
+        "ENDPOINT_UNREACHABLE": "客房控制服务器不可达",
+        "TIMEOUT": "超时",
+        "TTL_EXPIRED": "超时",
+        "REQUEST_REJECTED": "连接器拒绝请求",
+        "BAD_RESPONSE": "设备响应无效",
+        "DEVICE_NOT_FOUND": "未找到设备或通道",
+        "CHANNEL_NOT_FOUND": "未找到设备或通道",
+        "DEVICE_OR_CHANNEL_NOT_FOUND": "未找到设备或通道",
+        "unconfirmed": "指令未确认",
+        "failed": "指令失败",
+        "other": "其他原因"
+      },
+      "enabled": "已开启",
+      "noModules": "没有模块——客人只能看到菜单和订单。",
+      "toModules": "模块",
+      "activation": {
+        "title": "停用酒店",
+        "onText": "对客人和员工关闭酒店；数据和设置会保留，随时可以重新启用。",
+        "offText": "酒店已停用：客人和员工无法进入。数据和设置已保留。",
+        "disable": "停用酒店…",
+        "enable": "启用酒店…",
+        "offTitle": "酒店已停用",
+        "reason": "原因：{{reason}}",
+        "when": "{{by}} 于 {{at}} 停用",
+        "enableOn": "将于 {{date}} 自动启用",
+        "manual": "只能手动启用",
+        "onlyHere": "只有平台团队能看到原因。",
+        "auto": "已按日期自动启用"
+      },
+      "connections": {
+        "nodesTitle": "连接器",
+        "add": "+ 添加连接器",
+        "about": "安装在酒店服务器上的程序，把客人的指令传到客房设备。",
+        "aboutHelp": "连接由内向外：连接器主动向我们报到。“不在线”表示超过 3 分钟未报到。",
+        "issue": "签发密钥",
+        "issueAgain": "重新签发密钥",
+        "keyOnce": "连接器“{{name}}”的密钥只显示一次——请立即保存。之后只能重新签发。",
+        "copy": "复制密钥",
+        "copied": "已复制",
+        "emptyTitle": "没有连接器",
+        "emptyBody": "开启客房控制时需要：没有它，客人的指令无法到达设备。",
+        "lastSeen": "最后响应",
+        "version": "程序版本",
+        "keyIssued": "密钥签发时间",
+        "systemsTitle": "外部系统",
+        "roomSystem": "客房控制系统",
+        "otherSystems": "酒店管理系统、支付、门锁",
+        "otherSoon": "接入后会显示在这里",
+        "filter": {
+          "status": "状态",
+          "search": "按名称或版本查找"
+        },
+        "sort": {
+          "name": "名称",
+          "status": "连接",
+          "purpose": "用途",
+          "seen": "最后信号",
+          "version": "版本",
+          "key": "密钥签发"
+        }
+      },
+      "rooms": {
+        "title": "客房",
+        "what": "酒店客房",
+        "search": "查找客房",
+        "count": "显示 {{found}} / {{total}}",
+        "moduleOff": "客房控制已关闭——不使用方案和 PIN",
+        "emptyTitle": "暂无客房",
+        "emptyBody": "酒店在其面板中添加客房或上传列表。添加后，这里将显示布局：楼栋、楼层以及上下对齐的客房。",
+        "noMatch": "没有符合筛选的结果",
+        "noMatchBody": "移除部分筛选或更改搜索。",
+        "none": "未设置",
+        "inactive": "已关闭入住",
+        "noVariant": "无方案",
+        "pin": {
+          "yes": "有",
+          "no": "无"
+        },
+        "col": {
+          "number": "房号",
+          "building": "楼栋",
+          "floor": "楼层",
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "position": "位置",
+          "control": "就绪"
+        },
+        "noBuilding": "无楼栋",
+        "noFloor": "无楼层",
+        "noPosition": "无位置",
+        "floorShort": "{{floor}} 层",
+        "floorLong": "{{floor}} 层",
+        "roomsCount": "客房：{{count}}",
+        "view": {
+          "label": "视图",
+          "table": "表格",
+          "scheme": "布局"
+        },
+        "layer": {
+          "label": "着色",
+          "control": "控制就绪",
+          "variant": "方案",
+          "pin": "PIN",
+          "problems": "阻碍",
+          "occupancy": "入住",
+          "soon": "即将推出",
+          "help": {
+            "control": "客人能否用手机控制灯光和空调。根据设置计算：酒店连接、客房方案、发布状态和 PIN。此处不轮询设备。",
+            "variant": "客房使用的控制方案。相同的客房（通常上下对齐）共用一个方案。",
+            "pin": "客房是否有有效的 PIN 供客人进入客房控制。",
+            "problems": "阻碍客房的最重要原因。所有原因见客房卡片。",
+            "occupancy": "已入住、空闲、清洁中。接入酒店预订系统后显示。"
+          }
+        },
+        "control": {
+          "ok": "一切正常",
+          "attention": "需要注意",
+          "blocked": "阻碍客人",
+          "off": "未接入控制"
+        },
+        "problem": {
+          "no_link": "与酒店无连接",
+          "no_variant": "无方案",
+          "not_published": "方案未发布",
+          "no_pin": "无 PIN",
+          "demo_entry": "无 PIN 进入（演示）",
+          "none": "无阻碍"
+        },
+        "pinValue": {
+          "yes": "有 PIN",
+          "no": "无 PIN"
+        },
+        "noVariantValue": "无方案",
+        "inactiveValue": "已禁用进入",
+        "legend": {
+          "hint": "将鼠标悬停在图例行上，布局中对应的客房会高亮。"
+        },
+        "fix": {
+          "title": "需要修复",
+          "help": "阻碍客人控制客房的原因，按重要性排序。“显示”只保留这些客房。",
+          "show": "显示",
+          "shown": "已显示",
+          "allGood": "没有任何阻碍：所有客房都有已发布的方案和 PIN，酒店在线。",
+          "moduleOff": "此酒店未接入客房控制。布局仅显示客房、楼栋和楼层。"
+        },
+        "zoom": {
+          "label": "缩放",
+          "in": "放大",
+          "out": "缩小",
+          "fit": "正常大小",
+          "fitted": "正常大小"
+        },
+        "rule": {
+          "title": "如何读取房号",
+          "text": "楼层内位置 — {{position}}，楼层 — {{floor}}。",
+          "lastDigits": "末尾位数：{{n}}",
+          "floorAll": "位置之前的全部数字",
+          "floorFirst": "开头位数：{{n}}",
+          "byDefault": "默认",
+          "help": "位置相同的客房上下对齐，在布局中位于同一列。客房上设置的楼层和手动位置优先于规则。",
+          "edit": "修改规则",
+          "dialogTitle": "如何读取房号",
+          "position": "楼层内位置",
+          "floor": "楼层",
+          "digits": "末尾位数：{{n}}",
+          "floorAllOption": "位置之前的全部数字",
+          "floorFirstOption": "开头位数：{{n}}",
+          "example": "例如“{{number}}”：楼层 {{floor}}，位置 {{position}}。",
+          "exampleNoFloor": "例如“{{number}}”：房号中没有楼层，位置 {{position}}。",
+          "save": "保存",
+          "cancel": "取消",
+          "saved": "规则已保存",
+          "allByRule": "所有客房的楼层和位置均按规则。",
+          "floorsAllRule": "所有客房的楼层均按规则。",
+          "floorsAllRoom": "楼层已在客房上设置。",
+          "floorsSomeRule_other": "{{count}} 间客房的楼层按规则。",
+          "positionsManual_other": "{{count}} 间客房的位置为手动设置。",
+          "positionsRule": "位置按规则。"
+        },
+        "card": {
+          "title": "客房 {{number}}",
+          "building": "楼栋",
+          "floor": "楼层",
+          "position": "位置",
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "control": "就绪",
+          "problems": "阻碍",
+          "fromNumber": "取自房号",
+          "manual": "手动",
+          "byRule": "按规则",
+          "notSet": "未设置",
+          "noVariant": "未分配",
+          "yes": "有",
+          "no": "无",
+          "open": "点击打开客房"
+        },
+        "place": {
+          "title": "楼层内位置",
+          "help": "位置是客房在楼层中的位置，位置相同的客房上下对齐。通常从房号读取；如果客房不在规则指示的位置，请手动设置。",
+          "byRule": "按规则：{{position}}",
+          "byRuleNone": "规则无法给出位置",
+          "manualLabel": "自定义位置",
+          "save": "保存",
+          "reset": "恢复规则",
+          "close": "关闭",
+          "saved": "位置已保存"
+        },
+        "facet": {
+          "building": "楼栋",
+          "floor": "楼层",
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "control": "就绪",
+          "problem": "阻碍"
+        },
+        "part": "位置 {{from}}–{{to}}",
+        "tile": {
+          "label": "方块",
+          "a": "色条",
+          "b": "卡片",
+          "c": "棋盘"
+        },
+        "short": {
+          "ok": "就绪",
+          "off": "未接入",
+          "inactive": "已禁用",
+          "no_link": "无连接",
+          "no_variant": "无方案",
+          "not_published": "草稿",
+          "no_pin": "无 PIN",
+          "demo_entry": "演示进入",
+          "pinYes": "有 PIN",
+          "noVariant": "无方案",
+          "none": "正常"
+        },
+        "tiny": {
+          "ok": "就绪",
+          "off": "未接入",
+          "inactive": "禁用",
+          "no_link": "无连接",
+          "no_variant": "无方案",
+          "not_published": "草稿",
+          "no_pin": "无 PIN",
+          "demo_entry": "演示",
+          "pinYes": "PIN ✓",
+          "noVariant": "无方案",
+          "none": "正常"
+        },
+        "add": {
+          "button": "添加客房",
+          "first": "添加第一批客房",
+          "firstExample": "例如：“101-120, 201-220” — 一次添加两层共四十间客房。",
+          "onFloor": "在 {{floor}} 层添加客房",
+          "title": "添加客房",
+          "subtitle": "一个房号、列表或范围。已存在的客房不会重复。",
+          "spec": "房号",
+          "specHelp": "用逗号分隔：“201-212” 为范围，“3A” 和 “套房-1” 按原样添加。保留前导零：“008-012”。",
+          "example": "201-212, 3A, 套房-1",
+          "limit": "一次最多 500 间。",
+          "floorHelp": "留空 — 按规则从房号读取楼层。",
+          "previewEmpty": "输入房号 — 这里会显示将要添加的内容。",
+          "will": "将添加 — {{count}}：",
+          "exists": "已存在 — {{count}}，将跳过：",
+          "buried": "曾被删除 — {{count}}：",
+          "restore": "连同历史恢复",
+          "fresh": "重新创建",
+          "restoreHelp": "客房连同以往订单和聊天恢复；上一位客人的 PIN 和会话将被移除。",
+          "freshHelp": "创建无历史的新客房；已删除的客房以其他名称保留在归档中。",
+          "submit": "添加 — {{count}}",
+          "submitNone": "没有可添加的",
+          "done": "已添加客房：{{count}}"
+        },
+        "edit": {
+          "prev": "上一间",
+          "prevHint": "上一间 (←)",
+          "next": "下一间",
+          "nextHint": "下一间 (→)",
+          "section": {
+            "main": "基本",
+            "control": "控制",
+            "access": "访问",
+            "state": "状态",
+            "problems": "阻碍",
+            "history": "历史"
+          },
+          "loading": "加载中…",
+          "none": "— 未设置 —",
+          "numberHelp": "更改房号会改变二维码链接 — 保存前会显示后果。",
+          "floorHelp": "此处设置的楼层优先于“如何读取房号”规则。留空 — 从房号读取楼层。",
+          "byRule": "按规则：{{value}}",
+          "floorSet": "楼层已在客房上设置。",
+          "floorRule": "留空 — 按规则：{{value}}。",
+          "floorNone": "房号中没有楼层 — 请手动设置。",
+          "positionSet": "位置为手动设置 — 优先于规则。",
+          "guestLink": "客人链接：",
+          "noVariant": "— 无方案 —",
+          "noVariants": "酒店还没有方案 — 在“客房控制”标签中创建。",
+          "device": "设备名称",
+          "deviceHelp": "客房在控制服务器中的名称。通常按方案模板；如果此客房名称不同，请手动设置。",
+          "byTemplate": "按模板：{{value}}",
+          "deviceNeedsVariant": "请先选择方案。",
+          "deviceManual": "手动设置。",
+          "deviceByTemplate": "留空 — 按方案模板。",
+          "is_active": "客人进入",
+          "is_activeHelp": "客房是否允许客人扫码进入。禁用的客房不对客人开放，也不打印在二维码表中。",
+          "is_activeOn": "客房允许客人扫码进入。",
+          "is_activeOff": "扫码进入已关闭 — 客人无法打开客房。",
+          "out_of_service": "停售",
+          "out_of_serviceHelp": "客房在维修或关闭。不影响客人 — 这是给酒店的标记。",
+          "out_of_serviceOn": "客房已标记为停售。",
+          "out_of_serviceOff": "客房在售。",
+          "noProblems": "没有阻碍：客人可以控制客房。",
+          "why": {
+            "no_link": "与酒店服务器无连接 — 客人的指令无法发出。请检查连接。",
+            "no_variant": "客房没有控制方案 — 客人无可控制之物。",
+            "not_published": "客房方案尚未发布 — 客人看不到。",
+            "no_pin": "客房没有 PIN，且无 PIN 进入已关闭 — 客人无法进入控制。",
+            "demo_entry": "没有 PIN，客人通过演示进入无需代码 — 仅限演示期间。"
+          },
+          "fix": "修复",
+          "historyEmpty": "暂无修改。",
+          "saved": "已保存",
+          "save": "保存",
+          "cancel": "取消",
+          "leaveTitle": "有未保存的修改",
+          "leaveBody": "如果离开，此客房的修改将丢失。",
+          "leaveOk": "不保存离开",
+          "renameTitle": "将“{{from}}”改名为“{{to}}”？",
+          "renameQr": "二维码链接将改变 — 需要重新打印客房内的贴纸。",
+          "renameDevice": "设备名称将改变：“{{from}}” → “{{to}}”。",
+          "renameSessions": "客房内的活动客人会话：{{count}} — 将继续有效。",
+          "renameOk": "改名"
+        },
+        "access": {
+          "until": "PIN 有效期至 {{date}}。",
+          "noEnd": "PIN 在更改前一直有效。",
+          "expired": "PIN 已过期 — 客人无法进入。",
+          "demo": "没有 PIN — 客人通过演示进入无需代码。",
+          "none": "没有 PIN — 客人无法控制客房。",
+          "help": "PIN 是入住代码：客人输入后即可控制客房。仅保存代码的指纹，无法查看代码本身。",
+          "copy": "复制",
+          "once": "代码只显示一次 — 请记下或告诉客人。之后无法再次查看。",
+          "validUntil": "有效期至",
+          "validUntilHelp": "退房日期；留空 — 无期限。",
+          "pin": "PIN",
+          "pinHelp": "4 到 12 位数字。",
+          "generate": "生成 PIN",
+          "manual": "手动设置",
+          "saveManual": "保存 PIN",
+          "clear": "移除 PIN",
+          "clearTitle": "移除客房 {{number}} 的 PIN？",
+          "clearBody": "使用此 PIN 进入的客人将失去客房控制。"
+        },
+        "del": {
+          "button": "删除客房",
+          "title": "删除客房 {{number}}？",
+          "lead": "客房将从客房库存中消失。此外：",
+          "pin": "客房 PIN 将被移除。",
+          "noPin": "客房没有 PIN。",
+          "sessions": "将关闭客人会话：{{count}}。",
+          "noSessions": "没有活动的客人会话。",
+          "variant": "客房将与方案“{{variant}}”解除绑定。",
+          "noVariant": "客房没有方案。",
+          "history": "订单和聊天保留在历史中；重新添加即可恢复客房。",
+          "ok": "删除"
+        },
+        "dict": {
+          "building": {
+            "title": "楼栋",
+            "open": "+ 楼栋",
+            "subtitle": "在酒店的每种语言中填写名称。有客房的楼栋只能在迁移客房后删除。",
+            "add": "+ 添加楼栋",
+            "rename": "改名",
+            "delete": "删除",
+            "titleIn": "名称（{{language}}）",
+            "empty": "暂无楼栋。",
+            "deleteTitle": "删除楼栋“{{name}}”？",
+            "busy": "楼栋内客房：{{count}}。迁移到哪里？",
+            "moveTo": "将客房迁移到",
+            "moveNone": "无楼栋",
+            "free": "楼栋内没有客房 — 将立即删除。"
+          },
+          "category": {
+            "title": "类别",
+            "open": "类别",
+            "subtitle": "在酒店的每种语言中填写名称。有客房的类别只能在迁移客房后删除。",
+            "add": "+ 添加类别",
+            "rename": "改名",
+            "delete": "删除",
+            "titleIn": "名称（{{language}}）",
+            "empty": "暂无类别。",
+            "deleteTitle": "删除类别“{{name}}”？",
+            "busy": "该类别客房：{{count}}。迁移到哪里？",
+            "moveTo": "将客房迁移到",
+            "moveNone": "无类别",
+            "free": "该类别没有客房 — 将立即删除。"
+          }
+        }
+      },
+      "journal": {
+        "support": "支持登录",
+        "supportHelp": "平台员工何时进入此酒店面板以及原因。进行中的登录可以中断。",
+        "hardware": "设备日志",
+        "hardwareHelp": "客房设备的指令和读取：时间、客房、元素、结果。"
+      },
+      "disable": {
+        "title": "停用“{{name}}”？",
+        "subtitle": "数据、设置和客房都会保留，随时可以重新启用。",
+        "submit": "停用",
+        "reason": "原因",
+        "reasonPlaceholder": "例如：十月未付款",
+        "reasonHint": "只在 Control 中可见。酒店、客人和员工都看不到原因。",
+        "enableOn": "自动启用日期",
+        "enableOnHint": "可选。留空 — 酒店保持停用，直到手动启用。",
+        "whatHappens": "将会发生什么",
+        "who": {
+          "guest": "客人",
+          "staff": "员工",
+          "room": "客房",
+          "control": "Control"
+        },
+        "what": {
+          "guest": "店面换成酒店品牌的“酒店暂不接受订单”页面；订单和聊天关闭",
+          "staff": "已登录的会话结束；登录表单可见但无法登录 —“无法登录”，不显示原因",
+          "room": "不再向设备发送指令；连接器保持连接",
+          "control": "酒店在列表中标记为“已停用”，并显示原因、操作人和时间"
+        }
+      },
+      "roomControl": {
+        "typeHelp": "下方配置的房型方案：上传、构建器、平面图、版本。房间在“房间库存”标签页绑定到方案。",
+        "moduleOff": "此酒店的房间控制已关闭。请在“模块”标签页开启该模块——之后这里会出现房型方案、调试文件上传、平面图和设备日志。",
+        "toModules": "模块 →"
+      },
+      "sort": {
+        "severity": "重要性",
+        "title": "名称",
+        "count": "数量"
+      }
+    },
+    "profile": {
+      "mainLanguage": "主要",
+      "noTranslation": "未设置翻译",
+      "languagesHint": "客人会看到自己语言的名称和城市；翻译为空时显示主要语言。",
+      "confirm": {
+        "title": "确认修改",
+        "subtitle": "客人和员工会注意到这些变化。",
+        "submit": "我明白，保存"
+      },
+      "field": {
+        "name": "名称",
+        "city": "城市",
+        "timezone": "时区",
+        "currency": "货币",
+        "currency_minor_units": "小数位数",
+        "subdomain": "子域名",
+        "custom_domain": "自有域名",
+        "languages": "语言",
+        "group": "分组",
+        "subdomain_alias": "旧地址重定向"
+      },
+      "consequence": {
+        "timezone": {
+          "hours_shift": "场所营业时间和日程会移动：“08:00 起”将按新时区的 08:00 计算。",
+          "reports_day": "“今日”报表将按新时区计算一天。",
+          "logs_same": "日志时间不变——它与时区无关地存储。"
+        },
+        "currency": {
+          "no_recalc": "价格以数字存储——不会换算：1 500 ₽ 将变成新货币的 1 500。",
+          "open_orders": "未完成的订单和客人购物车保持原货币。",
+          "minor_separate": "小数位数是单独的设置，不会自动改变。"
+        },
+        "currency_minor_units": {
+          "prices_scale": "价格以最小单位存储：修改小数位后 1 500.00 可能变成 150 000 或 15.00。",
+          "check_menu": "修改后请检查酒店菜单中的价格。"
+        },
+        "subdomain": {
+          "old_redirects": "旧地址和客房二维码会重定向到新地址，直到手动移除重定向——无需重印二维码。",
+          "relogin": "员工和客人将在新地址重新登录。",
+          "tls": "新地址在测试站证书重新签发后才能通过 HTTPS 打开。"
+        }
+      },
+      "address": {
+        "title": "酒店地址",
+        "help": "客人通过此地址打开店面，客房二维码指向这里。只有所有者可以修改。",
+        "ownerOnly": "子域名和自有域名只能由平台所有者修改。",
+        "subdomainHint": "拉丁字母、数字、连字符。旧地址将通过重定向继续工作。",
+        "change": "更改…",
+        "aliases": "旧地址的重定向",
+        "aliasLine": "{{old}} → {{now}}",
+        "removeAlias": "移除",
+        "aliasHint": "重定向永久有效。只有确认不再有旧二维码和链接时才移除。",
+        "check": "检查 DNS",
+        "removeDomain": "移除域名",
+        "pointsHere": "{{domain}} 指向平台——可以保存。",
+        "pointsElsewhere": "{{domain}} 指向 {{resolved}}，而不是平台——需要 DNS 记录。",
+        "nothing": "无",
+        "howTitle": "如何接入自有域名",
+        "how": {
+          "dns": "酒店在注册商处添加 A 记录（或 CNAME 指向平台上的酒店地址）。",
+          "check": "点击“检查 DNS”——域名必须指向平台。",
+          "save": "保存域名：店面和二维码将基于它生成。",
+          "tls": "域名证书随测试站证书重新签发——需所有者同意。"
+        },
+        "sort": {
+          "old": "旧地址",
+          "created": "更改时间"
+        }
+      },
+      "group": {
+        "title": "分组",
+        "help": "分组是同一所有者的酒店。只有我们的团队可见。",
+        "label": "酒店分组",
+        "none": "无分组",
+        "hint": "移动会立即记入酒店和分组的历史。"
+      }
+    },
+    "journal": {
+      "system": "系统",
+      "role": {
+        "owner": "所有者",
+        "support": "支持",
+        "read_only": "只读",
+        "system": "自动",
+        "hotel": "酒店员工"
+      },
+      "on": "开启",
+      "off": "关闭",
+      "yes": "是",
+      "no": "否",
+      "field": {
+        "tariff": "套餐",
+        "subdomain_alias": "重定向",
+        "room_floor_digits": "房号中的楼层",
+        "room_position_digits": "房号中的位置",
+        "room_position": "楼层内位置",
+        "room_floor": "楼层",
+        "room_building": "楼栋",
+        "room_category": "类别",
+        "room_is_active": "客人进入",
+        "room_out_of_service": "停售",
+        "room_housekeeping": "清洁",
+        "room_variant": "方案",
+        "room_device": "设备名称",
+        "title": "名称"
+      },
+      "object": {
+        "node": "连接器“{{name}}”",
+        "variant": "方案“{{code}}”",
+        "variantVersion": "方案“{{code}}”，版本 {{version}}",
+        "room": "客房“{{number}}”",
+        "building": "楼栋“{{name}}”",
+        "category": "类别“{{name}}”"
+      },
+      "detail": {
+        "ttl_other": "时长 {{count}} 分钟",
+        "group": "通过分组操作“{{group}}”",
+        "bulk": "通过“酒店”批量操作",
+        "toVersion": "回到版本 {{version}}",
+        "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节",
+        "inDevelopment": "模块开发中——在改为无套餐模块时关闭",
+        "created": "已添加客房：{{count}}",
+        "moved": "已迁移客房：{{count}}",
+        "revoked": "已关闭客人会话：{{count}}"
+      },
+      "otherAction": "其他操作",
+      "sort": {
+        "at": "时间",
+        "who": "操作人",
+        "action": "操作",
+        "hotel": "酒店"
+      }
+    },
+    "history": {
+      "title": "历史",
+      "what": "酒店历史",
+      "who": "谁",
+      "whatFilter": "什么",
+      "period": "时间段",
+      "periods": {
+        "day": "最近一天",
+        "week": "最近一周",
+        "month": "最近一月",
+        "quarter": "最近一季",
+        "year": "最近一年"
+      },
+      "search": "查找：字段、值、人员",
+      "count": "显示 {{shown}} / {{total}}",
+      "emptyTitle": "没有记录",
+      "emptyBody": "没有符合筛选的修改——请移除部分筛选。",
+      "more": "显示更多",
+      "section": {
+        "profile": "资料",
+        "modules": "模块",
+        "connections": "连接",
+        "group": "分组",
+        "activation": "停用",
+        "admins": "管理员",
+        "roomControl": "客房控制",
+        "support": "支持登录",
+        "data": "数据",
+        "rooms": "客房"
+      }
+    },
+    "moduleInfo": {
+      "room_control": {
+        "gives": "客人用自己的手机控制灯光、空调和窗帘。",
+        "opens": [
+          "客人：“房间”标签页",
+          "酒店面板：访问、PIN、房间检查",
+          "Control：房型方案、平面图、指令日志"
+        ]
+      },
+      "marketing": {
+        "gives": "客人首页横幅和菜单项目标签。",
+        "opens": [
+          "客人：横幅和标签",
+          "酒店面板：“营销”栏目"
+        ]
+      },
+      "pms": {
+        "gives": "房间、入住和退房来自酒店管理预订的软件。",
+        "opens": [
+          "酒店面板：房间和客人自动导入"
+        ]
+      },
+      "payment": {
+        "gives": "客人直接在店面用银行卡支付订单。",
+        "opens": [
+          "客人：订单支付"
+        ]
+      },
+      "mobile_key": {
+        "gives": "用客人的手机打开房门。",
+        "opens": [
+          "客人：首页上的钥匙"
+        ]
+      },
+      "native_app": {
+        "gives": "以酒店自己的名字上架应用商店的酒店店面。",
+        "opens": [
+          "客人：酒店应用"
+        ]
+      },
+      "analytics_level": {
+        "gives": "任意时间段的营收、项目和员工报表。",
+        "opens": [
+          "酒店面板：报表"
+        ]
+      },
+      "multi_restaurant": {
+        "gives": "多个餐厅或酒吧，各有自己的菜单和营业时间。",
+        "opens": [
+          "酒店面板：餐饮场所"
+        ]
+      },
+      "extra_languages": {
+        "gives": "除俄语和英语之外的其他语言店面。",
+        "opens": [
+          "客人：语言选择"
+        ]
+      },
+      "config": {
+        "guest_entry_demo": "客人无需 PIN 进入（演示）"
+      }
+    },
+    "listFilteredEmpty": "未找到：请移除部分筛选或点击“重置”。",
+    "sort": {
+      "by": "按“{{column}}”排序",
+      "default": "默认顺序",
+      "label": "排序方式"
+    }
+  }
+}

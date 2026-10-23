@@ -15,6 +15,7 @@ import { adminCssVars } from './adminTokens';
 import { AdminLogin } from './AdminLogin';
 import { AdminShell, type AdminSection } from './AdminShell';
 import { ScreenBoundary } from '@/components/ScreenBoundary';
+import { useControlDictionary } from '@/i18n/useControlDictionary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
@@ -116,7 +117,12 @@ function AdminScope({ children }: { children: ReactNode }) {
   );
 }
 
+/** Control рисуется, когда приехал его словарь (63-1: строки Control — отдельно от гостя). */
 export function AdminApp() {
+  return useControlDictionary() ? <AdminAppBody /> : null;
+}
+
+function AdminAppBody() {
   const [authed, setAuthed] = useState<boolean>(() => Boolean(platformToken.get()));
 
   /*

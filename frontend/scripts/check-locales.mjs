@@ -47,9 +47,22 @@ if (files.length < 2) {
   process.exit(1);
 }
 
+// Строки Control — своим словарём `locales/admin/<язык>.json` (партия 63-1):
+// гость их не качает. Полнота считается по общему словарю вместе со словарём
+// Control; ветка `admin` живёт ТОЛЬКО во втором, и больше в нём ничего нет.
+const CONTROL = join(LOCALES, 'admin');
+const misplaced = [];
 const languages = new Map();
 for (const file of files) {
-  languages.set(file.replace('.json', ''), flatten(JSON.parse(readFileSync(join(LOCALES, file), 'utf8'))));
+  const common = JSON.parse(readFileSync(join(LOCALES, file), 'utf8'));
+  const control = JSON.parse(readFileSync(join(CONTROL, file), 'utf8'));
+  if ('admin' in common) misplaced.push(`${file}: ветка admin в общем словаре — её качает гость`);
+  for (const key of Object.keys(control)) if (key !== 'admin') misplaced.push(`admin/${file}: «${key}» — в словаре Control только admin`);
+  languages.set(file.replace('.json', ''), flatten({ ...common, admin: control.admin }));
+}
+if (misplaced.length) {
+  console.error(`Строки не в своём словаре (${misplaced.length}):\n  ${misplaced.join('\n  ')}`);
+  process.exit(1);
 }
 
 // --- 1. Полнота: основа ключа обязана быть во всех языках --------------------

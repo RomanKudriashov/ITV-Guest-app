@@ -11,6 +11,7 @@ import { useAppTheme } from '@/theme';
 import { createAppTheme } from '@/theme/createAppTheme';
 import { compactTheme } from '@/theme/density';
 import { DEFAULT_BRAND_TOKENS } from '@/theme/tokens';
+import { useControlDictionary } from '@/i18n/useControlDictionary';
 import { adminCssVars, ink, typo } from '../adminTokens';
 import { AdminLogin } from '../AdminLogin';
 import { AdminShell, type AdminSection } from '../AdminShell';
@@ -39,7 +40,12 @@ function SandboxScope({ children }: { children: ReactNode }) {
   );
 }
 
+/** Control рисуется, когда приехал его словарь (63-1: строки Control — отдельно от гостя). */
 export function SandboxApp() {
+  return useControlDictionary() ? <SandboxAppBody /> : null;
+}
+
+function SandboxAppBody() {
   const [authed, setAuthed] = useState<boolean>(() => Boolean(platformToken.get()));
   useEffect(() => {
     platformSession.onExpired(() => setAuthed(false));

@@ -98,7 +98,8 @@ function lookup(dict, code) {
 
 const problems = [];
 for (const lang of LANGS) {
-  const dict = JSON.parse(readFileSync(join(LOCALES, `${lang}.json`), 'utf8'));
+  // Подписи событий — в словаре Control (63-1: строки Control отдельно от гостя).
+  const dict = JSON.parse(readFileSync(join(LOCALES, 'admin', `${lang}.json`), 'utf8'));
   const actions = dict?.admin?.action ?? {};
   for (const code of [...codes].sort()) {
     const value = lookup(actions, code);

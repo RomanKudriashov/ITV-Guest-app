@@ -69,7 +69,11 @@ for (const file of languages) {
   scanContacts(`src/i18n/locales/${file}`, JSON.parse(text));
   const title = JSON.parse(text).app?.title;
   if (title !== NAME) problems.push(`src/i18n/locales/${file}: app.title = «${title}», а не «${NAME}»`);
-  const admin = JSON.parse(text).admin;
+  // Ветка admin — в словаре Control (63-1); его тоже проверяем на имя марки.
+  const controlText = readFileSync(`${LOCALES}admin/${file}`, 'utf8');
+  scan(`src/i18n/locales/admin/${file}`, controlText);
+  scanContacts(`src/i18n/locales/admin/${file}`, JSON.parse(controlText));
+  const admin = JSON.parse(controlText).admin;
   for (const [key, value] of [['admin.brand.name', admin?.brand?.name], ['admin.login.title', admin?.login?.title]]) {
     if (value !== CONSOLE) problems.push(`src/i18n/locales/${file}: ${key} = «${value}», а не «${CONSOLE}»`);
   }

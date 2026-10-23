@@ -47,6 +47,35 @@ const DICTIONARIES: Record<SupportedLanguage, () => Promise<{ default: ResourceK
   zh: () => import('./locales/zh.json'),
 };
 
+/*
+  СТРОКИ CONTROL — СВОИМ СЛОВАРЁМ (партия 63-1).
+
+  Ветка `admin.*` жила в общем словаре, и гость по QR качал вместе со своими
+  строками весь Control: окно номера, корпуса, журнал — треть файла. Теперь
+  она в `locales/admin/<язык>.json` и грузится только там, где есть Control
+  (`/admin` и его песочница): `useControlDictionary` догружает словарь до
+  первого кадра и при смене языка. Паритет ключей держит `check-locales`.
+*/
+const CONTROL_DICTIONARIES: Record<SupportedLanguage, () => Promise<{ default: ResourceKey }>> = {
+  en: () => import('./locales/admin/en.json'),
+  ru: () => import('./locales/admin/ru.json'),
+  ar: () => import('./locales/admin/ar.json'),
+  zh: () => import('./locales/admin/zh.json'),
+};
+
+const controlLoaded = new Set<string>();
+
+/** Догрузить строки Control для языка; повторный вызов — сразу. */
+export async function loadControlDictionary(language: string | undefined): Promise<void> {
+  const code = (language ?? '').toLowerCase().split('-')[0] as SupportedLanguage;
+  const load = CONTROL_DICTIONARIES[code] ?? CONTROL_DICTIONARIES.en;
+  const key = CONTROL_DICTIONARIES[code] ? code : 'en';
+  if (controlLoaded.has(key)) return;
+  const module = await load();
+  i18n.addResourceBundle(key, 'translation', module.default, true, false);
+  controlLoaded.add(key);
+}
+
 /** Загрузчик словарей — общий с показом бренда (`cms/brand/previewI18n.ts`). */
 export const dictionaryBackend: BackendModule = {
   type: 'backend',
@@ -85,7 +114,8 @@ export const i18nReady: Promise<unknown> = i18n
     // Первый кадр рисуется после `i18nReady`, смена языка переключает экран
     // уже с загруженным словарём — ждать внутри компонентов нечего, а
     // приостановка выше всех границ уронила бы корень.
-    react: { useSuspense: false },
+    // `added`: догруженный словарь Control перерисовывает экраны сам.
+    react: { useSuspense: false, bindI18nStore: 'added' },
     detection: {
       order: ['querystring', 'localStorage', 'navigator'],
       lookupQuerystring: 'lang',
