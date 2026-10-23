@@ -63,6 +63,27 @@ def _remember_endpoints(hotel_id: str, endpoints) -> None:
 
 
 @database_sync_to_async
+def _settings(hotel_id: str) -> dict:
+    from apps.grms.services import control_server
+
+    return control_server.settings_message(hotel_id)
+
+
+@database_sync_to_async
+def _record_settings(hotel_id: str, result: dict) -> None:
+    from apps.grms.services import control_server
+
+    control_server.record_result(hotel_id, result)
+
+
+@database_sync_to_async
+def _remember_source(hotel_id: str, settings) -> None:
+    from apps.grms.services import control_server
+
+    control_server.remember_source(hotel_id, settings)
+
+
+@database_sync_to_async
 def _forget_endpoints(hotel_id: str) -> None:
     from apps.grms.services import liveness
 
@@ -153,6 +174,23 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
             # endpoint'а. До G5 это поле никто не читал; гостевой признак
             # доступности собирается в том числе из него.
             await _remember_endpoints(self.node["hotel_id"], content.get("endpoints"))
+            # Откуда у коннектора адрес сервера управления (63-3).
+            await _remember_source(self.node["hotel_id"], content.get("settings"))
+            return
+
+        if kind == "connector.settings.request":
+            # Коннектор (1.1+) сам спрашивает настройки при подключении: они
+            # живут у него только в памяти. Сервер не задан в Control — ответ
+            # `endpoints: null`, и коннектор работает по своему файлу.
+            await self.send_json(await _settings(self.node["hotel_id"]))
+            return
+
+        if kind == "connector.settings.result":
+            await _record_settings(self.node["hotel_id"], content)
+            logger.info(
+                "коннектор ответил на настройки: узел=%s принял=%s причина=%s",
+                self.node["node_id"], content.get("ok"), content.get("reason") or "-",
+            )
             return
 
         if kind == "connector.response":
@@ -165,6 +203,10 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
                 logger.info("поздний ответ коннектора, requestID=%s", request_id)
                 return
             await self.channel_layer.send(reply_to, {"type": "connector.reply", "payload": content})
+
+    async def connector_settings_push(self, message):
+        """Сервер управления поправили в Control — отдать узлу новые настройки."""
+        await self.send_json(await _settings(self.node["hotel_id"]))
 
     async def connector_dispatch(self, message):
         """Задание от backend → в сокет узла."""

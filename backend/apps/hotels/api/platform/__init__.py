@@ -14,6 +14,7 @@ from ninja import Router
 from .auth import router as auth_router
 from .card import router as card_router
 from .rooms_edit import router as rooms_edit_router
+from .connection import router as connection_router
 from .modules import router as modules_router
 from .fleet import router as fleet_router
 from .groups import router as groups_router
@@ -42,6 +43,7 @@ router.add_router("", templates_router)
 router.add_router("", nodes_router)
 router.add_router("", card_router)
 router.add_router("", rooms_edit_router)
+router.add_router("", connection_router)
 router.add_router("", modules_router)
 router.add_router("", team_router)
 

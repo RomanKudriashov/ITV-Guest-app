@@ -36,6 +36,13 @@ def env_list(name: str, default: str = "") -> list[str]:
 # --- Базовое ---------------------------------------------------------------
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-change-me")
+
+# Ключ шифрования секретов сервера управления отеля (логин и пароль, токен —
+# партия 63-3). Fernet: 32 байта в base64. Без ключа процесс не стартует —
+# см. `apps.grms.apps.GrmsConfig.ready`; новый ключ:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Потерян ключ — сохранённые секреты не прочитать, их вводят в Control заново.
+CONTROL_SERVER_SECRET_KEY = os.getenv("CONTROL_SERVER_SECRET_KEY", "")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "*")
 

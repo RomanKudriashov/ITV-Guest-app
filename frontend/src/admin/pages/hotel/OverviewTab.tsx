@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,7 +12,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { QueryState } from '@/components/QueryState';
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../../useRights';
-import { ink, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
+import { accent, ink, panelSx, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
 import {
   disableHotel,
   enableHotel,
@@ -68,9 +69,34 @@ function Overview({ hotel, data, onFix }: { hotel: HotelProfile; data: Readiness
   const passed = data.rules.filter((rule) => rule.status === 'pass');
   const failed = f.commands.failed;
   const connector = f.connector;
+  const [, setParams] = useSearchParams();
+  const { canWrite } = useRights();
 
   return (
     <Box sx={{ display: 'grid', gap: 2 }} data-testid="admin-overview">
+      {f.room_control && !connector && canWrite ? (
+        // Модуль включён, подключения нет (63-3): сразу в мастер, а не искать вкладку.
+        <Box sx={{ ...panelSx, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', border: `1px solid ${accent.main}` }} data-testid="admin-overview-connect">
+          <Box sx={{ flex: '1 1 260px' }}>
+            <Box sx={{ ...typo.panelTitle, color: ink.hi }}>{t('admin.card.conn.overviewTitle')}</Box>
+            <Box sx={{ ...typo.caption, color: ink.mid }}>{t('admin.card.conn.overviewBody')}</Box>
+          </Box>
+          <Button
+            sx={primaryButtonSx}
+            onClick={() =>
+              setParams((prev) => {
+                const next = new URLSearchParams(prev);
+                next.set('tab', 'connections');
+                next.set('connect', '1');
+                return next;
+              })
+            }
+            data-testid="admin-overview-connect-open"
+          >
+            {t('admin.card.conn.connect')}
+          </Button>
+        </Box>
+      ) : null}
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, minmax(0, 1fr))' } }}>
         <Metric
           label={t('admin.card.metric.rooms')}

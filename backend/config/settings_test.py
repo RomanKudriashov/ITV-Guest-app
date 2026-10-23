@@ -89,3 +89,7 @@ CACHES = {
         "KEY_PREFIX": CACHE_KEY_PREFIX,
     }
 }
+
+# Секреты сервера управления (63-3): у прогона свой постоянный ключ, если в
+# окружении его нет, — тесты не должны зависеть от локального `.env`.
+CONTROL_SERVER_SECRET_KEY = CONTROL_SERVER_SECRET_KEY or "dGVzdC1rZXktZm9yLWNvbnRyb2wtc2VydmVyLTAwMzI="

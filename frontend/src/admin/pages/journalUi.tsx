@@ -20,6 +20,9 @@ const ROLE_TONE: Record<string, Tone> = { owner: 'gold', support: 'info', read_o
 
 export const PERIODS = ['day', 'week', 'month', 'quarter', 'year'] as const;
 
+// Значения, что ввёл человек (адрес и логин сервера управления, 63-3), — данные, не слова экрана.
+const DATA_FIELDS = new Set(['control_host', 'control_login']);
+
 export function ActorLabel({ actor }: { actor: JournalActor }) {
   const { t } = useTranslation();
   const role = actor.role || 'system';
@@ -62,6 +65,11 @@ export function useJournalWords() {
     // Правило номеров (партия 63-1): «0» у этажа — «всё перед позицией», не число.
     if (key === 'room_floor_digits') return item === '0' ? t('admin.card.rooms.rule.floorAll') : t('admin.card.rooms.rule.floorFirst', { n: item });
     if (key === 'room_position_digits') return t('admin.card.rooms.rule.lastDigits', { n: item });
+    // Сервер управления (63-3): тип, протокол, вход — словами; секрет — только «изменён».
+    if (key === 'control_kind') return t(`admin.card.conn.form.kinds.${item}`, { defaultValue: unknown });
+    if (key === 'control_protocol') return t(`admin.card.conn.form.protocols.${item}`, { defaultValue: unknown });
+    if (key === 'control_auth') return t(`admin.card.conn.form.auths.${item}`, { defaultValue: unknown });
+    if (key === 'control_secret') return t('admin.journal.detail.secretChanged');
     // Уборка — словом панели отеля, а не кодом из базы (63-1).
     if (key === 'room_housekeeping') return t(`entityCard.room.housekeeping.${item}`, { defaultValue: unknown });
     return item;
@@ -181,7 +189,16 @@ export function JournalRow({ entry, testId, aside }: { entry: JournalEntry; test
         </Box>
         {entry.changes.map((change) => (
           <Box key={change.field} data-testid={`admin-journal-change-${change.field}`} sx={{ color: ink.mid, overflowWrap: 'anywhere' }}>
-            <b>{words.field(change.field)}:</b> {words.value(change, change.from)} → {words.value(change, change.to)}
+            <b>{words.field(change.field)}:</b>{' '}
+            {DATA_FIELDS.has(change.field) ? (
+              <>
+                <span data-words="data">{words.value(change, change.from)}</span> → <span data-words="data">{words.value(change, change.to)}</span>
+              </>
+            ) : (
+              <>
+                {words.value(change, change.from)} → {words.value(change, change.to)}
+              </>
+            )}
           </Box>
         ))}
         {lines.map((line, index) => (

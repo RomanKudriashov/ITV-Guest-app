@@ -21,7 +21,7 @@ import { API, PLATFORM, signInPlatform } from './helpers'
  */
 
 /** Латиница, которой интерфейсу можно: имена продуктов и общепринятые сокращения. */
-const ALLOWED = ['NaviRoom Control', 'NaviRoom', 'Control', 'iRidi', 'PIN', 'QR', 'Telegram', 'GRMS', 'DNS', 'CNAME', 'запись A', 'CSV', 'JSON', 'Excel', 'Wi-Fi', 'TOTP', '2FA', 'UTC', 'API']
+const ALLOWED = ['NaviRoom Control', 'NaviRoom', 'Control', 'iRidi', 'Bittel', 'PIN', 'QR', 'Telegram', 'GRMS', 'DNS', 'CNAME', 'запись A', 'CSV', 'JSON', 'Excel', 'Wi-Fi', 'TOTP', '2FA', 'UTC', 'API']
 
 const CODE_SNAKE = /\b[a-z][a-z0-9]*_[a-z0-9_]+\b/g
 const CODE_DOTTED = /\b[a-z][a-zA-Z0-9_]*\.[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+\b/g

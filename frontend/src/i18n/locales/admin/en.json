@@ -511,7 +511,9 @@
           "tariff_changed": "Tariff changed",
           "admin_removed": "Hotel admin removed",
           "rooms_rule_set": "Room number rule changed",
-          "room_place_set": "Room position set"
+          "room_place_set": "Room position set",
+          "control_server_set": "Control server changed",
+          "control_server_removed": "Control server address — from the connector file"
         },
         "node": {
           "registered": "Node registered",
@@ -1265,6 +1267,12 @@
           "detail": "{{emails}} — the password may not have arrived or got lost.",
           "fix": "Send the password again",
           "passed": "An administrator has signed in"
+        },
+        "control_server_silent": {
+          "title": "The control server does not respond",
+          "detail": "The connector is online, but the control server behind it does not respond — guests cannot control rooms.",
+          "fix": "Open connections",
+          "passed": "The control server responds"
         }
       },
       "reason": {
@@ -1826,6 +1834,183 @@
         "severity": "Importance",
         "title": "Name",
         "count": "How many"
+      },
+      "conn": {
+        "title": "Room control connection",
+        "connect": "Connect room control",
+        "reconnect": "Connection wizard",
+        "overviewTitle": "Room control is on but not connected",
+        "overviewBody": "The wizard walks you through: the connector on the hotel server, the control server, a room check.",
+        "cloudSub": "our cloud — receives guest commands",
+        "version": "version {{version}}",
+        "link": {
+          "cloud": "NaviRoom cloud",
+          "connector": "Connector",
+          "server": "Control server",
+          "rooms": "Rooms"
+        },
+        "state": {
+          "ok": "working"
+        },
+        "connector": {
+          "online": "online",
+          "silent": "offline",
+          "never": "never connected",
+          "none": "not set up",
+          "noneSub": "a program on the hotel server — the road to the control server"
+        },
+        "server": {
+          "ok": "responding",
+          "down": "not responding",
+          "unknown": "unknown — connector offline",
+          "addressFile": "address — in the file on the hotel server"
+        },
+        "source": {
+          "control": "address set in Control",
+          "local": "address set on the hotel server",
+          "unknown": "the connector has not reported yet"
+        },
+        "rooms": {
+          "ready": "{{ready}} of {{total}} ready",
+          "off": "control is not on",
+          "sub": "with a variant and a published layout"
+        },
+        "fact": {
+          "address": "Server address",
+          "source": "Address from",
+          "auth": "Server sign-in",
+          "secretSet": "secret set",
+          "lastCheck": "Last check",
+          "never": "not checked",
+          "inControl": "Set in Control, not in effect"
+        },
+        "checkNow": "Check now",
+        "checking": "Checking…",
+        "editServer": "Change server",
+        "setServer": "Set server",
+        "useFile": "Use the address from the file",
+        "useFileHelp": "“Use the address from the file” removes the address from Control: the connector goes back to the address in its file on the hotel server.",
+        "apply": {
+          "none": "No server set in Control — the connector uses the address from its file on the hotel server.",
+          "applied": "The connector accepted the server settings.",
+          "offline": "The connector is offline — it will accept the settings when it comes online.",
+          "waiting": "Waiting for the connector to reply…",
+          "error": {
+            "outside_allowed": "The connector refused: address {{address}} is outside the allowed circle.",
+            "no_allowed_circle": "The connector refused: it has no allowed circle.",
+            "bad_address": "The connector refused: this does not look like a server address.",
+            "unknown_endpoint": "The connector refused: it does not know such a server.",
+            "other": "The connector did not accept the settings."
+          },
+          "todo": {
+            "outside_allowed": "What to do: add this address to the connector's allowed circle on the hotel server (the command from the wizard's “Connector” step) or fix the address here.",
+            "no_allowed_circle": "What to do: update the connector settings on the hotel server with the command from the wizard's “Connector” step — it includes the allowed circle.",
+            "bad_address": "What to do: check the address and port.",
+            "unknown_endpoint": "What to do: update the connector to version 1.1.",
+            "other": "What to do: open the connection wizard and go through the steps again."
+          }
+        },
+        "check": {
+          "ok": "The control server responds — {{ms}} ms, {{address}}.",
+          "down": "The connector is online but the control server does not respond.",
+          "noConnector": "The connector is offline — nothing to check with.",
+          "oldConnector": "The connector did not answer the check.",
+          "todo": {
+            "down": "What to do: make sure the control server is on and the address and port are right.",
+            "noConnector": "What to do: start the connector on the hotel server or issue a new key.",
+            "oldConnector": "What to do: the connector may be outdated — update it to 1.1."
+          }
+        },
+        "form": {
+          "title": "Control server",
+          "kind": "Server type",
+          "kindHelp": "Which server controls the room equipment. iRidi is available now; Bittel and others will come later.",
+          "kinds": {
+            "iridi": "iRidi",
+            "bittel": "Bittel",
+            "other": "Other"
+          },
+          "soon": "soon",
+          "host": "Address in the hotel network",
+          "hostHelp": "The control server IP or name — as the connector sees it. Without “http://” or a path.",
+          "port": "Port",
+          "protocol": "Encryption",
+          "protocolHelp": "How the connector talks to the server: usually without encryption, inside the hotel network.",
+          "protocols": {
+            "http": "no encryption",
+            "https": "encrypted"
+          },
+          "auth": "Server sign-in",
+          "authHelp": "Whether the control server needs sign-in. Passwords and tokens are stored encrypted and never shown again.",
+          "auths": {
+            "none": "no sign-in",
+            "basic": "login and password",
+            "token": "token"
+          },
+          "login": "Login",
+          "password": "Password",
+          "token": "Token",
+          "secretHelp": "Stored encrypted. It cannot be viewed later — only replaced.",
+          "change": "Change",
+          "timeout": "Wait for reply, ms",
+          "timeoutHelp": "How long the connector waits for the server's reply to one command. From 500 to 30,000.",
+          "enabled": "Enabled",
+          "enabledHelp": "A disabled server is not sent to the connector — the connector uses the address from its file.",
+          "save": "Save"
+        },
+        "wiz": {
+          "title": "Connect room control",
+          "steps": {
+            "what": "What we connect",
+            "connector": "Connector",
+            "server": "Control server",
+            "room": "Room check",
+            "done": "Done"
+          },
+          "back": "Back",
+          "next": "Next",
+          "finish": "Finish",
+          "close": "Close",
+          "what1": "A guest taps “Light” on the phone. The command goes to the NaviRoom cloud, then to the connector on the hotel server, which passes it to the control server, which switches the light.",
+          "what2": "The control server sits in the hotel network and is not visible from outside. So a connector is installed at the hotel: it calls the cloud itself and keeps the link. The server address is set here, but the connector accepts it only within the allowed circle set at installation.",
+          "connectorLead": "Choose a connector or set up a new one. The install command contains the key and the allowed circle — where the connector may go by the address from Control.",
+          "newConnector": "+ New connector",
+          "connectorName": "Connector name",
+          "defaultName": "Hotel server",
+          "circle": "Allowed circle: network or server name",
+          "circleHelp": "A network like 10.10.20.0/24 or a server name. The connector accepts the control server address from Control only if it is inside this circle.",
+          "circlePort": "Port",
+          "alreadyOnline": "This connector is already online — you can go on. A new key is needed only to change the allowed circle.",
+          "issueNew": "Issue a key and show the command",
+          "issueAgain": "Reissue the key and show the command",
+          "issueAgainWarn": "The old key stops working right away: the connector disconnects until the new command is run on the hotel server.",
+          "command": "Command for the hotel server",
+          "copy": "Copy",
+          "copied": "Copied",
+          "keyOnce": "The key is shown once — in this command.",
+          "waiting": "Waiting for the connector to come online… Usually a minute after running the command.",
+          "online": "The connector is online.",
+          "server": "Set the control server. After saving, the connector gets the settings and replies whether it accepted them.",
+          "roomLead": "Choose a room and read its state — read only, no commands to the equipment.",
+          "read": "Read state",
+          "reading": "Reading…",
+          "readOk": "The room answered: {{answered}} of {{read}} channels.",
+          "readReason": {
+            "no_type": "The room has no control variant — nothing to read.",
+            "no_config": "The room variant is not published.",
+            "no_room": "Room not found.",
+            "no_feedback": "The variant has no channels that can be read.",
+            "no_answer": "The room equipment did not answer on any channel. Check the room device name and the control server.",
+            "other": "Could not read."
+          },
+          "device": "Device:",
+          "readSafe": "This was read only: no commands were sent to the room.",
+          "noRooms": "The hotel has no rooms with a control variant — check a room later on the “Room control” tab.",
+          "done1": "Connected:",
+          "doneConnector": "connector “{{name}}” is online;",
+          "doneServer": "control server —",
+          "doneRooms": "rooms ready: {{ready}} of {{total}}."
+        }
       }
     },
     "profile": {
@@ -1932,7 +2117,17 @@
         "room_housekeeping": "Housekeeping",
         "room_variant": "Variant",
         "room_device": "Device name",
-        "title": "Name"
+        "title": "Name",
+        "control_kind": "Server type",
+        "control_protocol": "Encryption",
+        "control_host": "Server address",
+        "control_port": "Server port",
+        "control_auth": "Server sign-in",
+        "control_login": "Server login",
+        "control_timeout_ms": "Wait for reply, ms",
+        "control_is_enabled": "Server enabled",
+        "control_node": "Connector",
+        "control_secret": "Password or token"
       },
       "object": {
         "node": "connector “{{name}}”",
@@ -1955,7 +2150,8 @@
         "moved": "rooms moved: {{count}}",
         "revoked": "guest sessions closed: {{count}}",
         "batch": "{{kind}}",
-        "batchValue": "{{kind}}: “{{value}}”"
+        "batchValue": "{{kind}}: “{{value}}”",
+        "secretChanged": "changed"
       },
       "otherAction": "other action",
       "sort": {

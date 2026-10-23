@@ -3,13 +3,24 @@
   "node_key_file": "/etc/itv-connector/key",
   "heartbeat_interval_s": 60,
   "max_concurrent_requests": 8,
-  "version": "1.0.0",
-
+  "allowedTargets": [
+    {
+      "net": "10.10.20.0/24",
+      "ports": [
+        1085
+      ]
+    }
+  ],
   "endpoints": {
     "iridi": {
       "baseUrl": "http://10.10.20.15:1085",
-      "allowedMethods": ["GET", "POST"],
-      "allowedPaths": ["/"],
+      "allowedMethods": [
+        "GET",
+        "POST"
+      ],
+      "allowedPaths": [
+        "/"
+      ],
       "timeoutMs": 3000,
       "maxRequestBytes": 8192,
       "maxResponseBytes": 65536,

@@ -16,7 +16,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import __version__
 from .executor import Endpoint
+from .remote import Target
 
 
 @dataclass
@@ -26,7 +28,10 @@ class ConnectorConfig:
     endpoints: dict[str, Endpoint] = field(default_factory=dict)
     heartbeat_interval_s: int = 60
     max_concurrent_requests: int = 8
-    version: str = "1.0.0"
+    version: str = __version__
+    # Разрешённый круг (63-3): куда коннектор согласен ходить по адресу из
+    # Control. Пусто — адрес только из этого файла, как до 1.1.
+    allowed_targets: list[Target] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: str | Path) -> "ConnectorConfig":
@@ -59,7 +64,10 @@ class ConnectorConfig:
             # Скрипт iRidi поднимает сервер с max_http_clients = 50 на ВЕСЬ
             # объект. Восемь на узел оставляет запас другим потребителям.
             max_concurrent_requests=int(raw.get("max_concurrent_requests", 8)),
-            version=str(raw.get("version", "1.0.0")),
+            # Версия — свойство кода, а не файла: старое поле `version` в
+            # конфиге больше не читается и облаку не врёт.
+            version=__version__,
+            allowed_targets=[Target.from_config(item) for item in (raw.get("allowedTargets") or [])],
         )
 
     def redacted(self) -> dict:
@@ -73,4 +81,5 @@ class ConnectorConfig:
             "heartbeat_interval_s": self.heartbeat_interval_s,
             "max_concurrent_requests": self.max_concurrent_requests,
             "version": self.version,
+            "allowedTargets": [target.describe() for target in self.allowed_targets],
         }

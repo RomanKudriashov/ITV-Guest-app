@@ -1201,6 +1201,74 @@ export const previewBatch = (hotelId: string, action: BatchAction, value: BatchV
 export const runBatch = (hotelId: string, ticket: string, roomIds: string[]) =>
   request<BatchResult>(`/hotels/${hotelId}/rooms/batch`, 'POST', { ticket, room_ids: roomIds });
 
+/* ── Подключение управления номером (партия 63-3) ───────────────────────── */
+
+export interface ControlServer {
+  kind: 'iridi' | 'bittel' | 'other';
+  protocol: 'http' | 'https';
+  host: string;
+  port: number;
+  auth: 'none' | 'basic' | 'token';
+  login: string;
+  /** Секрет на экран не приходит никогда — только «задан ли». */
+  has_secret: boolean;
+  timeout_ms: number;
+  is_enabled: boolean;
+  node_id: string | null;
+  node: string | null;
+  revision: number;
+  applied_revision: number | null;
+  applied_at: string | null;
+  apply_error: 'outside_allowed' | 'no_allowed_circle' | 'bad_address' | 'unknown_endpoint' | string | null;
+  apply_detail: string | null;
+  last_check_at: string | null;
+  last_check_ok: boolean | null;
+  last_check_detail: string | null;
+}
+export interface ConnectionState {
+  server: ControlServer | null;
+  room_control: boolean;
+  connector: { state: 'online' | 'silent' | 'never' | 'none'; id: string | null; name: string | null; version: string | null; seconds: number | null };
+  server_link: { state: 'ok' | 'down' | 'unknown'; source: 'control' | 'local' | null; configured: boolean };
+  rooms: { total: number; bound: number; ready: number };
+  nodes: Array<{ id: string; name: string; online: boolean; version: string; never: boolean }>;
+  connector_url: string;
+}
+export interface ControlServerIn {
+  kind: string;
+  protocol: string;
+  host: string;
+  port: number;
+  auth: string;
+  login: string;
+  secret?: string | null;
+  timeout_ms: number;
+  is_enabled: boolean;
+  node_id?: string | null;
+}
+export interface ServerCheck {
+  connector: boolean;
+  reachable: boolean;
+  latency_ms?: number | null;
+  address?: string | null;
+  source?: 'control' | 'local' | null;
+  version?: string | null;
+  error: string | null;
+}
+export interface RoomRead {
+  ok: boolean;
+  reason: string;
+  device: string | null;
+  read: number;
+  answered: number;
+  values: Record<string, string | number | boolean | null>;
+}
+export const getConnection = (hotelId: string) => request<ConnectionState>(`/hotels/${hotelId}/control-server`);
+export const putControlServer = (hotelId: string, body: ControlServerIn) => request<ConnectionState>(`/hotels/${hotelId}/control-server`, 'PUT', body);
+export const deleteControlServer = (hotelId: string) => request<ConnectionState>(`/hotels/${hotelId}/control-server`, 'DELETE');
+export const checkControlServer = (hotelId: string) => request<ConnectionState & { check: ServerCheck }>(`/hotels/${hotelId}/control-server/check`, 'POST', {});
+export const readRoomState = (hotelId: string, roomId: string) => request<RoomRead>(`/hotels/${hotelId}/control-server/room-check`, 'POST', { room_id: roomId });
+
 export type DictKind = 'building' | 'category';
 const dictPath = (hotelId: string, kind: DictKind) => `/hotels/${hotelId}/${kind === 'building' ? 'buildings' : 'room-categories'}`;
 export const createDictItem = (hotelId: string, kind: DictKind, title: Record<string, string>) => request<DictItem>(dictPath(hotelId, kind), 'POST', { title });

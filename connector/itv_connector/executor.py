@@ -22,7 +22,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Коды — те же, что в контракте G0. Дублируются строками намеренно: коннектор
 # отдельный сервис и НЕ импортирует backend, иначе он перестал бы быть
@@ -42,6 +42,9 @@ class Endpoint:
     max_request_bytes: int = 8192
     max_response_bytes: int = 65536
     follow_redirects: bool = False
+    # Авторизация сервера управления из Control (63-3): только в памяти,
+    # в лог и в ответ облаку не попадает. `repr=False` — и в отладочный вывод.
+    headers: dict = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_config(cls, raw: dict) -> "Endpoint":
@@ -114,6 +117,8 @@ def execute(envelope: dict, endpoints: dict[str, Endpoint]) -> dict:
 
     headers = {"Content-Type": "application/json"}
     headers.update(envelope.get("headers") or {})
+    # Авторизация сервера — последней: конверт облака её не перекрывает.
+    headers.update(endpoint.headers)
 
     # GET С ТЕЛОМ поддержан намеренно, хотя мы им не пользуемся: прозвон
     # показал, что сервер игнорирует метод и читать можно POST'ом. Но на другом

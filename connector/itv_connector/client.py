@@ -19,6 +19,7 @@ import time
 
 from .config import ConnectorConfig
 from .executor import execute
+from .remote import RemoteState, apply_settings
 
 log = logging.getLogger("itv.connector")
 
@@ -48,6 +49,9 @@ class Connector:
         self.config = config
         self._sem = asyncio.Semaphore(config.max_concurrent_requests)
         self._stopping = False
+        # Локальные адреса — навсегда; действующие — локальные или из Control.
+        self.local_endpoints = dict(config.endpoints)
+        self.remote = RemoteState()
 
     async def run_forever(self) -> None:
         attempt = 0
@@ -69,6 +73,9 @@ class Connector:
             self.config.backend_url, additional_headers=headers, ping_interval=20
         ) as socket:
             log.info("подключились к backend: %s", self.config.backend_url)
+            # Сами спрашиваем настройки сервера управления: облако не знает,
+            # когда коннектор перезапустился и забыл их (они только в памяти).
+            await socket.send(json.dumps({"type": "connector.settings.request", "version": self.config.version}))
             heartbeat = asyncio.create_task(self._heartbeat(socket))
             try:
                 async for message in socket:
@@ -99,6 +106,8 @@ class Connector:
                         "type": "connector.heartbeat",
                         "version": self.config.version,
                         "endpoints": probes,
+                        # Откуда сейчас адрес: «задан в Control» или «на сервере отеля».
+                        "settings": {"source": self.remote.source, "revision": self.remote.revision},
                     }
                 )
             )
@@ -126,7 +135,19 @@ class Connector:
         except ValueError:
             log.warning("получен неразбираемый конверт")
             return
-        if envelope.get("type") != "connector.request":
+        kind = envelope.get("type")
+        if kind == "connector.settings":
+            self.config.endpoints, self.remote, result = apply_settings(
+                envelope, local=self.local_endpoints, circle=self.config.allowed_targets
+            )
+            # В лог — только адреса и итог; заголовки с секретом — никогда.
+            log.info("настройки сервера управления: %s, источник=%s, адреса=%s", "приняты" if result["ok"] else f"отказ ({result['reason']})", self.remote.source, self.remote.applied or "из файла")
+            await socket.send(json.dumps(result))
+            return
+        if kind == "connector.check":
+            await socket.send(json.dumps(await self._check(envelope)))
+            return
+        if kind != "connector.request":
             return
 
         # Лимит конкурентности — на стороне коннектора, а не backend: это он
@@ -136,6 +157,35 @@ class Connector:
                 None, execute, envelope, self.config.endpoints
             )
         await socket.send(json.dumps(response))
+
+    async def _check(self, envelope: dict) -> dict:
+        """
+        Проверка доступности сервера управления ПО ЗАПРОСУ из Control: только
+        TCP-соединение, ни одной команды оборудованию.
+        """
+        name = str(envelope.get("endpoint") or "iridi")
+        request_id = str(envelope.get("requestID", ""))
+        if name not in self.config.endpoints:
+            return {"type": "connector.response", "requestID": request_id, "ok": False, "error": {"code": "ENDPOINT_UNKNOWN", "message": name}}
+        started = time.monotonic()
+        reachable = await self._probe(name)
+        endpoint = self.config.endpoints[name]
+        from urllib.parse import urlparse
+
+        parsed = urlparse(endpoint.base_url)
+        return {
+            "type": "connector.response",
+            "requestID": request_id,
+            "ok": True,
+            "check": {
+                "endpoint": name,
+                "reachable": reachable,
+                "latency_ms": int((time.monotonic() - started) * 1000),
+                "address": f"{parsed.hostname}:{parsed.port or (443 if parsed.scheme == 'https' else 80)}",
+                "source": self.remote.source,
+                "version": self.config.version,
+            },
+        }
 
     def stop(self) -> None:
         self._stopping = True

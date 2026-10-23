@@ -27,7 +27,11 @@ from apps.core.models import AuditLog
 
 LEGACY_DUPLICATES = ("platform.hotel.entered", "grms.published", "grms.rolled_back")
 SUPPORT_ACTIONS = ("impersonation.started", "impersonation.revoked")
-NODE_ACTIONS = ("platform.node.registered", "platform.node.reissued", "platform.node.revoked")
+NODE_ACTIONS = (
+    "platform.node.registered", "platform.node.reissued", "platform.node.revoked",
+    # Сервер управления отеля (63-3) — тот же раздел «Подключения».
+    "platform.hotel.control_server_set", "platform.hotel.control_server_removed",
+)
 ADMIN_ACTIONS = ("platform.hotel.admin_set", "platform.hotel.admin_email_changed", "platform.hotel.admin_removed")
 # Номерной фонд (63-1): правило номеров, номера, корпуса, категории. Записи
 # номера пишут сервисы панели — от имени того, кто правит; в «Историю» из них

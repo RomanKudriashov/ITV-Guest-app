@@ -509,7 +509,9 @@
           "tariff_changed": "套餐已更改",
           "admin_removed": "已移除酒店管理员",
           "rooms_rule_set": "房号规则已修改",
-          "room_place_set": "已设置客房位置"
+          "room_place_set": "已设置客房位置",
+          "control_server_set": "已修改控制服务器",
+          "control_server_removed": "控制服务器地址——使用连接器文件中的地址"
         },
         "node": {
           "registered": "注册节点",
@@ -1229,6 +1231,12 @@
           "detail": "{{emails}} — 密码可能未送达或已丢失。",
           "fix": "重新发送密码",
           "passed": "管理员已登录过"
+        },
+        "control_server_silent": {
+          "title": "控制服务器无响应",
+          "detail": "连接器在线，但其后的控制服务器无响应——客人无法控制客房。",
+          "fix": "打开连接",
+          "passed": "控制服务器有响应"
         }
       },
       "reason": {
@@ -1786,6 +1794,183 @@
         "severity": "重要性",
         "title": "名称",
         "count": "数量"
+      },
+      "conn": {
+        "title": "客房控制连接",
+        "connect": "连接客房控制",
+        "reconnect": "连接向导",
+        "overviewTitle": "客房控制已开启但未连接",
+        "overviewBody": "向导将逐步引导：酒店服务器上的连接器、控制服务器、客房检查。",
+        "cloudSub": "我们的云——接收客人的指令",
+        "version": "版本 {{version}}",
+        "link": {
+          "cloud": "NaviRoom 云",
+          "connector": "连接器",
+          "server": "控制服务器",
+          "rooms": "客房"
+        },
+        "state": {
+          "ok": "正常"
+        },
+        "connector": {
+          "online": "在线",
+          "silent": "离线",
+          "never": "从未连接",
+          "none": "未设置",
+          "noneSub": "酒店服务器上的程序——通往控制服务器的通道"
+        },
+        "server": {
+          "ok": "有响应",
+          "down": "无响应",
+          "unknown": "未知——连接器离线",
+          "addressFile": "地址——在酒店服务器的文件中"
+        },
+        "source": {
+          "control": "地址在 Control 中设置",
+          "local": "地址在酒店服务器上设置",
+          "unknown": "连接器尚未报告"
+        },
+        "rooms": {
+          "ready": "已就绪 {{ready}} / {{total}}",
+          "off": "控制未开启",
+          "sub": "有方案且已发布布局"
+        },
+        "fact": {
+          "address": "服务器地址",
+          "source": "地址来源",
+          "auth": "服务器登录",
+          "secretSet": "已设置密钥",
+          "lastCheck": "上次检查",
+          "never": "未检查",
+          "inControl": "在 Control 中设置，未生效"
+        },
+        "checkNow": "立即检查",
+        "checking": "检查中…",
+        "editServer": "修改服务器",
+        "setServer": "设置服务器",
+        "useFile": "使用文件中的地址",
+        "useFileHelp": "“使用文件中的地址”会从 Control 中移除地址：连接器将恢复使用其在酒店服务器上文件中的地址。",
+        "apply": {
+          "none": "Control 中未设置服务器——连接器使用其在酒店服务器上文件中的地址。",
+          "applied": "连接器已接受服务器设置。",
+          "offline": "连接器离线——上线后将接受设置。",
+          "waiting": "等待连接器回复…",
+          "error": {
+            "outside_allowed": "连接器拒绝：地址 {{address}} 不在允许范围内。",
+            "no_allowed_circle": "连接器拒绝：未设置允许范围。",
+            "bad_address": "连接器拒绝：这不像服务器地址。",
+            "unknown_endpoint": "连接器拒绝：它不知道这个服务器。",
+            "other": "连接器未接受设置。"
+          },
+          "todo": {
+            "outside_allowed": "怎么办：在酒店服务器上把此地址加入连接器的允许范围（向导“连接器”步骤中的命令），或在此修改地址。",
+            "no_allowed_circle": "怎么办：用向导“连接器”步骤中的命令更新酒店服务器上的连接器设置——其中包含允许范围。",
+            "bad_address": "怎么办：检查地址和端口。",
+            "unknown_endpoint": "怎么办：将连接器更新到 1.1 版本。",
+            "other": "怎么办：打开连接向导并重新完成各步骤。"
+          }
+        },
+        "check": {
+          "ok": "控制服务器有响应——{{ms}} 毫秒，{{address}}。",
+          "down": "连接器在线，但控制服务器无响应。",
+          "noConnector": "连接器离线——无法检查。",
+          "oldConnector": "连接器未回复检查。",
+          "todo": {
+            "down": "怎么办：确认控制服务器已开启，地址和端口正确。",
+            "noConnector": "怎么办：在酒店服务器上启动连接器或发放新密钥。",
+            "oldConnector": "怎么办：连接器可能是旧版本——更新到 1.1。"
+          }
+        },
+        "form": {
+          "title": "控制服务器",
+          "kind": "服务器类型",
+          "kindHelp": "哪种服务器控制客房设备。目前可用 iRidi；Bittel 等将稍后推出。",
+          "kinds": {
+            "iridi": "iRidi",
+            "bittel": "Bittel",
+            "other": "其他"
+          },
+          "soon": "即将推出",
+          "host": "酒店网络中的地址",
+          "hostHelp": "控制服务器的 IP 或名称——按连接器所见。不含“http://”和路径。",
+          "port": "端口",
+          "protocol": "加密",
+          "protocolHelp": "连接器与服务器通信的方式：通常在酒店网络内不加密。",
+          "protocols": {
+            "http": "不加密",
+            "https": "加密"
+          },
+          "auth": "服务器登录",
+          "authHelp": "控制服务器是否需要登录。密码和令牌加密保存，不会再显示。",
+          "auths": {
+            "none": "无需登录",
+            "basic": "登录名和密码",
+            "token": "令牌"
+          },
+          "login": "登录名",
+          "password": "密码",
+          "token": "令牌",
+          "secretHelp": "将加密保存。之后无法查看——只能设置新的。",
+          "change": "修改",
+          "timeout": "等待回复（毫秒）",
+          "timeoutHelp": "连接器等待服务器对一条指令回复的时间。500 到 30 000。",
+          "enabled": "已启用",
+          "enabledHelp": "停用的服务器不会发送给连接器——连接器使用其文件中的地址。",
+          "save": "保存"
+        },
+        "wiz": {
+          "title": "连接客房控制",
+          "steps": {
+            "what": "连接什么",
+            "connector": "连接器",
+            "server": "控制服务器",
+            "room": "客房检查",
+            "done": "完成"
+          },
+          "back": "上一步",
+          "next": "下一步",
+          "finish": "完成",
+          "close": "关闭",
+          "what1": "客人在手机上点“灯光”。指令发往 NaviRoom 云，再发往酒店服务器上的连接器，连接器把它交给控制服务器，由后者开灯。",
+          "what2": "控制服务器位于酒店网络中，外部不可见。因此在酒店安装连接器：它主动连接云并保持连接。服务器地址在此设置，但连接器只在安装时设定的允许范围内接受该地址。",
+          "connectorLead": "选择连接器或新建一个。安装命令包含密钥和允许范围——连接器可按 Control 中的地址访问的范围。",
+          "newConnector": "+ 新连接器",
+          "connectorName": "连接器名称",
+          "defaultName": "酒店服务器",
+          "circle": "允许范围：网络或服务器名称",
+          "circleHelp": "形如 10.10.20.0/24 的网络或服务器名称。只有在此范围内，连接器才接受 Control 中的控制服务器地址。",
+          "circlePort": "端口",
+          "alreadyOnline": "此连接器已在线——可以继续。只有更改允许范围时才需要新密钥。",
+          "issueNew": "发放密钥并显示命令",
+          "issueAgain": "重新发放密钥并显示命令",
+          "issueAgainWarn": "旧密钥立即失效：在酒店服务器上运行新命令之前，连接器将断开。",
+          "command": "酒店服务器上的命令",
+          "copy": "复制",
+          "copied": "已复制",
+          "keyOnce": "密钥只显示一次——在此命令中。",
+          "waiting": "等待连接器上线…通常在运行命令后一分钟内。",
+          "online": "连接器在线。",
+          "server": "设置控制服务器。保存后，连接器将收到设置并回复是否接受。",
+          "roomLead": "选择客房并读取其状态——只读，不向设备发送任何指令。",
+          "read": "读取状态",
+          "reading": "读取中…",
+          "readOk": "客房已回复：{{answered}} / {{read}} 个通道。",
+          "readReason": {
+            "no_type": "客房没有控制方案——无可读取内容。",
+            "no_config": "客房方案未发布。",
+            "no_room": "未找到客房。",
+            "no_feedback": "方案中没有可读取的通道。",
+            "no_answer": "客房设备在所有通道均未回复。请检查客房设备名称和控制服务器。",
+            "other": "读取失败。"
+          },
+          "device": "设备：",
+          "readSafe": "这只是读取：未向客房发送任何指令。",
+          "noRooms": "酒店没有带控制方案的客房——稍后在“客房控制”标签中检查客房。",
+          "done1": "已连接：",
+          "doneConnector": "连接器“{{name}}”在线；",
+          "doneServer": "控制服务器——",
+          "doneRooms": "已就绪客房：{{ready}} / {{total}}。"
+        }
       }
     },
     "profile": {
@@ -1892,7 +2077,17 @@
         "room_housekeeping": "清洁",
         "room_variant": "方案",
         "room_device": "设备名称",
-        "title": "名称"
+        "title": "名称",
+        "control_kind": "服务器类型",
+        "control_protocol": "加密",
+        "control_host": "服务器地址",
+        "control_port": "服务器端口",
+        "control_auth": "服务器登录",
+        "control_login": "服务器登录名",
+        "control_timeout_ms": "等待回复（毫秒）",
+        "control_is_enabled": "服务器已启用",
+        "control_node": "连接器",
+        "control_secret": "密码或令牌"
       },
       "object": {
         "node": "连接器“{{name}}”",
@@ -1913,7 +2108,8 @@
         "moved": "已迁移客房：{{count}}",
         "revoked": "已关闭客人会话：{{count}}",
         "batch": "{{kind}}",
-        "batchValue": "{{kind}}：“{{value}}”"
+        "batchValue": "{{kind}}：“{{value}}”",
+        "secretChanged": "已更改"
       },
       "otherAction": "其他操作",
       "sort": {

@@ -19,6 +19,7 @@ import { ChoiceField, Field, FormCell, FormGrid } from '../../form';
 import { createNode, getHotelNodes, reissueHotelNode, revokeHotelNode, type NodeRow } from '../../adminClient';
 import { Empty, FilterBar, Help, Panel, Pill, type Facet } from '../hotels/hotelsUi';
 import { SortBar, useSort } from '../../sort';
+import { ConnectWizard, ConnectionScreen, connectionKey } from './connection';
 
 /**
  * ПОДКЛЮЧЕНИЯ ОТЕЛЯ (партия 62-B): сюда переехал раздел «On-premise» — но
@@ -33,7 +34,19 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
   const qc = useQueryClient();
   const actionFailed = useActionFailed();
   // Состояние, назначение и текст — в адресе, считает сервер (партия 62-D).
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  // Мастер подключения (63-3) открывается и из «Обзора» — адресом `connect=1`.
+  const wizard = params.get('connect') === '1';
+  const setWizard = (open: boolean) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (open) next.set('connect', '1');
+        else next.delete('connect');
+        return next;
+      },
+      { replace: true },
+    );
   // Порядок — с сервера (партия 62-F): «не на связи» выше.
   const sort = useSort('', ['name', 'status', 'purpose', 'seen', 'version', 'key']);
   const filters = { ...Object.fromEntries(['status', 'purpose', 'search'].map((key) => [key, params.get(key) ?? ''])), ...sort.query };
@@ -51,6 +64,7 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel-nodes', hotelId] });
     void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotelId] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
+    void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
   };
   const create = useMutation({
     mutationFn: () => createNode(hotelId, { name: form.name.trim(), purpose: form.purpose }),
@@ -76,6 +90,16 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
 
   return (
     <Box sx={{ display: 'grid', gap: 2 }} data-testid="admin-connections">
+      <ConnectionScreen hotelId={hotelId} onWizard={() => setWizard(true)} />
+      {wizard ? (
+        <ConnectWizard
+          hotelId={hotelId}
+          onClose={() => {
+            setWizard(false);
+            changed();
+          }}
+        />
+      ) : null}
       <Panel
         title={t('admin.card.connections.nodesTitle')}
         aside={

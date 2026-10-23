@@ -50,6 +50,8 @@ GOOD_RESULTS = ("ok", "confirmed", "accepted")
 RULES: tuple[tuple[str, str, str], ...] = (
     ("module_without_connection", "bad", "connections"),
     ("connector_silent", "bad", "connections"),
+    # 63-3: коннектор на связи, а сервер управления за ним — нет.
+    ("control_server_silent", "bad", "connections"),
     ("rooms_without_variant", "warn", "roomControl"),
     ("variant_unpublished", "warn", "roomControl"),
     ("failed_commands", "warn", "journal"),
@@ -152,6 +154,22 @@ def compute(hotel: Hotel) -> dict[str, Any]:
                 f"Коннектор «{node.name}» не на связи",
                 key=str(node.pk), node=node.name, seconds=seconds,
             ))
+
+        # 2а. Сервер управления не отвечает (63-3): коннектор НА СВЯЗИ, а его
+        # проба сервера — нет. Коннектор молчит — правило выше, здесь не
+        # дублируем: про сервер за молчащим коннектором сказать нечего.
+        if "room_control" in modules and nodes and link_state(nodes) == "online":
+            from apps.grms.services import liveness
+
+            if liveness.endpoint_reachable(hotel.pk) is False:
+                node = pick_node(nodes)
+                problems.append(_problem(
+                    "control_server_silent",
+                    "Сервер управления не отвечает",
+                    key="iridi", node=node.name if node else "",
+                ))
+        else:
+            skipped.add("control_server_silent")
 
         room_control = "room_control" in modules
         bound = 0
