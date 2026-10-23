@@ -203,8 +203,9 @@ def test_rule_and_place_land_in_history(api):
     api("put", f"/hotels/{hotel.pk}/rooms/rule", {"floor_digits": 1, "position_digits": 2})
     items = api("get", f"/hotels/{hotel.pk}/history?what=rooms").json()["items"]
     actions = sorted(i["action"] for i in items)
-    assert actions == ["platform.hotel.room_place_set", "platform.hotel.rooms_rule_set"]
-    place = next(i for i in items if i["action"] == "platform.hotel.room_place_set")
+    # С 63-1 позиция пишется общим сервисом номера: «room.updated» с «было → стало».
+    assert actions == ["platform.hotel.rooms_rule_set", "room.updated"]
+    place = next(i for i in items if i["action"] == "room.updated")
     assert place["object"] == {"kind": "room", "number": "2205"}
     assert place["changes"] == [{"field": "room_position", "from": "", "to": "7"}]
     rule = next(i for i in items if i["action"] == "platform.hotel.rooms_rule_set")

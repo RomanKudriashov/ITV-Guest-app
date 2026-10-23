@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import Any
 
 from apps.core.context import current_actor
 from apps.core.errors import PermissionDenied
@@ -202,3 +203,21 @@ def managed_point_ids_or_none() -> list[str] | None:
     """
     access = current_access()
     return None if access.unrestricted else sorted(access.managed_point_ids)
+
+
+def audit_actor() -> tuple[str, Any]:
+    """
+    Кто правит — для журнала: (`actor_type`, `actor_id`) по актору контекста.
+
+    Партия 63-1: номерной фонд правят и панель отеля, и Control, через одни и
+    те же сервисы. Запись журнала обязана сказать, ЧЕЙ это шаг: правка Control
+    попадает в «Историю» отеля (там только платформа), правка панели — нет.
+    """
+    from apps.core.models import AuditLog
+
+    actor = current_actor()
+    if actor is None:
+        return AuditLog.ActorType.SYSTEM, None
+    if getattr(actor, "is_platform_admin", False):
+        return AuditLog.ActorType.PLATFORM, actor.pk
+    return AuditLog.ActorType.STAFF, actor.pk

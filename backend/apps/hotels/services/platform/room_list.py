@@ -11,8 +11,6 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from django.db.models import Q
-from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.core.listing import natural_key, sort_rows
@@ -35,10 +33,10 @@ NONE = "none"
 
 
 def room_list(hotel: Hotel, params: dict[str, str]) -> dict[str, Any]:
-    from apps.grms.models import RoomPin, RoomTypeRoom
+    from apps.grms.models import RoomTypeRoom
+    from apps.grms.services.access import active_pin_room_ids
     from apps.hotels.models import HotelModule, Room
 
-    now = timezone.now()
     with tenant_context(hotel):
         room_control = HotelModule.objects.filter(code="room_control", is_enabled=True).exists()
         rooms = list(
@@ -48,11 +46,8 @@ def room_list(hotel: Hotel, params: dict[str, str]) -> dict[str, Any]:
             link.room_id: link.room_type
             for link in RoomTypeRoom.objects.select_related("room_type")
         }
-        pins = set(
-            RoomPin.objects.exclude(pin_hash="")
-            .filter(Q(valid_until__isnull=True) | Q(valid_until__gt=now))
-            .values_list("room_id", flat=True)
-        )
+        # «Есть PIN» — то же правило, что у «Доступа» панели (63-1, укус 401).
+        pins = active_pin_room_ids()
         rows = [_row(room, links.get(room.pk), room.pk in pins) for room in rooms]
 
     facets = {key: _facet(rows, key) for key in FACETS}

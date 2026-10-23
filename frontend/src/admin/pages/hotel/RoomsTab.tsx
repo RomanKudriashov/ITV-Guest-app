@@ -4,7 +4,6 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
@@ -14,47 +13,66 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import FitScreenOutlinedIcon from '@mui/icons-material/FitScreenOutlined';
 import TableRowsOutlinedIcon from '@mui/icons-material/TableRowsOutlined';
-import ViewModuleOutlinedIcon from '@mui/icons-material/ViewModuleOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
 import { accent, fieldSx, ink, panelSx, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
-import { getRoomsMap, putRoomPlace, putRoomRule, type MapRoom, type RoomRule, type RoomsMap } from '../../adminClient';
+import { getRoomsDictionaries, getRoomsMap, putRoomRule, type DictKind, type MapRoom, type RoomRule, type RoomsMap } from '../../adminClient';
 import { AdminDialog } from '../../form';
 import { useRights } from '../../useRights';
 import { Empty, FilterBar, Help, Hl, Panel, Pill, ViewSwitch, type Facet } from '../hotels/hotelsUi';
 import { SortBar, SortHeader, useSort, type SortState } from '../../sort';
 import {
-  BuildingBlocks,
   BuildingScheme,
   CursorCard,
   LAYERS,
   Legend,
   PROBLEM_ORDER,
-  RoomCell,
-  ZOOM_STEPS,
+  TILES,
+  ZOOM_MAX,
+  ZOOM_MIN,
   highlightSx,
   useCursorCard,
   useSwatches,
   type Layer,
   type Swatches,
+  type Tile,
 } from './roomsMap';
+import { AddRoomsDialog, DictionaryDialog, RoomDialog } from './roomDialogs';
 
 /**
- * НОМЕРНОЙ ФОНД — ПРОСМОТР (партия 63-1, вариант А макетов 63-М).
+ * НОМЕРНОЙ ФОНД (партия 63-1, вариант А макетов 63-М, с правкой).
  *
- * Виды Схема (по умолчанию) · Блоки · Таблица, слой цветом с легендой,
- * «Что исправить» сверху, поиск и фильтры чипами — всё в адресе. Схема
- * вписывается в экран целиком; крупнее — кнопками масштаба. Этаж и позиция
- * (стояк) — заданные у номера или прочитанные из номера по правилу отеля.
- * Действий над номерами здесь нет (партия 63-2); правится только правило
- * отеля и позиция отдельного номера.
+ * Виды Схема (по умолчанию) · Таблица; в схеме — плитка на выбор («Полоса»,
+ * «Карточка» по умолчанию, «Шахматка»): выбор в адресе и запоминается для
+ * этого браузера. Слой цветом с легендой, «Что исправить» сверху, поиск и
+ * фильтры чипами — всё в адресе. Номер открывается окном (`room=` в адресе),
+ * номера добавляются кнопкой над схемой, «+» в конце этажа и у пустого
+ * отеля. Правка — через те же сервисы, что у панели отеля.
  */
 
 const FACET_KEYS = ['building', 'floor', 'category', 'variant', 'pin', 'control', 'problem'] as const;
 const SORT_KEYS = ['number', 'building', 'floor', 'position', 'category', 'variant', 'pin', 'control'] as const;
-type View = 'table' | 'blocks' | 'scheme';
+type View = 'table' | 'scheme';
+const TILE_KEY = 'itv.admin.rooms.tile';
+
+function storedTile(): Tile | null {
+  try {
+    const value = window.localStorage.getItem(TILE_KEY);
+    return TILES.includes(value as Tile) ? (value as Tile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberTile(tile: Tile) {
+  try {
+    window.localStorage.setItem(TILE_KEY, tile);
+  } catch {
+    /* хранилище недоступно — выбор живёт только в адресе */
+  }
+}
 
 export function RoomsTab({ hotelId }: { hotelId: string }) {
   const { t } = useTranslation();
@@ -97,11 +115,14 @@ function useParam() {
 
 function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMap; search: string; sort: SortState }) {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
   const [params, set] = useParam();
   const narrow = useMediaQuery('(max-width:899px)');
-  const view = (params.get('view') as View) || 'scheme';
+  // «Блоки» убраны (63-1): старый адрес `view=blocks` открывает схему.
+  const view: View = params.get('view') === 'table' ? 'table' : 'scheme';
+  const tile: Tile = (TILES.includes(params.get('tile') as Tile) ? (params.get('tile') as Tile) : null) ?? storedTile() ?? 'b';
   const layer: Layer = LAYERS.includes(params.get('layer') as Layer) ? (params.get('layer') as Layer) : 'control';
-  const zoom = Math.min(Math.max(Number(params.get('zoom')) || 0, 0), ZOOM_STEPS.length - 1);
+  const zoom = Math.min(Math.max(Number(params.get('zoom')) || 0, ZOOM_MIN), ZOOM_MAX);
   /*
     Масштаб шагом от ПОСЛЕДНЕГО записанного значения, а не от отрисованного:
     `setSearchParams` в react-router 6 отдаёт функции параметры прошлой
@@ -114,17 +135,24 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
     zoomRef.current = zoom;
   }
   const step = (delta: number | null) => {
-    const value = delta === null ? 0 : Math.min(Math.max(zoomRef.current + delta, 0), ZOOM_STEPS.length - 1);
+    const value = delta === null ? 0 : Math.min(Math.max(zoomRef.current + delta, ZOOM_MIN), ZOOM_MAX);
     zoomRef.current = value;
     set({ zoom: value ? String(value) : null });
   };
   const [highlight, setHighlight] = useState<string | null>(null);
-  const [open, setOpen] = useState<MapRoom | null>(null);
+  const [adding, setAdding] = useState<null | { building_id?: string; floor?: string }>(null);
+  const [dictKind, setDictKind] = useState<DictKind | null>(null);
+  const [toast, setToast] = useState('');
+  const dict = useQuery({ queryKey: ['admin', 'rooms-dictionaries', hotelId], queryFn: () => getRoomsDictionaries(hotelId) });
 
   const rooms = useMemo(() => data.buildings.flatMap((b) => b.floors.flatMap((f) => f.rooms)), [data]);
   const byId = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
   const swatches = useSwatches(rooms);
   const card = useCursorCard(byId, !narrow);
+  const openId = params.get('room');
+  // ← и → в окне номера идут в порядке экрана: в схеме — корпус, этаж, позиция;
+  // в таблице — порядок выбранной сортировки.
+  const order = view === 'table' ? data.order : rooms.map((r) => r.id);
 
   const facets: Facet[] = FACET_KEYS.map((key) => ({
     key,
@@ -133,26 +161,84 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
     describe: (value: string) => facetLabel(t, key, value, value),
   }));
 
-  if (!data.total) {
-    return (
-      <Panel title={t('admin.card.rooms.title')}>
-        <Empty title={t('admin.card.rooms.emptyTitle')} testId="admin-rooms-empty">{t('admin.card.rooms.emptyBody')}</Empty>
-      </Panel>
-    );
-  }
-
   const openRoom = (event: React.MouseEvent | React.KeyboardEvent) => {
     if ('key' in event && event.key !== 'Enter' && event.key !== ' ') return;
     const target = (event.target as HTMLElement).closest('[data-room-id]') as HTMLElement | null;
     const room = target ? byId.get(target.dataset.roomId ?? '') : undefined;
-    if (room) setOpen(room);
+    if (room) {
+      card.clear();
+      set({ room: room.id });
+    }
   };
+  const addDone = (created?: number) => {
+    setAdding(null);
+    if (created) setToast(t('admin.card.rooms.add.done', { count: created }));
+  };
+
+  const dialogs = (
+    <>
+      {openId ? (
+        <RoomDialog
+          hotelId={hotelId}
+          roomId={openId}
+          order={order}
+          dict={dict.data}
+          canWrite={canWrite}
+          onNavigate={(id) => set({ room: id })}
+          onClose={() => set({ room: null })}
+          onOpenTab={(tab) => set({ room: null, tab })}
+        />
+      ) : null}
+      {adding ? <AddRoomsDialog hotelId={hotelId} dict={dict.data} initial={adding} onClose={addDone} /> : null}
+      {dictKind ? <DictionaryDialog hotelId={hotelId} kind={dictKind} dict={dict.data} canWrite={canWrite} onClose={() => setDictKind(null)} /> : null}
+    </>
+  );
+
+  if (!data.total) {
+    return (
+      <Panel title={t('admin.card.rooms.title')}>
+        <Empty
+          title={t('admin.card.rooms.emptyTitle')}
+          testId="admin-rooms-empty"
+          action={
+            canWrite ? (
+              <Button sx={{ ...primaryButtonSx, px: 3, py: 1.25, fontSize: 15 }} startIcon={<AddIcon />} onClick={() => setAdding({})} data-testid="admin-rooms-add-first">
+                {t('admin.card.rooms.add.first')}
+              </Button>
+            ) : undefined
+          }
+        >
+          {t('admin.card.rooms.emptyBody')}
+          {canWrite ? <Box sx={{ mt: 1, color: ink.low }}>{t('admin.card.rooms.add.firstExample')}</Box> : null}
+        </Empty>
+        {dialogs}
+      </Panel>
+    );
+  }
 
   return (
     <Box sx={{ display: 'grid', gap: 1.5, minWidth: 0 }}>
       <FixPanel data={data} />
       <RuleStrip hotelId={hotelId} data={data} sample={rooms[0]?.number ?? '2205'} />
       <Box sx={{ ...panelSx, p: { xs: 1.25, md: 2 }, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }} data-testid="admin-rooms-toolbar">
+          {canWrite ? (
+            <Button sx={primaryButtonSx} startIcon={<AddIcon />} onClick={() => setAdding({})} data-testid="admin-rooms-add">
+              {t('admin.card.rooms.add.button')}
+            </Button>
+          ) : null}
+          <Button sx={secondaryButtonSx} onClick={() => setDictKind('building')} data-testid="admin-rooms-buildings">
+            {canWrite ? t('admin.card.rooms.dict.building.open') : t('admin.card.rooms.dict.building.title')}
+          </Button>
+          <Button sx={secondaryButtonSx} onClick={() => setDictKind('category')} data-testid="admin-rooms-categories">
+            {t('admin.card.rooms.dict.category.title')}
+          </Button>
+          {toast ? (
+            <Box sx={{ ...typo.caption, color: state.ok, alignSelf: 'center' }} data-testid="admin-rooms-toast">
+              {toast}
+            </Box>
+          ) : null}
+        </Box>
         <FilterBar
           facets={facets}
           placeholder={t('admin.card.rooms.search')}
@@ -163,9 +249,8 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
               testIdPrefix="admin-rooms-view"
               onChange={(next) => set({ view: next === 'scheme' ? null : next })}
               options={[
-                ['table', t('admin.card.rooms.view.table'), <TableRowsOutlinedIcon key="t" fontSize="small" />],
-                ['blocks', t('admin.card.rooms.view.blocks'), <ViewModuleOutlinedIcon key="b" fontSize="small" />],
                 ['scheme', t('admin.card.rooms.view.scheme'), <ApartmentOutlinedIcon key="s" fontSize="small" />],
+                ['table', t('admin.card.rooms.view.table'), <TableRowsOutlinedIcon key="t" fontSize="small" />],
               ]}
             />
           }
@@ -173,7 +258,21 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <LayerPicker layer={layer} onChange={(next) => set({ layer: next === 'control' ? null : next })} />
           <Box sx={{ flex: 1 }} />
-          {view === 'scheme' ? <ZoomBar zoom={zoom} onStep={step} /> : null}
+          {view === 'scheme' ? (
+            <>
+              <ViewSwitch<Tile>
+                label={t('admin.card.rooms.tile.label')}
+                value={tile}
+                testIdPrefix="admin-rooms-tile"
+                onChange={(next) => {
+                  rememberTile(next);
+                  set({ tile: next });
+                }}
+                options={TILES.map((key) => [key, t(`admin.card.rooms.tile.${key}`)] as [Tile, string])}
+              />
+              <ZoomBar zoom={zoom} onStep={step} />
+            </>
+          ) : null}
         </Box>
         <Box sx={{ mb: 1.5 }}>
           <Legend rooms={rooms} layer={layer} swatches={swatches} highlight={highlight} onHighlight={setHighlight} />
@@ -186,7 +285,7 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
           <Empty title={t('admin.card.rooms.noMatch')} testId="admin-rooms-nomatch">{t('admin.card.rooms.noMatchBody')}</Empty>
         ) : (
           <Box
-            sx={{ display: 'grid', gap: 2, minWidth: 0, ...highlightSx(highlight) }}
+            sx={{ display: 'grid', gap: 2.5, minWidth: 0, ...highlightSx(highlight) }}
             {...card.handlers}
             onClick={openRoom}
             onKeyDown={openRoom}
@@ -202,12 +301,31 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
                       {building.title ? <span data-words="data">{building.title}</span> : t('admin.card.rooms.noBuilding')}
                     </Typography>
                     <Box sx={{ ...typo.caption, color: ink.low }}>{t('admin.card.rooms.roomsCount', { count: building.rooms })}</Box>
+                    {canWrite && building.key && !building.key.startsWith('zone:') ? (
+                      <ButtonBase
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDictKind('building');
+                        }}
+                        sx={{ ...typo.caption, color: accent.soft, fontWeight: 700, px: 0.5, borderRadius: 1 }}
+                        data-testid={`admin-rooms-building-rename-${building.key}`}
+                      >
+                        {t('admin.card.rooms.dict.building.rename')}
+                      </ButtonBase>
+                    ) : null}
                   </Box>
-                  {view === 'scheme' ? (
-                    <BuildingScheme building={building} layer={layer} swatches={swatches} zoom={zoom} narrow={narrow} />
-                  ) : (
-                    <BuildingBlocks building={building} layer={layer} swatches={swatches} />
-                  )}
+                  <BuildingScheme
+                    building={building}
+                    layer={layer}
+                    swatches={swatches}
+                    tile={tile}
+                    zoom={zoom}
+                    onAdd={
+                      canWrite
+                        ? (floor) => setAdding({ floor, building_id: building.key && !building.key.startsWith('zone:') ? building.key : undefined })
+                        : undefined
+                    }
+                  />
                 </Box>
               ))
             )}
@@ -215,7 +333,7 @@ function Rooms({ hotelId, data, search, sort }: { hotelId: string; data: RoomsMa
         )}
       </Box>
       <CursorCard hover={card.hover}>{card.hover ? <RoomFacts room={card.hover.room} swatches={swatches} /> : null}</CursorCard>
-      <RoomSheet hotelId={hotelId} room={open} onClose={() => setOpen(null)} narrow={narrow} swatches={swatches} />
+      {dialogs}
     </Box>
   );
 }
@@ -294,6 +412,21 @@ function ruleText(t: (k: string, o?: Record<string, unknown>) => string, rule: {
   });
 }
 
+/**
+ * Сводка правила словами (63-1, замечание Олега): не «прочитан из номера у 0»,
+ * а «этажи и позиции у всех номеров — по правилу» или «у 12 номеров позиция
+ * задана вручную».
+ */
+function ruleStats(t: (k: string, o?: Record<string, unknown>) => string, data: RoomsMap) {
+  const total = data.total;
+  const floors = data.summary.rule_floors;
+  const manual = data.summary.manual_positions;
+  if (floors === total && !manual) return t('admin.card.rooms.rule.allByRule');
+  const floorPart = floors === total ? t('admin.card.rooms.rule.floorsAllRule') : floors === 0 ? t('admin.card.rooms.rule.floorsAllRoom') : t('admin.card.rooms.rule.floorsSomeRule', { count: floors });
+  const positionPart = manual ? t('admin.card.rooms.rule.positionsManual', { count: manual }) : t('admin.card.rooms.rule.positionsRule');
+  return `${floorPart} ${positionPart}`;
+}
+
 function RuleStrip({ hotelId, data, sample }: { hotelId: string; data: RoomsMap; sample: string }) {
   const { t } = useTranslation();
   const { canWrite } = useRights();
@@ -306,7 +439,7 @@ function RuleStrip({ hotelId, data, sample }: { hotelId: string; data: RoomsMap;
         {ruleText(t, data.rule)}
         {data.rule.is_default ? <Box component="span" sx={{ color: ink.low }}> ({t('admin.card.rooms.rule.byDefault')})</Box> : null}
         <Box component="span" sx={{ ...typo.caption, color: ink.mid, display: 'block' }} data-testid="admin-rooms-rule-stats">
-          {t('admin.card.rooms.rule.stats', { rule: data.summary.rule_floors, manual: data.summary.manual_positions })}
+          {ruleStats(t, data)}
         </Box>
       </Box>
       {canWrite ? (
@@ -443,8 +576,8 @@ function ZoomBar({ zoom, onStep }: { zoom: number; onStep: (delta: number | null
   );
   return (
     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }} role="group" aria-label={t('admin.card.rooms.zoom.label')} data-testid="admin-rooms-zoom">
-      {button(t('admin.card.rooms.zoom.out'), <RemoveIcon fontSize="small" />, () => onStep(-1), zoom === 0, 'admin-rooms-zoom-out')}
-      {button(t('admin.card.rooms.zoom.in'), <AddIcon fontSize="small" />, () => onStep(1), zoom >= ZOOM_STEPS.length - 1, 'admin-rooms-zoom-in')}
+      {button(t('admin.card.rooms.zoom.out'), <RemoveIcon fontSize="small" />, () => onStep(-1), zoom <= ZOOM_MIN, 'admin-rooms-zoom-out')}
+      {button(t('admin.card.rooms.zoom.in'), <AddIcon fontSize="small" />, () => onStep(1), zoom >= ZOOM_MAX, 'admin-rooms-zoom-in')}
       <Button size="small" sx={{ ...secondaryButtonSx, gap: 0.5 }} onClick={() => onStep(null)} disabled={zoom === 0} data-testid="admin-rooms-zoom-fit">
         <FitScreenOutlinedIcon fontSize="small" />
         {zoom === 0 ? t('admin.card.rooms.zoom.fitted') : t('admin.card.rooms.zoom.fit')}
@@ -454,6 +587,20 @@ function ZoomBar({ zoom, onStep }: { zoom: number; onStep: (delta: number | null
 }
 
 /* ── Таблица ────────────────────────────────────────────────────────────── */
+
+function Dot({ room, layer, swatches }: { room: MapRoom; layer: Layer; swatches: Swatches }) {
+  const s = swatches.swatchOf(room, layer);
+  return (
+    <Box
+      component="span"
+      aria-hidden
+      data-v={s.value}
+      sx={{ width: 18, height: 18, flex: 'none', borderRadius: '5px', display: 'inline-grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: ink.hi, border: `1px solid ${s.base}`, bgcolor: `color-mix(in srgb, ${s.base} 22%, transparent)` }}
+    >
+      {s.glyph}
+    </Box>
+  );
+}
 
 function RoomsTable({
   data,
@@ -480,10 +627,8 @@ function RoomsTable({
       <Box sx={{ display: 'grid', gap: 1 }}>
         <SortBar columns={columns} state={sort} testId="admin-rooms-sort" />
         {rows.map((room) => (
-          <Box key={room.id} data-room-id={room.id} sx={{ ...panelSx, p: 1.25, display: 'flex', gap: 1, alignItems: 'center', cursor: 'pointer' }}>
-            <Box sx={{ width: 34, height: 26, display: 'flex', flex: 'none' }}>
-              <RoomCell room={room} layer={layer} swatches={swatches} showNumber={false} showGlyph />
-            </Box>
+          <Box key={room.id} role="button" tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} sx={{ ...panelSx, p: 1.25, display: 'flex', gap: 1, alignItems: 'center', cursor: 'pointer' }}>
+            <Dot room={room} layer={layer} swatches={swatches} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
                 <Hl text={room.number} q={search} />
@@ -509,9 +654,12 @@ function RoomsTable({
         </Box>
         <Box component="tbody">
           {rows.map((room) => (
-            <Box component="tr" key={room.id} data-room-id={room.id} data-testid={`admin-room-${room.number}`} sx={{ cursor: 'pointer', '&:hover': { bgcolor: surface.s2 } }}>
+            <Box component="tr" key={room.id} tabIndex={0} data-room-id={room.id} data-testid={`admin-room-${room.number}`} sx={{ cursor: 'pointer', '&:hover, &:focus-visible': { bgcolor: surface.s2, outline: 'none' } }}>
               <Box component="td" sx={{ ...cell, color: ink.hi, fontWeight: 700 }}>
-                <Hl text={room.number} q={search} />
+                <Box component="span" sx={{ display: 'inline-flex', gap: 1, alignItems: 'center' }}>
+                  <Dot room={room} layer={layer} swatches={swatches} />
+                  <Hl text={room.number} q={search} />
+                </Box>
                 {!room.is_active ? <Box component="span" sx={{ ml: 1 }}><Pill tone="muted">{t('admin.card.rooms.inactive')}</Pill></Box> : null}
               </Box>
               <Box component="td" sx={cell}>{room.building ? <span data-words="data">{room.building}</span> : '—'}</Box>
@@ -547,7 +695,7 @@ function ControlPill({ room }: { room: MapRoom }) {
   return <Pill tone={tone}>{t(`admin.card.rooms.control.${room.control}`)}</Pill>;
 }
 
-/* ── Карточка и лист номера ─────────────────────────────────────────────── */
+/* ── Карточка у курсора ─────────────────────────────────────────────────── */
 
 function RoomFacts({ room, swatches }: { room: MapRoom; swatches: Swatches }) {
   const { t } = useTranslation();
@@ -591,88 +739,7 @@ function RoomFacts({ room, swatches }: { room: MapRoom; swatches: Swatches }) {
           ))}
         </Box>
       ) : null}
-    </Box>
-  );
-}
-
-function RoomSheet({ hotelId, room, onClose, narrow, swatches }: { hotelId: string; room: MapRoom | null; onClose: () => void; narrow: boolean; swatches: Swatches }) {
-  const { t } = useTranslation();
-  return (
-    <Drawer
-      anchor={narrow ? 'bottom' : 'right'}
-      open={Boolean(room)}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          bgcolor: surface.s1,
-          color: ink.hi,
-          width: narrow ? '100%' : 380,
-          maxHeight: narrow ? '85vh' : '100%',
-          borderRadius: narrow ? `${shape.radius}px ${shape.radius}px 0 0` : 0,
-          p: 2,
-        },
-      }}
-    >
-      {room ? (
-        <Box data-testid="admin-room-sheet" sx={{ display: 'grid', gap: 2 }}>
-          <RoomFacts room={room} swatches={swatches} />
-          <PlaceEditor hotelId={hotelId} room={room} />
-          <Button sx={secondaryButtonSx} onClick={onClose}>{t('admin.card.rooms.place.close')}</Button>
-        </Box>
-      ) : null}
-    </Drawer>
-  );
-}
-
-function PlaceEditor({ hotelId, room }: { hotelId: string; room: MapRoom }) {
-  const { t } = useTranslation();
-  const { canWrite } = useRights();
-  const client = useQueryClient();
-  const [value, setValue] = useState(room.position_source === 'manual' ? room.position : '');
-  const [done, setDone] = useState(false);
-  const save = useMutation({
-    mutationFn: (position: string) => putRoomPlace(hotelId, room.id, position),
-    onSuccess: async () => {
-      setDone(true);
-      await client.invalidateQueries({ queryKey: ['admin', 'hotel-rooms-map', hotelId] });
-    },
-  });
-  if (!canWrite) return null;
-  const byRule = room.position_source === 'rule' ? room.position : '';
-  return (
-    <Box sx={{ display: 'grid', gap: 1 }} data-testid="admin-room-place">
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Box sx={{ ...typo.label, color: ink.mid }}>{t('admin.card.rooms.place.title')}</Box>
-        <Help>{t('admin.card.rooms.place.help')}</Help>
-      </Box>
-      {room.position_source !== 'manual' ? (
-        <Typography sx={{ ...typo.caption, color: ink.mid }}>
-          {byRule ? t('admin.card.rooms.place.byRule', { position: byRule }) : t('admin.card.rooms.place.byRuleNone')}
-        </Typography>
-      ) : null}
-      <TextField
-        size="small"
-        label={t('admin.card.rooms.place.manualLabel')}
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value.slice(0, 16));
-          setDone(false);
-        }}
-        sx={fieldSx}
-        inputProps={{ 'data-testid': 'admin-room-place-input' }}
-      />
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button size="small" sx={primaryButtonSx} disabled={save.isPending || !value.trim()} onClick={() => save.mutate(value.trim())} data-testid="admin-room-place-save">
-          {t('admin.card.rooms.place.save')}
-        </Button>
-        {room.position_source === 'manual' ? (
-          <Button size="small" sx={secondaryButtonSx} disabled={save.isPending} onClick={() => { setValue(''); save.mutate(''); }} data-testid="admin-room-place-reset">
-            {t('admin.card.rooms.place.reset')}
-          </Button>
-        ) : null}
-        {done ? <Box sx={{ ...typo.caption, color: state.ok }}>{t('admin.card.rooms.place.saved')}</Box> : null}
-      </Box>
-      {save.isError ? <Typography sx={{ ...typo.caption, color: state.bad }}>{(save.error as Error).message}</Typography> : null}
+      <Box sx={{ color: ink.low, pt: 0.5 }}>{t('admin.card.rooms.card.open')}</Box>
     </Box>
   );
 }

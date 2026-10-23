@@ -2978,7 +2978,9 @@
         "plan_frames": "Plan frame uploaded",
         "plan_copied": "Plan geometry copied",
         "published": "Configuration published",
-        "rolled_back": "Configuration rolled back"
+        "rolled_back": "Configuration rolled back",
+        "pin_set": "Room PIN issued",
+        "pin_cleared": "Room PIN removed"
       },
       "guest_session": {
         "created": "Guest opened the app",
@@ -3003,7 +3005,12 @@
         "renamed": "Room renamed",
         "restored": "Deleted room restored",
         "bulk_created": "Rooms created in bulk",
-        "bulk_updated": "Rooms updated in bulk"
+        "bulk_updated": "Rooms updated in bulk",
+        "created": "Room added",
+        "updated": "Room changed",
+        "deleted": "Room deleted",
+        "variant_set": "Room variant changed",
+        "device_set": "Room device name changed"
       },
       "notification": {
         "event_settings_changed": "Notification settings changed",
@@ -3031,6 +3038,16 @@
       "bot": {
         "take": "Order taken with a Telegram button",
         "triage": "Review taken with a Telegram button"
+      },
+      "building": {
+        "created": "Building added",
+        "updated": "Building renamed",
+        "deleted": "Building deleted"
+      },
+      "room_category": {
+        "created": "Room category added",
+        "updated": "Room category renamed",
+        "deleted": "Room category deleted"
       }
     },
     "enter": {
@@ -3756,7 +3773,6 @@
         "view": {
           "label": "View",
           "table": "Table",
-          "blocks": "Blocks",
           "scheme": "Layout"
         },
         "layer": {
@@ -3810,8 +3826,8 @@
           "label": "Zoom",
           "in": "Larger",
           "out": "Smaller",
-          "fit": "Fit",
-          "fitted": "whole building"
+          "fit": "Normal size",
+          "fitted": "normal size"
         },
         "rule": {
           "title": "How to read a room number",
@@ -3820,7 +3836,6 @@
           "floorAll": "everything before the position",
           "floorFirst": "first digits: {{n}}",
           "byDefault": "default",
-          "stats": "Floor read from the number for {{rule}}, position set manually for {{manual}}.",
           "help": "Rooms with the same position are stacked above each other and share a column on the layout. A floor set on the room and a manual position override the rule.",
           "edit": "Change rule",
           "dialogTitle": "How to read a room number",
@@ -3833,7 +3848,15 @@
           "exampleNoFloor": "For example, “{{number}}”: no floor in the number, position {{position}}.",
           "save": "Save",
           "cancel": "Cancel",
-          "saved": "Rule saved"
+          "saved": "Rule saved",
+          "allByRule": "Floors and positions of all rooms follow the rule.",
+          "floorsAllRule": "Floors of all rooms follow the rule.",
+          "floorsAllRoom": "Floors are set on the rooms.",
+          "floorsSomeRule_one": "{{count}} room takes its floor from the rule.",
+          "floorsSomeRule_other": "{{count}} rooms take their floor from the rule.",
+          "positionsManual_one": "{{count}} room has a manual position.",
+          "positionsManual_other": "{{count}} rooms have a manual position.",
+          "positionsRule": "Positions follow the rule."
         },
         "card": {
           "title": "Room {{number}}",
@@ -3873,6 +3896,189 @@
           "pin": "PIN",
           "control": "Readiness",
           "problem": "What blocks"
+        },
+        "part": "positions {{from}}–{{to}}",
+        "tile": {
+          "label": "Tile",
+          "a": "Stripe",
+          "b": "Card",
+          "c": "Grid"
+        },
+        "short": {
+          "ok": "ready",
+          "off": "not connected",
+          "inactive": "disabled",
+          "no_link": "no link",
+          "no_variant": "no variant",
+          "not_published": "draft",
+          "no_pin": "no PIN",
+          "demo_entry": "demo entry",
+          "pinYes": "has PIN",
+          "noVariant": "no variant",
+          "none": "all good"
+        },
+        "tiny": {
+          "ok": "ready",
+          "off": "off",
+          "inactive": "disabled",
+          "no_link": "no link",
+          "no_variant": "no var.",
+          "not_published": "draft",
+          "no_pin": "no PIN",
+          "demo_entry": "demo",
+          "pinYes": "PIN ✓",
+          "noVariant": "no var.",
+          "none": "good"
+        },
+        "add": {
+          "button": "Add rooms",
+          "first": "Add the first rooms",
+          "firstExample": "For example: “101-120, 201-220” — forty rooms on two floors at once.",
+          "onFloor": "Add a room on floor {{floor}}",
+          "title": "Add rooms",
+          "subtitle": "One room, a list or a range. Rooms that already exist are not duplicated.",
+          "spec": "Rooms",
+          "specHelp": "Comma-separated: “201-212” is a range, “3A” and “Suite-1” are taken as written. Leading zeros are kept: “008-012”.",
+          "example": "201-212, 3A, Suite-1",
+          "limit": "No more than 500 rooms at a time.",
+          "floorHelp": "Empty — the floor is read from the number by the rule.",
+          "previewEmpty": "Type room numbers — what will be added appears here.",
+          "will": "Will be added — {{count}}:",
+          "exists": "Already exist — {{count}}, skipped:",
+          "buried": "Were deleted — {{count}}:",
+          "restore": "Restore with history",
+          "fresh": "Create anew",
+          "restoreHelp": "The room comes back with its past orders and chat; the previous guest's PIN and sessions are removed.",
+          "freshHelp": "A new room without history; the deleted one stays archived under another name.",
+          "submit": "Add — {{count}}",
+          "submitNone": "Nothing to add",
+          "done": "Rooms added: {{count}}"
+        },
+        "edit": {
+          "prev": "Previous room",
+          "prevHint": "Previous room (←)",
+          "next": "Next room",
+          "nextHint": "Next room (→)",
+          "section": {
+            "main": "Basics",
+            "control": "Control",
+            "access": "Access",
+            "state": "Status",
+            "problems": "What blocks",
+            "history": "History"
+          },
+          "loading": "Loading…",
+          "none": "— not set —",
+          "numberHelp": "Changing the number changes the QR link — consequences are shown before saving.",
+          "floorHelp": "A floor set here overrides the “how to read a room number” rule. Empty — the floor is read from the number.",
+          "byRule": "by rule: {{value}}",
+          "floorSet": "Floor set on the room.",
+          "floorRule": "Empty — by rule: {{value}}.",
+          "floorNone": "The number has no floor — set it manually.",
+          "positionSet": "Position set manually — it overrides the rule.",
+          "guestLink": "Guest link:",
+          "noVariant": "— no variant —",
+          "noVariants": "The hotel has no variants yet — they are created on the “Room control” tab.",
+          "device": "Device name",
+          "deviceHelp": "How the room is named on the control server. Usually from the variant template; set it manually if this room is named differently.",
+          "byTemplate": "by template: {{value}}",
+          "deviceNeedsVariant": "Choose a variant first.",
+          "deviceManual": "Set manually.",
+          "deviceByTemplate": "Empty — by the variant template.",
+          "is_active": "Guest entry",
+          "is_activeHelp": "Whether the room lets a guest in by QR. A disabled room does not open for guests and is not printed on the QR sheet.",
+          "is_activeOn": "The room lets guests in by QR.",
+          "is_activeOff": "QR entry is off — guests cannot open the room.",
+          "out_of_service": "Out of order",
+          "out_of_serviceHelp": "The room is under repair or closed. It does not affect guests — it is a note for the hotel.",
+          "out_of_serviceOn": "The room is marked out of order.",
+          "out_of_serviceOff": "The room is in service.",
+          "noProblems": "Nothing blocks: guests can control the room.",
+          "why": {
+            "no_link": "No link to the hotel server — guest commands go nowhere. Check the connection.",
+            "no_variant": "The room has no control variant — guests have nothing to control.",
+            "not_published": "The room variant is not published yet — guests do not see it.",
+            "no_pin": "The room has no PIN and entry without PIN is off — guests cannot enter control.",
+            "demo_entry": "No PIN, guests use demo entry without a code — only for demonstrations."
+          },
+          "fix": "Fix",
+          "historyEmpty": "No changes yet.",
+          "saved": "Saved",
+          "save": "Save",
+          "cancel": "Cancel",
+          "leaveTitle": "You have unsaved changes",
+          "leaveBody": "If you leave, changes to this room will be lost.",
+          "leaveOk": "Leave without saving",
+          "renameTitle": "Rename “{{from}}” to “{{to}}”?",
+          "renameQr": "The QR link will change — the sticker in the room must be reprinted.",
+          "renameDevice": "The device name will change: “{{from}}” → “{{to}}”.",
+          "renameSessions": "Live guest sessions in the room: {{count}} — they will keep working.",
+          "renameOk": "Rename"
+        },
+        "access": {
+          "until": "PIN valid until {{date}}.",
+          "noEnd": "PIN is valid until changed.",
+          "expired": "The PIN has expired — guests cannot enter.",
+          "demo": "No PIN — guests use demo entry without a code.",
+          "none": "No PIN — guests cannot control the room.",
+          "help": "The PIN is the stay code: guests type it to control the room. Only a fingerprint of the code is stored; the code itself cannot be viewed.",
+          "copy": "Copy",
+          "once": "The code is shown once — write it down or tell the guest. It cannot be viewed again.",
+          "validUntil": "Valid until",
+          "validUntilHelp": "Check-out date; empty — no end.",
+          "pin": "PIN",
+          "pinHelp": "4 to 12 digits.",
+          "generate": "Generate PIN",
+          "manual": "Set manually",
+          "saveManual": "Save PIN",
+          "clear": "Remove PIN",
+          "clearTitle": "Remove the PIN of room {{number}}?",
+          "clearBody": "A guest who entered with this PIN loses control of the room."
+        },
+        "del": {
+          "button": "Delete room",
+          "title": "Delete room {{number}}?",
+          "lead": "The room disappears from the inventory. Also:",
+          "pin": "The room PIN is removed.",
+          "noPin": "The room has no PIN.",
+          "sessions": "Guest sessions closed: {{count}}.",
+          "noSessions": "No live guest sessions.",
+          "variant": "The room is unlinked from variant “{{variant}}”.",
+          "noVariant": "The room has no variant.",
+          "history": "Orders and chat stay in history; the room can be restored by adding it again.",
+          "ok": "Delete"
+        },
+        "dict": {
+          "building": {
+            "title": "Buildings",
+            "open": "+ Building",
+            "subtitle": "A name in each hotel language. A building with rooms can only be deleted by moving its rooms.",
+            "add": "+ Add building",
+            "rename": "Rename",
+            "delete": "Delete",
+            "titleIn": "Name ({{language}})",
+            "empty": "No buildings yet.",
+            "deleteTitle": "Delete building “{{name}}”?",
+            "busy": "Rooms in the building: {{count}}. Where to move them?",
+            "moveTo": "Move rooms to",
+            "moveNone": "no building",
+            "free": "The building has no rooms — it is deleted right away."
+          },
+          "category": {
+            "title": "Categories",
+            "open": "Categories",
+            "subtitle": "A name in each hotel language. A category with rooms can only be deleted by moving its rooms.",
+            "add": "+ Add category",
+            "rename": "Rename",
+            "delete": "Delete",
+            "titleIn": "Name ({{language}})",
+            "empty": "No categories yet.",
+            "deleteTitle": "Delete category “{{name}}”?",
+            "busy": "Rooms in the category: {{count}}. Where to move them?",
+            "moveTo": "Move rooms to",
+            "moveNone": "no category",
+            "free": "The category has no rooms — it is deleted right away."
+          }
         }
       },
       "journal": {
@@ -4010,13 +4216,24 @@
         "subdomain_alias": "Redirect",
         "room_floor_digits": "Floor in number",
         "room_position_digits": "Position in number",
-        "room_position": "Position on the floor"
+        "room_position": "Position on the floor",
+        "room_floor": "Floor",
+        "room_building": "Building",
+        "room_category": "Category",
+        "room_is_active": "Guest entry",
+        "room_out_of_service": "Out of order",
+        "room_housekeeping": "Housekeeping",
+        "room_variant": "Variant",
+        "room_device": "Device name",
+        "title": "Name"
       },
       "object": {
         "node": "connector “{{name}}”",
         "variant": "variant “{{code}}”",
         "variantVersion": "variant “{{code}}”, version {{version}}",
-        "room": "room “{{number}}”"
+        "room": "room “{{number}}”",
+        "building": "building “{{name}}”",
+        "category": "category “{{name}}”"
       },
       "detail": {
         "ttl_one": "for {{count}} minute",
@@ -4026,7 +4243,10 @@
         "toVersion": "to version {{version}}",
         "legacyCount_one": "{{count}} module changed — the old entry keeps no details",
         "legacyCount_other": "{{count}} modules changed — the old entry keeps no details",
-        "inDevelopment": "module in development — switched off on the move to modules without plans"
+        "inDevelopment": "module in development — switched off on the move to modules without plans",
+        "created": "rooms added: {{count}}",
+        "moved": "rooms moved: {{count}}",
+        "revoked": "guest sessions closed: {{count}}"
       },
       "otherAction": "other action",
       "sort": {

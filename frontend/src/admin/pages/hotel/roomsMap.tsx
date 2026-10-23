@@ -2,23 +2,45 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Popper from '@mui/material/Popper';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import AddIcon from '@mui/icons-material/Add';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import KeyOffOutlinedIcon from '@mui/icons-material/KeyOffOutlined';
+import WifiOutlinedIcon from '@mui/icons-material/WifiOutlined';
+import WifiOffOutlinedIcon from '@mui/icons-material/WifiOffOutlined';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import LayersClearOutlinedIcon from '@mui/icons-material/LayersClearOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import BlockIcon from '@mui/icons-material/Block';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, shadow, shape, state, surface, typo } from '../../adminTokens';
 import type { MapBuilding, MapRoom, RoomProblem } from '../../adminClient';
 
 /**
- * СХЕМА НОМЕРНОГО ФОНДА (партия 63-1): раскраска слоями, легенда, схема
- * корпуса «этажи × позиции», блоки и карточка номера у курсора.
+ * СХЕМА НОМЕРНОГО ФОНДА (партия 63-1): раскраска слоями, легенда, плитка
+ * номера трёх видов на выбор и карточка номера у курсора.
  *
- * Цвет — не единственный признак: у каждого значения свой знак (✓ ! ✕ –),
- * у «плохих» значений — штриховка. Человек, не различающий красный и
- * зелёный, читает схему по знакам.
+ * Плитка (выбор Олега — все три с переключателем):
+ *   a «Полоса»   — крупный номер, цвет слоя узкой полосой слева, значки
+ *                  вариант / PIN / связь (зачёркнутый — нет);
+ *   b «Карточка» — тень, значок состояния в углу, категория и слово;
+ *   c «Шахматка» — плотная таблица, номер и короткое слово в клетке.
+ *
+ * Цвет — не единственный признак: у значения есть знак и слово. Большой
+ * корпус не листается вбок — ряд позиций режется на части по ширине экрана,
+ * стояки внутри части по-прежнему друг под другом.
  */
 
 export type Layer = 'control' | 'variant' | 'pin' | 'problems';
 export const LAYERS: Layer[] = ['control', 'variant', 'pin', 'problems'];
 export const PROBLEM_ORDER: RoomProblem[] = ['no_link', 'no_variant', 'not_published', 'no_pin', 'demo_entry'];
+export type Tile = 'a' | 'b' | 'c';
+export const TILES: Tile[] = ['a', 'b', 'c'];
+
+type Tone = 'ok' | 'warn' | 'bad' | 'off' | 'info';
 
 export interface Swatch {
   value: string;
@@ -26,10 +48,12 @@ export interface Swatch {
   base: string;
   glyph: string;
   hatch: boolean;
+  tone: Tone;
 }
 
 const mix = (a: string, b: string, pa: number) => `color-mix(in srgb, ${a} ${pa}%, ${b})`;
 const MUTED = ink.low;
+const TONE: Record<Tone, string> = { ok: state.ok, warn: state.warn, bad: state.bad, off: ink.low, info: accent.main };
 /*
   Оттенки вариантов — из словаря смешением (`check-colors`): своих цветов у
   экрана нет. Красного и жёлтого «бед» среди них нет — вариант не беда.
@@ -46,7 +70,7 @@ const VARIANT_HUES = [
 ];
 const VARIANT_GLYPHS = '123456789АБВГДЕЖИКЛМН';
 
-/** Значение номера в слое: подпись, цвет, знак. Порядок легенды — порядок `swatches`. */
+/** Значение номера в слое: подпись, цвет, знак, тон. Порядок легенды — порядок `lists`. */
 export function useSwatches(rooms: MapRoom[]) {
   const { t } = useTranslation();
   const variants = useMemo(() => {
@@ -56,29 +80,36 @@ export function useSwatches(rooms: MapRoom[]) {
   }, [rooms]);
 
   return useMemo(() => {
-    const off: Swatch = { value: 'off', label: t('admin.card.rooms.control.off'), base: MUTED, glyph: '–', hatch: false };
+    const off: Swatch = { value: 'off', label: t('admin.card.rooms.control.off'), base: MUTED, glyph: '–', hatch: false, tone: 'off' };
     const lists: Record<Layer, Swatch[]> = {
       control: [
-        { value: 'ok', label: t('admin.card.rooms.control.ok'), base: state.ok, glyph: '✓', hatch: false },
-        { value: 'attention', label: t('admin.card.rooms.control.attention'), base: state.warn, glyph: '!', hatch: false },
-        { value: 'blocked', label: t('admin.card.rooms.control.blocked'), base: state.bad, glyph: '✕', hatch: true },
+        { value: 'ok', label: t('admin.card.rooms.control.ok'), base: state.ok, glyph: '✓', hatch: false, tone: 'ok' },
+        { value: 'attention', label: t('admin.card.rooms.control.attention'), base: state.warn, glyph: '!', hatch: false, tone: 'warn' },
+        { value: 'blocked', label: t('admin.card.rooms.control.blocked'), base: state.bad, glyph: '✕', hatch: true, tone: 'bad' },
         off,
       ],
       variant: [
-        ...variants.map(([code, title], i) => ({ value: `v:${code}`, label: title, base: VARIANT_HUES[i % VARIANT_HUES.length], glyph: VARIANT_GLYPHS[i] ?? '•', hatch: false })),
-        { value: 'v:', label: t('admin.card.rooms.noVariantValue'), base: MUTED, glyph: '–', hatch: true },
+        ...variants.map(([code, title], i) => ({
+          value: `v:${code}`,
+          label: title,
+          base: VARIANT_HUES[i % VARIANT_HUES.length],
+          glyph: VARIANT_GLYPHS[i] ?? '•',
+          hatch: false,
+          tone: 'info' as Tone,
+        })),
+        { value: 'v:', label: t('admin.card.rooms.noVariantValue'), base: MUTED, glyph: '–', hatch: true, tone: 'off' },
       ],
       pin: [
-        { value: 'yes', label: t('admin.card.rooms.pinValue.yes'), base: state.ok, glyph: '✓', hatch: false },
-        { value: 'no', label: t('admin.card.rooms.pinValue.no'), base: state.bad, glyph: '✕', hatch: true },
+        { value: 'yes', label: t('admin.card.rooms.pinValue.yes'), base: state.ok, glyph: '✓', hatch: false, tone: 'ok' },
+        { value: 'no', label: t('admin.card.rooms.pinValue.no'), base: state.bad, glyph: '✕', hatch: true, tone: 'bad' },
       ],
       problems: [
-        { value: 'none', label: t('admin.card.rooms.problem.none'), base: state.ok, glyph: '✓', hatch: false },
-        { value: 'no_link', label: t('admin.card.rooms.problem.no_link'), base: state.bad, glyph: '∅', hatch: true },
-        { value: 'no_variant', label: t('admin.card.rooms.problem.no_variant'), base: state.bad, glyph: '?', hatch: true },
-        { value: 'not_published', label: t('admin.card.rooms.problem.not_published'), base: state.warn, glyph: '…', hatch: true },
-        { value: 'no_pin', label: t('admin.card.rooms.problem.no_pin'), base: state.bad, glyph: '#', hatch: false },
-        { value: 'demo_entry', label: t('admin.card.rooms.problem.demo_entry'), base: state.warn, glyph: '!', hatch: false },
+        { value: 'none', label: t('admin.card.rooms.problem.none'), base: state.ok, glyph: '✓', hatch: false, tone: 'ok' },
+        { value: 'no_link', label: t('admin.card.rooms.problem.no_link'), base: state.bad, glyph: '∅', hatch: true, tone: 'bad' },
+        { value: 'no_variant', label: t('admin.card.rooms.problem.no_variant'), base: state.bad, glyph: '?', hatch: true, tone: 'bad' },
+        { value: 'not_published', label: t('admin.card.rooms.problem.not_published'), base: state.warn, glyph: '…', hatch: true, tone: 'warn' },
+        { value: 'no_pin', label: t('admin.card.rooms.problem.no_pin'), base: state.bad, glyph: '#', hatch: false, tone: 'bad' },
+        { value: 'demo_entry', label: t('admin.card.rooms.problem.demo_entry'), base: state.warn, glyph: '!', hatch: false, tone: 'warn' },
         off,
       ],
     };
@@ -99,13 +130,23 @@ export function useSwatches(rooms: MapRoom[]) {
       const value = valueOf(room, layer);
       return lists[layer].find((s) => s.value === value) ?? off;
     };
-    return { lists, valueOf, swatchOf };
+    /** Слово на плитке: коротко, что с номером в этом слое. `tiny` — для клетки шахматки. */
+    const wordOf = (room: MapRoom, layer: Layer, tiny = false): string => {
+      const set = tiny ? 'tiny' : 'short';
+      if (layer === 'variant') return room.variant ? room.variant.title : t(`admin.card.rooms.${set}.noVariant`);
+      if (layer === 'pin') return t(`admin.card.rooms.${set}.${room.pin ? 'pinYes' : 'no_pin'}`);
+      if (room.control === 'off') return t(`admin.card.rooms.${set}.${room.is_active ? 'off' : 'inactive'}`);
+      if (layer === 'control' && room.control === 'ok') return t(`admin.card.rooms.${set}.ok`);
+      const first = PROBLEM_ORDER.find((code) => room.problems.includes(code));
+      return first ? t(`admin.card.rooms.${set}.${first}`) : t(`admin.card.rooms.${set}.none`);
+    };
+    return { lists, valueOf, swatchOf, wordOf };
   }, [t, variants]);
 }
 
 export type Swatches = ReturnType<typeof useSwatches>;
 
-/** Заливка клетки: размытый цвет значения, у «плохих» — штриховка. */
+/** Заливка знака легенды: размытый цвет значения, у «плохих» — штриховка. */
 export function cellPaint(s: Swatch) {
   return {
     bgcolor: mix(s.base, surface.s1, 26),
@@ -195,7 +236,7 @@ export function Legend({
   );
 }
 
-/** Подсветка по легенде: одно правило на контейнер, а не по правилу на клетку. */
+/** Подсветка по легенде: одно правило на контейнер, а не по правилу на плитку. */
 export function highlightSx(highlight: string | null) {
   if (!highlight) return {};
   return {
@@ -204,9 +245,8 @@ export function highlightSx(highlight: string | null) {
   };
 }
 
-/* ── Схема корпуса: этажи × позиции ─────────────────────────────────────── */
+/* ── Схема корпуса: этажи × позиции, ряд режется на части ───────────────── */
 
-/** Ширина элемента — живьём, чтобы схема вписывалась при любом окне. */
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
   const [width, setWidth] = useState(0);
@@ -221,162 +261,349 @@ function useWidth<T extends HTMLElement>() {
   return [ref, width] as const;
 }
 
-/** Шаги масштаба: 0 — «весь корпус» (вписать), дальше — ширина клетки в точках. */
-export const ZOOM_STEPS = [0, 28, 40, 56, 72];
-const MAX_FIT = 96;
+/** Масштаб плитки: шаги −1…2, 0 — обычный размер. */
+export const ZOOM_MIN = -1;
+export const ZOOM_MAX = 2;
+const SCALE: Record<number, number> = { [-1]: 0.82, 0: 1, 1: 1.22, 2: 1.5 };
+
+const SIZES: Record<Tile, { w: number; h: number; gap: number; wPhone: number; hPhone: number }> = {
+  a: { w: 64, h: 52, gap: 6, wPhone: 56, hPhone: 48 },
+  b: { w: 92, h: 66, gap: 8, wPhone: 76, hPhone: 62 },
+  c: { w: 46, h: 32, gap: 0, wPhone: 42, hPhone: 30 },
+};
 
 export function BuildingScheme({
   building,
   layer,
   swatches,
+  tile,
   zoom,
-  narrow,
+  onAdd,
 }: {
   building: MapBuilding;
   layer: Layer;
   swatches: Swatches;
+  tile: Tile;
   zoom: number;
-  narrow: boolean;
+  /** «+» в конце этажа: добавить номер на этот этаж этого корпуса; нет — нет кнопки. */
+  onAdd?: (floor: string) => void;
 }) {
   const { t } = useTranslation();
   const [ref, width] = useWidth<HTMLDivElement>();
+  const phone = useMediaQuery('(max-width:599px)');
+  const size = SIZES[tile];
+  const scale = SCALE[zoom] ?? 1;
+  const w = Math.round((phone ? size.wPhone : size.w) * scale);
+  const h = Math.round((phone ? size.hPhone : size.h) * scale);
+  const gap = size.gap;
+  const label = phone ? 30 : 52;
+  const plusWidth = onAdd ? Math.min(w, 32) : 0;
+  const plus = onAdd ? plusWidth + Math.max(gap, 4) + (tile === 'c' ? 4 : 0) : 0;
   const positions = useMemo(() => {
     const list = [...building.positions];
     if (building.floors.some((f) => f.rooms.some((r) => !r.position))) list.push('');
     return list;
   }, [building]);
-  const columns = Math.max(positions.length, 1);
-  const label = narrow ? 30 : 52;
-  const gap = columns > 40 ? 1 : columns > 16 ? 2 : 3;
-  // «Вписать» — не шире 96 точек: у отеля на три номера в ряд клетки иначе растягивались на весь экран.
-  const fit = Math.min(Math.max((width - label - gap * columns) / columns, 1), MAX_FIT);
-  const cell = zoom > 0 ? Math.max(ZOOM_STEPS[zoom] ?? fit, fit) : fit;
-  const height = Math.round(Math.min(Math.max(cell * 0.72, 12), 40));
-  const showNumber = cell >= 38;
-  const showGlyph = cell >= 11;
-  // Подписи позиций — не теснее 22 точек: при узких клетках — каждая k-я.
-  const every = Math.max(1, Math.ceil(22 / Math.max(cell + gap, 1)));
-  const template = zoom > 0 ? `${label}px repeat(${columns}, ${cell}px)` : `${label}px repeat(${columns}, minmax(0, ${MAX_FIT}px))`;
-  const at = (floorRooms: MapRoom[], position: string) => floorRooms.filter((r) => r.position === position);
+  // Сколько позиций влезает в ряд; ряд режется на равные части.
+  const fit = Math.max(1, Math.floor((width - label - plus - 2 + gap) / (w + gap)));
+  const parts = Math.max(1, Math.ceil(positions.length / fit));
+  const per = Math.ceil(positions.length / parts);
+  const chunks = Array.from({ length: parts }, (_, i) => positions.slice(i * per, (i + 1) * per)).filter((c) => c.length);
 
   return (
-    // Справа — запас под подпись последней позиции: над узкой колонкой она шире
-    // колонки и иначе выступала за край на пару точек (e2e 63-1, 390).
-    <Box ref={ref} sx={{ overflowX: zoom > 0 ? 'auto' : 'hidden', pb: zoom > 0 ? 1 : 0, pr: zoom > 0 ? 0 : 1 }} data-testid={`admin-rooms-scheme-${building.key || 'none'}`}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: template, columnGap: `${gap}px`, rowGap: `${Math.max(gap, 2)}px`, alignItems: 'center', minWidth: 0 }}>
-        <Box />
-        {positions.map((p, i) => (
-          <Box key={`h-${p}`} sx={{ ...typo.caption, fontSize: 10.5, color: ink.low, display: 'flex', justifyContent: 'center', whiteSpace: 'nowrap', overflow: 'visible', minWidth: 0, width: '100%' }}>
-            {i % every === 0 ? (p ? p : '—') : ''}
-          </Box>
-        ))}
-        {building.floors.map((floor) => (
-          <FloorRow key={`f-${floor.floor}`} floor={floor.floor} narrow={narrow} t={t}>
-            {positions.map((p) => {
-              const here = at(floor.rooms, p);
-              return (
-                <Box key={`c-${floor.floor}-${p}`} sx={{ display: 'flex', gap: '1px', minWidth: 0, height }}>
-                  {here.map((room) => (
-                    <RoomCell key={room.id} room={room} layer={layer} swatches={swatches} showNumber={showNumber && here.length === 1} showGlyph={showGlyph} />
-                  ))}
+    <Box ref={ref} sx={{ display: 'grid', gap: 2, minWidth: 0, overflow: 'hidden' }} data-testid={`admin-rooms-scheme-${building.key || 'none'}`} data-tile={tile}>
+      {width > 0
+        ? chunks.map((chunk, i) => (
+            <Box key={i} sx={{ minWidth: 0 }}>
+              {chunks.length > 1 ? (
+                <Box sx={{ ...typo.caption, color: ink.low, mb: 0.5 }}>
+                  {t('admin.card.rooms.part', { from: chunk[0] || '—', to: chunk[chunk.length - 1] || '—' })}
                 </Box>
-              );
-            })}
-          </FloorRow>
-        ))}
-      </Box>
+              ) : null}
+              <Part
+                building={building}
+                positions={chunk}
+                w={w}
+                h={h}
+                gap={gap}
+                label={label}
+                phone={phone}
+                tile={tile}
+                layer={layer}
+                swatches={swatches}
+                onAdd={i === chunks.length - 1 ? onAdd : undefined}
+                plusWidth={plusWidth}
+              />
+            </Box>
+          ))
+        : null}
     </Box>
   );
 }
 
-function FloorRow({ floor, narrow, t, children }: { floor: string; narrow: boolean; t: (key: string, o?: Record<string, unknown>) => string; children: ReactNode }) {
-  return (
-    <>
-      <Box sx={{ ...typo.caption, fontWeight: 700, color: ink.mid, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pr: 0.5 }}>
-        {floor ? (narrow ? floor : t('admin.card.rooms.floorShort', { floor })) : '—'}
-      </Box>
-      {children}
-    </>
-  );
-}
-
-export function RoomCell({
-  room,
+function Part({
+  building,
+  positions,
+  w,
+  h,
+  gap,
+  label,
+  phone,
+  tile,
   layer,
   swatches,
-  showNumber,
-  showGlyph,
-  sx,
+  onAdd,
+  plusWidth,
 }: {
-  room: MapRoom;
+  building: MapBuilding;
+  positions: string[];
+  w: number;
+  h: number;
+  gap: number;
+  label: number;
+  phone: boolean;
+  tile: Tile;
   layer: Layer;
   swatches: Swatches;
-  showNumber: boolean;
-  showGlyph: boolean;
-  sx?: object;
+  onAdd?: (floor: string) => void;
+  plusWidth: number;
 }) {
-  const s = swatches.swatchOf(room, layer);
+  const { t } = useTranslation();
+  const chess = tile === 'c';
+  const line = `1px solid ${surface.line}`;
+  const columns = `${label}px repeat(${positions.length}, ${w}px)${onAdd ? ` ${plusWidth + (chess ? 4 : 0)}px` : ''}`;
+  const floorText = (floor: string) => (floor ? (phone ? floor : t('admin.card.rooms.floorShort', { floor })) : '—');
+  const chessCell = (extra: object = {}) => (chess ? { borderRight: line, borderBottom: line, ...extra } : {});
   return (
     <Box
-      role="button"
-      tabIndex={0}
-      aria-label={`${room.number}: ${s.label}`}
-      data-testid={`admin-room-${room.number}`}
-      data-room-id={room.id}
-      data-v={s.value}
       sx={{
-        ...cellPaint(s),
-        position: 'relative',
-        flex: '1 1 0',
-        minWidth: 0,
-        height: '100%',
-        borderRadius: '4px',
-        border: '1px solid',
         display: 'grid',
-        placeItems: 'center',
-        cursor: 'pointer',
-        overflow: 'hidden',
-        opacity: room.is_active ? 1 : 0.55,
-        color: ink.hi,
-        transition: 'opacity .12s',
-        '&:focus-visible': { outline: `2px solid ${accent.main}`, outlineOffset: '1px' },
-        ...sx,
+        gridTemplateColumns: columns,
+        columnGap: `${gap}px`,
+        rowGap: `${gap}px`,
+        alignItems: 'stretch',
+        width: 'max-content',
+        maxWidth: '100%',
+        ...(chess ? { borderTop: line, borderLeft: line } : {}),
       }}
     >
-      {showNumber ? (
-        <Box component="span" sx={{ fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', px: '2px' }}>
-          {room.number}
+      <Box sx={chessCell({ bgcolor: surface.s2 })} />
+      {positions.map((p) => (
+        <Box
+          key={`h-${p}`}
+          sx={{
+            ...typo.caption,
+            fontSize: 10.5,
+            fontWeight: chess ? 700 : 400,
+            color: ink.low,
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            lineHeight: '20px',
+            ...chessCell({ bgcolor: surface.s2 }),
+          }}
+        >
+          {p || '—'}
         </Box>
-      ) : showGlyph ? (
-        <Box component="span" sx={{ fontSize: 10, fontWeight: 800, lineHeight: 1 }}>{s.glyph}</Box>
-      ) : null}
-      {showNumber ? (
-        <Box component="span" aria-hidden sx={{ position: 'absolute', top: 1, right: 3, fontSize: 9, fontWeight: 800, lineHeight: 1 }}>
-          {s.glyph}
-        </Box>
-      ) : null}
+      ))}
+      {onAdd ? <Box sx={chess ? { borderBottom: line, ml: '-1px' } : undefined} /> : null}
+      {building.floors.map((floor) => (
+        <FloorRow key={`f-${floor.floor}`}>
+          <Box
+            sx={{
+              ...typo.caption,
+              fontWeight: 700,
+              color: ink.mid,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'flex',
+              alignItems: 'center',
+              px: chess ? 0.5 : 0,
+              ...chessCell({ bgcolor: surface.s2 }),
+            }}
+          >
+            {floorText(floor.floor)}
+          </Box>
+          {positions.map((p) => {
+            const here = floor.rooms.filter((r) => r.position === p);
+            return (
+              <Box key={`c-${floor.floor}-${p}`} sx={{ height: h, display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, ...chessCell() }}>
+                {here.length ? (
+                  here.map((room) => <RoomTile key={room.id} room={room} tile={tile} layer={layer} swatches={swatches} compact={here.length > 1} />)
+                ) : (
+                  <Box sx={chess ? { flex: 1, bgcolor: surface.s2, opacity: 0.55 } : { flex: 1, borderRadius: '8px', border: `1px dashed ${surface.hair}` }} />
+                )}
+              </Box>
+            );
+          })}
+          {onAdd ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', pl: chess ? 0.5 : 0 }}>
+              <ButtonBase
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdd(floor.floor);
+                }}
+                aria-label={t('admin.card.rooms.add.onFloor', { floor: floor.floor || '—' })}
+                title={t('admin.card.rooms.add.onFloor', { floor: floor.floor || '—' })}
+                data-testid={`admin-rooms-add-floor-${floor.floor || 'none'}`}
+                sx={{
+                  height: Math.min(h, 32),
+                  width: plusWidth,
+                  borderRadius: '8px',
+                  border: `1px dashed ${surface.line}`,
+                  color: ink.low,
+                  '&:hover': { color: accent.soft, borderColor: accent.main, bgcolor: accent.washSoft },
+                }}
+              >
+                <AddIcon sx={{ fontSize: 16 }} />
+              </ButtonBase>
+            </Box>
+          ) : null}
+        </FloorRow>
+      ))}
     </Box>
   );
 }
 
-/* ── Блоки: номера плитками по этажам ───────────────────────────────────── */
+function FloorRow({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
 
-export function BuildingBlocks({ building, layer, swatches }: { building: MapBuilding; layer: Layer; swatches: Swatches }) {
-  const { t } = useTranslation();
-  return (
-    <Box sx={{ display: 'grid', gap: 1.25 }} data-testid={`admin-rooms-blocks-${building.key || 'none'}`}>
-      {building.floors.map((floor) => (
-        <Box key={floor.floor}>
-          <Box sx={{ ...typo.label, color: ink.mid, mb: 0.5 }}>{floor.floor ? t('admin.card.rooms.floorLong', { floor: floor.floor }) : t('admin.card.rooms.noFloor')}</Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))', gap: 0.75 }}>
-            {floor.rooms.map((room) => (
-              <Box key={room.id} sx={{ height: 40, display: 'flex' }}>
-                <RoomCell room={room} layer={layer} swatches={swatches} showNumber showGlyph />
-              </Box>
-            ))}
-          </Box>
+/* ── Плитка номера ──────────────────────────────────────────────────────── */
+
+const BADGE: Record<Tone, ReactNode> = {
+  ok: <CheckCircleIcon />,
+  warn: <ErrorOutlineIcon />,
+  bad: <BlockIcon />,
+  off: <RemoveCircleOutlineIcon />,
+  info: null,
+};
+
+function RoomTile({ room, tile, layer, swatches, compact }: { room: MapRoom; tile: Tile; layer: Layer; swatches: Swatches; compact: boolean }) {
+  const s = swatches.swatchOf(room, layer);
+  const common = {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': `${room.number}: ${s.label}`,
+    'data-testid': `admin-room-${room.number}`,
+    'data-room-id': room.id,
+    'data-v': s.value,
+  } as const;
+  const longNumber = room.number.length > 5;
+  if (tile === 'c') {
+    return (
+      <Box
+        {...common}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'grid',
+          alignContent: 'center',
+          justifyItems: 'center',
+          bgcolor: s.tone === 'ok' ? surface.s1 : mix(s.base, surface.s1, s.tone === 'off' ? 10 : 16),
+          boxShadow: `inset 0 -3px 0 ${s.base}`,
+          opacity: room.is_active ? 1 : 0.6,
+          cursor: 'pointer',
+          position: 'relative',
+          transition: 'opacity .12s',
+          '&:hover, &:focus-visible': { outline: `2px solid ${accent.main}`, outlineOffset: '-1px', zIndex: 1 },
+        }}
+      >
+        <Box sx={{ fontSize: longNumber ? 9.5 : 11, fontWeight: 800, color: ink.hi, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', px: '2px' }}>
+          {room.number}
         </Box>
-      ))}
+        {!compact ? (
+          <Box sx={{ fontSize: 8.5, fontWeight: 700, color: s.tone === 'ok' ? ink.low : TONE[s.tone], lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', px: '2px' }}>
+            {swatches.wordOf(room, layer, true)}
+          </Box>
+        ) : null}
+      </Box>
+    );
+  }
+  if (tile === 'b') {
+    return (
+      <Box
+        {...common}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          boxSizing: 'border-box',
+          position: 'relative',
+          borderRadius: '10px',
+          bgcolor: surface.s1,
+          border: `1px solid ${surface.hair}`,
+          boxShadow: `0 1px 2px ${mix(ink.hi, 'transparent', 10)}, 0 2px 6px ${mix(ink.hi, 'transparent', 6)}`,
+          px: 0.9,
+          py: compact ? 0.2 : 0.6,
+          display: 'grid',
+          alignContent: 'space-between',
+          opacity: room.is_active ? 1 : 0.55,
+          cursor: 'pointer',
+          transition: 'transform .12s ease, box-shadow .12s ease, opacity .12s',
+          '&:hover, &:focus-visible': { transform: 'translateY(-3px)', boxShadow: `0 10px 22px ${mix(ink.hi, 'transparent', 20)}`, outline: 'none' },
+        }}
+      >
+        <Box sx={{ position: 'absolute', top: 5, right: 5, color: TONE[s.tone], display: 'grid', '& svg': { fontSize: 16 } }} aria-hidden>
+          {BADGE[s.tone] ?? (
+            <Box component="span" sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: s.base, color: surface.s1, fontSize: 10, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
+              {s.glyph}
+            </Box>
+          )}
+        </Box>
+        <Box sx={{ pr: 2.25, minWidth: 0 }}>
+          <Box sx={{ fontSize: longNumber ? 12.5 : 15, fontWeight: 800, color: ink.hi, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{room.number}</Box>
+          {!compact ? (
+            <Box sx={{ fontSize: 10, color: ink.low, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} data-words="data">
+              {room.category || ' '}
+            </Box>
+          ) : null}
+        </Box>
+        {!compact ? (
+          <Box sx={{ fontSize: 10.5, fontWeight: 700, color: s.tone === 'ok' ? ink.mid : TONE[s.tone], whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {swatches.wordOf(room, layer)}
+          </Box>
+        ) : null}
+      </Box>
+    );
+  }
+  const hasVariant = Boolean(room.variant) && !room.problems.includes('not_published');
+  const linked = !room.problems.includes('no_link');
+  const icon = (ok: boolean, on: ReactNode, off: ReactNode) => (
+    <Box component="span" aria-hidden sx={{ display: 'inline-grid', color: ok ? ink.low : state.bad, '& svg': { fontSize: 13 } }}>
+      {ok ? on : off}
+    </Box>
+  );
+  return (
+    <Box
+      {...common}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        boxSizing: 'border-box',
+        borderRadius: '8px',
+        bgcolor: surface.s1,
+        border: `1px solid ${surface.line}`,
+        borderLeft: `5px solid ${s.base}`,
+        backgroundImage: s.hatch ? `linear-gradient(90deg, ${mix(s.base, surface.s1, 12)} 0 6px, transparent 6px)` : 'none',
+        pl: 0.75,
+        pr: 0.5,
+        py: 0.4,
+        display: 'grid',
+        gridTemplateRows: compact ? '1fr' : '1fr auto',
+        opacity: room.is_active ? 1 : 0.55,
+        cursor: 'pointer',
+        transition: 'transform .12s ease, box-shadow .12s ease, opacity .12s',
+        '&:hover, &:focus-visible': { transform: 'translateY(-2px)', boxShadow: `0 6px 14px ${mix(ink.hi, 'transparent', 18)}`, borderColor: accent.main, outline: 'none' },
+      }}
+    >
+      <Box sx={{ fontSize: longNumber ? 12 : 15, fontWeight: 800, color: ink.hi, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{room.number}</Box>
+      {!compact ? (
+        <Box sx={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+          {icon(hasVariant, <LayersOutlinedIcon />, <LayersClearOutlinedIcon />)}
+          {icon(room.pin, <KeyOutlinedIcon />, <KeyOffOutlinedIcon />)}
+          {icon(linked, <WifiOutlinedIcon />, <WifiOffOutlinedIcon />)}
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -409,7 +636,7 @@ export function useCursorCard(rooms: Map<string, MapRoom>, enabled: boolean) {
         },
       }
     : {};
-  return { hover, handlers };
+  return { hover, handlers, clear: () => setHover(null) };
 }
 
 export function CursorCard({ hover, children }: { hover: { x: number; y: number } | null; children: ReactNode }) {

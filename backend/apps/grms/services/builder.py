@@ -375,6 +375,58 @@ def set_device_override(hotel, *, room_number: str, device_name: str) -> RoomTyp
         return link
 
 
+def assign_room_type(hotel, room: Room, code: str | None) -> tuple[str | None, str | None]:
+    """
+    Назначить номеру вариант управления (тип GRMS) — или снять (63-1).
+
+    До сих пор номер получал тип только импортом файла пусконаладки, и
+    поправить один номер было нечем. Смена варианта сбрасывает имя устройства,
+    заданное руками: оно относилось к прежней схеме. Возвращает названия
+    варианта «было → стало».
+    """
+    def title(room_type):
+        return (room_type.title_i18n or room_type.code) if room_type is not None else None
+
+    with tenant_context(hotel):
+        link = RoomTypeRoom.objects.select_related("room_type").filter(room=room).first()
+        before = link.room_type if link is not None else None
+        if not code:
+            if link is not None:
+                link.delete()
+            return title(before), None
+        room_type = _type(code)
+        if link is not None and link.room_type_id == room_type.pk:
+            return title(before), title(room_type)
+        if link is not None:
+            link.room_type = room_type
+            link.device_name_override = ""
+            link.is_reference = False
+            link.save(update_fields=["room_type", "device_name_override", "is_reference", "updated_at"])
+        else:
+            RoomTypeRoom.objects.create(room=room, room_type=room_type)
+        return title(before), title(room_type)
+
+
+def set_room_device(hotel, room: Room, device_name: str) -> tuple[str, str]:
+    """
+    Имя устройства номера, заданное руками (пусто — по шаблону варианта).
+    Возвращает «было → стало» переопределения. Номер без варианта — отказ:
+    имени устройства без схемы не бывает.
+    """
+    name = str(device_name or "").strip()
+    if len(name) > 255:
+        raise ValidationError("Имя устройства длиннее 255 символов", field="device_name")
+    with tenant_context(hotel):
+        link = RoomTypeRoom.objects.filter(room=room).first()
+        if link is None:
+            raise ValidationError("Сначала назначьте номеру вариант", field="device_name", code="no_variant")
+        before = link.device_name_override
+        if before != name:
+            link.device_name_override = name
+            link.save(update_fields=["device_name_override", "updated_at"])
+        return before, name
+
+
 def device_for_room(hotel, room_number: str) -> str:
     """Итоговое имя устройства: переопределение важнее шаблона."""
     with tenant_context(hotel):

@@ -17,6 +17,7 @@ from django.db import transaction
 from apps.catalog.models import Category, ServiceLocation
 from apps.accounts.services.roles import (
     HotelAdminOnly,
+    audit_actor,
     current_access,
     require_hotel_admin,
     require_point_scope,
@@ -268,7 +269,7 @@ def create_room(data: dict) -> Room:
     # Выбран корпус — строка следует за ним: она снимок, и расходиться со
     # справочником ей нельзя. Корпус не выбран — остаётся то, что прислали.
     if extra.get("building") is not None:
-        zone = extra["building"].title_i18n
+        zone = _zone_of(extra["building"])
 
     buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
     if buried is not None:
@@ -293,11 +294,10 @@ def create_room(data: dict) -> Room:
         revoked = _drop_stale_access(buried)
         buried._revoked_sessions = revoked
 
-        AuditLog.record(
+        _audit_room(
             "room.restored",
-            object_type="room",
-            object_id=buried.pk,
-            payload={
+            buried,
+            {
                 "number": number,
                 "orders": buried._restored_orders,
                 "sessions": buried._restored_sessions,
@@ -306,13 +306,69 @@ def create_room(data: dict) -> Room:
         )
         return buried
 
-    return Room.objects.create(
+    room = Room.objects.create(
         number=number,
         floor=floor,
         zone=zone,
         is_active=is_active,
         **extra,
     )
+    _audit_room("room.created", room, {"room": number})
+    return room
+
+
+def _audit_room(action: str, room: Room | None, payload: dict) -> None:
+    """
+    Запись журнала о номере — ОТ ИМЕНИ ТОГО, КТО ПРАВИТ (партия 63-1).
+
+    Раньше записи номера шли «от системы»: правку панели и правку Control было
+    не различить, и ни одна не попадала в «Историю» отеля. Теперь тип актора —
+    из контекста: сотрудник панели, платформа (Control) или система.
+    """
+    actor_type, actor_id = audit_actor()
+    AuditLog.record(
+        action,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        object_type="room",
+        object_id=room.pk if room is not None else None,
+        payload=payload,
+    )
+
+
+def _audit_dictionary(action: str, obj, payload: dict) -> None:
+    """Корпус или категория — в журнал от имени того, кто правит (63-1)."""
+    actor_type, actor_id = audit_actor()
+    AuditLog.record(
+        action,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        object_type="building" if isinstance(obj, Building) else "room_category",
+        object_id=obj.pk,
+        payload=payload,
+    )
+
+
+def _room_snapshot(room: Room) -> dict:
+    """Поля номера словами — для «было → стало» в журнале."""
+    return {
+        "number": room.number,
+        "floor": room.floor,
+        "position": room.position,
+        "building": room.building.title_i18n if room.building_id and room.building else (room.zone or ""),
+        "category": room.category.title_i18n if room.category_id and room.category else "",
+        "is_active": room.is_active,
+        "out_of_service": room.out_of_service,
+        "housekeeping": room.housekeeping,
+    }
+
+
+def _room_changes(before: dict, after: dict) -> dict:
+    return {
+        f"room_{key}": {"from": before[key], "to": after[key]}
+        for key in before
+        if before[key] != after[key]
+    }
 
 
 def _room_fields(data: dict) -> dict:
@@ -343,6 +399,19 @@ def _room_fields(data: dict) -> dict:
         fields["out_of_service"] = bool(data["out_of_service"])
 
     return fields
+
+
+def _zone_of(building) -> str:
+    """
+    Строка корпуса у номера — название на ЯЗЫКЕ ОТЕЛЯ (63-1), а не на языке
+    запроса: правка из английского Control записывала «North» туда, где
+    панель и сетка ждут «Северный».
+    """
+    if building is None:
+        return ""
+    hotel = Hotel.objects.filter(pk=require_hotel_id()).only("default_language").first()
+    title = building.title or {}
+    return (hotel and title.get(hotel.default_language)) or next((v for v in title.values() if v), "") or building.code
 
 
 def _building_or_none(value):
@@ -493,6 +562,7 @@ def update_room(room_id, data: dict) -> Room:
     """
     require_hotel_admin()
     room = get_room(room_id)
+    before = _room_snapshot(room)
     if "number" in data:
         number = str(data["number"] or "").strip()
         if not number:
@@ -519,11 +589,10 @@ def update_room(room_id, data: dict) -> Room:
                 link.device_name_override = impact["device"]
                 link.save(update_fields=["device_name_override", "updated_at"])
 
-            AuditLog.record(
+            _audit_room(
                 "room.renamed",
-                object_type="room",
-                object_id=room.pk,
-                payload={
+                room,
+                {
                     "from": room.number,
                     "to": number,
                     "device": impact["device"],
@@ -540,19 +609,102 @@ def update_room(room_id, data: dict) -> Room:
         room.zone = str(data["zone"] or "").strip()
     if "is_active" in data:
         room.is_active = data["is_active"]
+    if "position" in data:
+        # Позиция на этаже, заданная руками (63-1); пусто — по правилу отеля.
+        room.position = str(data["position"] or "").strip()[:16]
     fields = _room_fields(data)
     for field, value in fields.items():
         setattr(room, field, value)
     # Строка корпуса следует за справочником — и снимается вместе с ним.
     if "building" in fields:
-        room.zone = fields["building"].title_i18n if fields["building"] is not None else ""
+        room.zone = _zone_of(fields["building"])
     room.save()
+    changes = _room_changes(before, _room_snapshot(room))
+    changes.pop("room_number", None)  # переименование записано выше, со своими последствиями
+    if changes:
+        _audit_room("room.updated", room, {"room": room.number, "changes": changes})
     return room
 
 
-def delete_room(room_id) -> None:
+def room_delete_impact(room_id) -> dict:
+    """
+    Что случится при удалении номера — числами, ДО удаления (63-1): окно
+    подтверждения перечисляет последствия, а не спрашивает «вы уверены?».
+    """
     require_hotel_admin()
-    get_room(room_id).delete()
+    from django.utils import timezone
+
+    room = get_room(room_id)
+    link = _grms_link(room)
+    try:
+        from apps.grms.models import RoomPin
+
+        has_pin = RoomPin.objects.filter(room=room).exclude(pin_hash="").exists()
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        has_pin = False
+    return {
+        "room": room.number,
+        "pin": has_pin,
+        "sessions": GuestSession.objects.filter(
+            room=room, revoked_at__isnull=True, expires_at__gt=timezone.now()
+        ).count(),
+        "variant": (link.room_type.title_i18n or link.room_type.code) if link is not None else None,
+    }
+
+
+@transaction.atomic
+def delete_room(room_id) -> dict:
+    """
+    Мягкое удаление — и С НИМ снятие доступа (63-1, дыра из разведки 19.10).
+
+    Раньше номер просто помечался удалённым: PIN оставался, живые сессии гостя
+    продолжали заказывать, открытые сокеты — получать события. Теперь PIN
+    снимается, сессии отзываются вместе с сокетами, привязка к варианту
+    управления снимается: удалённого номера в схеме оборудования нет.
+    """
+    require_hotel_admin()
+    room = get_room(room_id)
+    impact = room_delete_impact(room.pk)
+    revoked = _drop_stale_access(room)
+    link = _grms_link(room)
+    if link is not None:
+        link.delete()
+    room.delete()
+    _audit_room(
+        "room.deleted",
+        room,
+        {"room": room.number, "revoked": revoked, "pin": impact["pin"], "variant": impact["variant"]},
+    )
+    return {**impact, "sessions": revoked}
+
+
+@transaction.atomic
+def check_out(room_id, *, actor_id=None) -> dict:
+    """
+    Выезд гостя: отозвать сессии (и их сокеты) И снять PIN проживания (63-1).
+
+    Раньше выезд гасил только сессии, PIN оставался — следующий гость получал
+    номер, код которого знал предыдущий.
+    """
+    from apps.accounts.services.guest_checkout import check_out_room as revoke
+
+    require_hotel_admin()
+    room = get_room(room_id)
+    result = revoke(room.hotel, room, actor_id=actor_id)
+    pin_cleared = False
+    try:
+        from apps.grms.models import RoomPin
+
+        pin_cleared = RoomPin.all_objects.filter(room=room).exists()
+        RoomPin.all_objects.filter(room=room).hard_delete()
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        pass
+    return {
+        "room": room.number,
+        "revoked": result.revoked,
+        "verified_revoked": result.verified_revoked,
+        "pin_cleared": pin_cleared,
+    }
 
 
 def parse_room_spec(spec: str) -> list[str]:
@@ -704,6 +856,12 @@ def bulk_create_rooms(data: dict) -> dict:
     floor = str(data.get("floor") or "").strip()
     zone = str(data.get("zone") or "").strip()
     extra = _room_fields(data)
+    # Выбран корпус — строка следует за ним, как у одиночного заведения.
+    if extra.get("building") is not None:
+        zone = _zone_of(extra["building"])
+    # Удалённый номер с тем же именем: вернуть с историей (по умолчанию) или
+    # завести заново, а удалённого оставить в архиве под другим именем (63-1).
+    restore = data.get("restore", True) is not False
 
     existing = set(Room.objects.values_list("number", flat=True))
     created, skipped, restored = [], [], []
@@ -714,6 +872,9 @@ def bulk_create_rooms(data: dict) -> dict:
             continue
 
         buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
+        if buried is not None and not restore:
+            _retire_buried(buried)
+            buried = None
         if buried is not None:
             # Тот же возврат, что и поштучно: вторая строка с этим номером
             # развела бы отчёты. Доступ прежнего проживания гасится там же.
@@ -746,10 +907,14 @@ def bulk_create_rooms(data: dict) -> dict:
         created.append(number)
 
     Room.objects.bulk_create(to_create)
-    AuditLog.record(
+    # `bulk_create` не зовёт сигналы — кэш готовности отеля сбрасываем сами.
+    from apps.hotels.services.platform.readiness import invalidate
+
+    invalidate(require_hotel_id())
+    _audit_room(
         "room.bulk_created",
-        object_type="room",
-        payload={"created": len(created), "skipped": len(skipped), "restored": restored},
+        None,
+        {"created": len(created), "skipped": len(skipped), "restored": restored, "numbers": created[:50]},
     )
     return {
         "created": created,
@@ -758,6 +923,18 @@ def bulk_create_rooms(data: dict) -> dict:
         "created_count": len(created),
         "skipped_count": len(skipped),
     }
+
+
+def _retire_buried(room: Room) -> None:
+    """
+    Удалённый номер — в архив под другим именем, чтобы завести этот номер
+    ЗАНОВО, без прежней истории (63-1). Заказы и чат остаются при архивной
+    строке; доступ прежнего проживания гасится.
+    """
+    _drop_stale_access(room)
+    suffix = f" · архив {room.pk.hex[:6]}"
+    room.number = room.number[: 32 - len(suffix)] + suffix
+    room.save()
 
 
 # --- Сетка номерного фонда --------------------------------------------------
@@ -991,7 +1168,7 @@ def bulk_update_rooms(payload: dict) -> dict:
             new_id = new_building.pk if new_building is not None else None
             if room.building_id != new_id:
                 room.building = new_building
-                room.zone = new_building.title_i18n if new_building is not None else ""
+                room.zone = _zone_of(new_building)
                 touched = True
         for key in ("housekeeping", "out_of_service"):
             if key in fields and getattr(room, key) != fields[key]:
@@ -1061,17 +1238,20 @@ def create_building(data: dict) -> Building:
     code = str(data.get("code") or "").strip() or _category_code_from(title)
     if Building.objects.filter(code=code).exists():
         raise ConflictError(f"Корпус «{code}» уже существует", code="building_exists")
-    return Building.objects.create(
+    building = Building.objects.create(
         code=code,
         title=title,
         sort_order=int(data.get("sort_order") or 0),
         is_active=data.get("is_active", True),
     )
+    _audit_dictionary("building.created", building, {"title": building.title_i18n})
+    return building
 
 
 @transaction.atomic
 def update_building(building_id, data: dict) -> Building:
     building = get_building(building_id)
+    before_title = dict(building.title or {})
     if "title" in data and data["title"] is not None:
         building.title = data["title"]
     if "code" in data and data["code"]:
@@ -1084,13 +1264,35 @@ def update_building(building_id, data: dict) -> Building:
     if "is_active" in data and data["is_active"] is not None:
         building.is_active = bool(data["is_active"])
     building.save()
+    # Строка корпуса у номеров — снимок названия; переименовали корпус —
+    # снимок следует за ним (63-1), иначе сетка панели группирует по старому.
+    Room.objects.filter(building=building).update(zone=_zone_of(building))
+    if dict(building.title or {}) != before_title:
+        _audit_dictionary(
+            "building.updated",
+            building,
+            {"title": building.title_i18n, "changes": {"title": {"from": before_title, "to": dict(building.title or {})}}},
+        )
     return building
 
 
-def delete_building(building_id) -> None:
-    """Занятый корпус не удаляем, а называем число — как у категорий."""
+@transaction.atomic
+def delete_building(building_id, *, move_to: str | None = None) -> int:
+    """
+    Занятый корпус не удаляем, а называем число — как у категорий. С
+    `move_to` (корпус или `none` — «без корпуса») номера сначала переезжают,
+    потом корпус удаляется (63-1). Возвращает, сколько номеров переехало.
+    """
     building = get_building(building_id)
     busy = Room.objects.filter(building=building).count()
+    if busy and move_to:
+        target = None if move_to == "none" else _building_or_none(move_to)
+        if target is not None and target.pk == building.pk:
+            raise ValidationError("Нельзя перенести номера в тот же корпус", field="move_to")
+        Room.objects.filter(building=building).update(building=target, zone=_zone_of(target))
+        building.delete()
+        _audit_dictionary("building.deleted", building, {"title": building.title_i18n, "moved": busy, "to": target.title_i18n if target else ""})
+        return busy
     if busy:
         raise ConflictError(
             f"В корпусе {busy} номеров — сначала переназначьте их",
@@ -1098,6 +1300,8 @@ def delete_building(building_id) -> None:
             rooms_count=busy,
         )
     building.delete()
+    _audit_dictionary("building.deleted", building, {"title": building.title_i18n, "moved": 0})
+    return 0
 
 
 # --- Категории номеров -----------------------------------------------------
@@ -1144,12 +1348,14 @@ def create_room_category(data: dict) -> RoomCategory:
     if RoomCategory.objects.filter(code=code).exists():
         raise ConflictError(f"Категория «{code}» уже существует", code="category_exists")
 
-    return RoomCategory.objects.create(
+    category = RoomCategory.objects.create(
         code=code,
         title=title,
         sort_order=int(data.get("sort_order") or 0),
         is_active=data.get("is_active", True),
     )
+    _audit_dictionary("room_category.created", category, {"title": category.title_i18n})
+    return category
 
 
 def _category_code_from(title: dict) -> str:
@@ -1171,6 +1377,7 @@ def get_room_category(category_id) -> RoomCategory:
 @transaction.atomic
 def update_room_category(category_id, data: dict) -> RoomCategory:
     category = get_room_category(category_id)
+    before_title = dict(category.title or {})
     if "title" in data and data["title"] is not None:
         category.title = data["title"]
     if "code" in data and data["code"]:
@@ -1183,10 +1390,17 @@ def update_room_category(category_id, data: dict) -> RoomCategory:
     if "is_active" in data and data["is_active"] is not None:
         category.is_active = bool(data["is_active"])
     category.save()
+    if dict(category.title or {}) != before_title:
+        _audit_dictionary(
+            "room_category.updated",
+            category,
+            {"title": category.title_i18n, "changes": {"title": {"from": before_title, "to": dict(category.title or {})}}},
+        )
     return category
 
 
-def delete_room_category(category_id) -> None:
+@transaction.atomic
+def delete_room_category(category_id, *, move_to: str | None = None) -> int:
     """
     Занятую категорию не удаляем, а называем число.
 
@@ -1197,6 +1411,14 @@ def delete_room_category(category_id) -> None:
     """
     category = get_room_category(category_id)
     busy = Room.objects.filter(category=category).count()
+    if busy and move_to:
+        target = None if move_to == "none" else _category_or_none(move_to)
+        if target is not None and target.pk == category.pk:
+            raise ValidationError("Нельзя перенести номера в ту же категорию", field="move_to")
+        Room.objects.filter(category=category).update(category=target)
+        category.delete()
+        _audit_dictionary("room_category.deleted", category, {"title": category.title_i18n, "moved": busy, "to": target.title_i18n if target else ""})
+        return busy
     if busy:
         raise ConflictError(
             f"На категории {busy} номеров — сначала переназначьте их",
@@ -1204,6 +1426,8 @@ def delete_room_category(category_id) -> None:
             rooms_count=busy,
         )
     category.delete()
+    _audit_dictionary("room_category.deleted", category, {"title": category.title_i18n, "moved": 0})
+    return 0
 
 
 def room_qr_targets() -> tuple[Hotel, list[Room]]:

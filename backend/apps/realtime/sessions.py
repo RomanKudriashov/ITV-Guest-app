@@ -53,6 +53,16 @@ def close_hotel_guests(hotel_id) -> None:
     transaction.on_commit(send)
 
 
+def guest_session_group(session_id) -> str:
+    """
+    Сокеты ОДНОЙ гостевой сессии (партия 63-1). Выезд и удаление номера
+    отзывали сессии, но открытый сокет гостя — статус заказа, чат, состояние
+    номера — проверялся только при подключении и продолжал жить. Теперь отзыв
+    шлёт в эту группу «закрыться», как у сессий персонала.
+    """
+    return f"guest-session.{_hex(session_id)}"
+
+
 def grant_group(grant_id) -> str:
     return f"support-grant.{grant_id}"
 

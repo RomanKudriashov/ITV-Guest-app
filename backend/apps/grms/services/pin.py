@@ -283,6 +283,7 @@ def set_pin(hotel, room, *, pin: str, valid_until=None):
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
             room_verified_at=None
         )
+        _journal_pin("grms.pin_set", room, {"room": room.number, "valid_until": valid_until.isoformat() if valid_until else None})
     _reset("room", room.pk)
     return record
 
@@ -298,7 +299,22 @@ def clear_pin(hotel, room) -> None:
     from apps.grms.models import RoomPin
 
     with tenant_context(hotel):
+        had = RoomPin.all_objects.filter(room=room).exists()
         RoomPin.all_objects.filter(room=room).hard_delete()
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
             room_verified_at=None
         )
+        if had:
+            _journal_pin("grms.pin_cleared", room, {"room": room.number})
+
+
+def _journal_pin(action: str, room, payload: dict) -> None:
+    """
+    Выдача и снятие PIN — в журнал (63-1): до сих пор ни то, ни другое не
+    оставляло следа, и на вопрос «кто снял PIN у 401» ответа не было. Сам код
+    в журнал не пишется никогда.
+    """
+    from apps.accounts.services.roles import audit_actor
+
+    actor_type, actor_id = audit_actor()
+    AuditLog.record(action, actor_type=actor_type, actor_id=actor_id, object_type="room", object_id=room.pk, payload=payload)

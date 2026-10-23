@@ -1055,6 +1055,119 @@ export const putRoomRule = (hotelId: string, body: { floor_digits: number; posit
 export const putRoomPlace = (hotelId: string, roomId: string, position: string) =>
   request<{ id: string; number: string; position: string; position_source: MapRoom['position_source'] }>(`/hotels/${hotelId}/rooms/${roomId}/place`, 'PUT', { position });
 
+/* ── Правка номерного фонда из Control (партия 63-1) ───────────────────── */
+
+export interface DictItem {
+  id: string;
+  code: string;
+  title: Record<string, string>;
+  title_i18n: string;
+  rooms_count: number;
+}
+export interface RoomsDictionaries {
+  buildings: DictItem[];
+  categories: DictItem[];
+  variants: Array<{ code: string; title: string; device_template: string }>;
+  languages: Array<{ code: string; title: string; is_default: boolean }>;
+  room_control: boolean;
+}
+export interface RoomDetail {
+  id: string;
+  number: string;
+  building_id: string | null;
+  building: string;
+  floor: string;
+  rule_floor: string;
+  position: string;
+  rule_position: string;
+  category_id: string | null;
+  is_active: boolean;
+  out_of_service: boolean;
+  variant: { code: string; title: string } | null;
+  device: { override: string; template: string; effective: string };
+  pin: { has: boolean; valid_until: string | null; issued_at: string | null; expired: boolean };
+  live_sessions: number;
+  control: RoomControl;
+  problems: RoomProblem[];
+  room_control: boolean;
+  demo_entry: boolean;
+  guest_url: string;
+}
+export interface RoomPatch {
+  number?: string;
+  confirm_rename?: boolean;
+  floor?: string;
+  position?: string;
+  building_id?: string | null;
+  category_id?: string | null;
+  is_active?: boolean;
+  out_of_service?: boolean;
+  variant?: string;
+  device_name?: string;
+}
+export interface RenameImpact {
+  number: string;
+  new_number: string;
+  taken: boolean;
+  qr_url: string;
+  qr_url_after: string;
+  device: string;
+  device_after: string;
+  device_changes: boolean;
+  live_sessions: number;
+  has_pin: boolean;
+}
+export interface DeleteImpact {
+  room: string;
+  pin: boolean;
+  sessions: number;
+  variant: string | null;
+}
+export interface BulkPreview {
+  numbers: string[];
+  will_create: string[];
+  exists: string[];
+  will_restore: string[];
+  total: number;
+  create_count: number;
+  exists_count: number;
+}
+export interface BulkResult {
+  created: string[];
+  skipped: string[];
+  restored: string[];
+  created_count: number;
+  skipped_count: number;
+}
+export interface BulkRequest {
+  spec: string;
+  floor?: string;
+  building_id?: string | null;
+  category_id?: string | null;
+  restore?: boolean;
+}
+const roomsBase = (hotelId: string) => `/hotels/${hotelId}/rooms`;
+export const getRoomsDictionaries = (hotelId: string) => request<RoomsDictionaries>(`${roomsBase(hotelId)}/dictionaries`);
+export const getRoomDetail = (hotelId: string, roomId: string) => request<RoomDetail>(`${roomsBase(hotelId)}/${roomId}/detail`);
+export const patchRoom = (hotelId: string, roomId: string, body: RoomPatch) => request<RoomDetail>(`${roomsBase(hotelId)}/${roomId}`, 'PATCH', body);
+export const roomRenameCheck = (hotelId: string, roomId: string, number: string) =>
+  request<RenameImpact>(`${roomsBase(hotelId)}/${roomId}/rename-check?${new URLSearchParams({ number }).toString()}`);
+export const roomDeleteCheck = (hotelId: string, roomId: string) => request<DeleteImpact>(`${roomsBase(hotelId)}/${roomId}/delete-check`);
+export const deleteRoom = (hotelId: string, roomId: string) => request<DeleteImpact>(`${roomsBase(hotelId)}/${roomId}`, 'DELETE');
+export const setRoomPin = (hotelId: string, roomId: string, body: { pin?: string; generate?: boolean; valid_until?: string | null }) =>
+  request<{ has: boolean; pin: string | null; valid_until: string | null }>(`${roomsBase(hotelId)}/${roomId}/pin`, 'POST', body);
+export const clearRoomPin = (hotelId: string, roomId: string) => request<{ has: boolean }>(`${roomsBase(hotelId)}/${roomId}/pin`, 'DELETE');
+export const getRoomHistory = (hotelId: string, roomId: string) => request<{ items: JournalEntry[] }>(`${roomsBase(hotelId)}/${roomId}/history`);
+export const previewRooms = (hotelId: string, body: BulkRequest) => request<BulkPreview>(`${roomsBase(hotelId)}/bulk/preview`, 'POST', body);
+export const createRooms = (hotelId: string, body: BulkRequest) => request<BulkResult>(`${roomsBase(hotelId)}/bulk`, 'POST', body);
+export type DictKind = 'building' | 'category';
+const dictPath = (hotelId: string, kind: DictKind) => `/hotels/${hotelId}/${kind === 'building' ? 'buildings' : 'room-categories'}`;
+export const createDictItem = (hotelId: string, kind: DictKind, title: Record<string, string>) => request<DictItem>(dictPath(hotelId, kind), 'POST', { title });
+export const renameDictItem = (hotelId: string, kind: DictKind, id: string, title: Record<string, string>) =>
+  request<DictItem>(`${dictPath(hotelId, kind)}/${id}`, 'PATCH', { title });
+export const deleteDictItem = (hotelId: string, kind: DictKind, id: string, moveTo?: string) =>
+  request<{ ok: boolean; moved: number }>(`${dictPath(hotelId, kind)}/${id}${moveTo ? `?${new URLSearchParams({ move_to: moveTo }).toString()}` : ''}`, 'DELETE');
+
 export const getTeam = (limit = 100, filters: Record<string, string> = {}) => {
   const query = new URLSearchParams({ limit: String(limit), ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
   return request<Page<TeamMember>>(`/team?${query.toString()}`);

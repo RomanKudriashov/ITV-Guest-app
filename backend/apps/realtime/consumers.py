@@ -79,6 +79,36 @@ async def _join_hotel(consumer) -> None:
     await consumer.channel_layer.group_add(consumer.hotel_group, consumer.channel_name)
 
 
+@database_sync_to_async
+def _guest_session_id(hotel, token: str):
+    from apps.accounts.services.auth import authenticate_guest
+
+    with tenant_context(hotel):
+        session = authenticate_guest(token)
+        return session.pk if session is not None else None
+
+
+async def _join_guest(consumer, token: str) -> None:
+    """
+    Гостевой сокет — в группу своей сессии (63-1): выезд и удаление номера
+    отзывают сессию, и сокет обязан закрыться сразу, а не при переподключении.
+    Вызывать ДО `accept`, как и вступление в группу сессии персонала.
+    """
+    from apps.realtime.sessions import guest_session_group
+
+    session_id = await _guest_session_id(consumer.hotel, token)
+    if session_id is None:
+        return
+    consumer.guest_group = guest_session_group(session_id)
+    await consumer.channel_layer.group_add(consumer.guest_group, consumer.channel_name)
+
+
+async def _leave_guest(consumer) -> None:
+    group = getattr(consumer, "guest_group", None)
+    if group:
+        await consumer.channel_layer.group_discard(group, consumer.channel_name)
+
+
 async def _leave_hotel(consumer) -> None:
     group = getattr(consumer, "hotel_group", None)
     if group:
@@ -338,6 +368,7 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = f"order.{hotel.pk}.{self.order_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await _join_hotel(self)
+        await _join_guest(self, token)
         await self.accept()
 
         # Первый снимок — сразу. Клиенту не нужно отдельно дёргать REST, а
@@ -349,6 +380,11 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
         await _leave_hotel(self)
+        await _leave_guest(self)
+
+    async def session_closed(self, message):
+        """Сессию гостя отозвали (выезд, удаление номера) — закрыть «не авторизован» (63-1)."""
+        await self.close(code=CLOSE_UNAUTHORIZED)
 
     async def hotel_closed(self, message):
         """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""
@@ -466,6 +502,7 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = f"chat.{hotel.pk}.{self.thread_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await _join_hotel(self)
+        await _join_guest(self, token)
         await self.accept()
         await self.send_json({"type": "chat.snapshot", "event": "connected", "thread": snapshot})
 
@@ -474,6 +511,11 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
         await _leave_hotel(self)
+        await _leave_guest(self)
+
+    async def session_closed(self, message):
+        """Сессию гостя отозвали (выезд, удаление номера) — закрыть «не авторизован» (63-1)."""
+        await self.close(code=CLOSE_UNAUTHORIZED)
 
     async def hotel_closed(self, message):
         """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""
@@ -585,6 +627,7 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = f"room.{hotel.pk}.{self.room_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await _join_hotel(self)
+        await _join_guest(self, self.token)
         await self.accept()
 
         # Первый снимок — сразу, и он ПЕРЕЧИТАН, а не взят из кэша. Именно это
@@ -599,6 +642,11 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
         await _leave_hotel(self)
+        await _leave_guest(self)
+
+    async def session_closed(self, message):
+        """Сессию гостя отозвали (выезд, удаление номера) — закрыть «не авторизован» (63-1)."""
+        await self.close(code=CLOSE_UNAUTHORIZED)
 
     async def hotel_closed(self, message):
         """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""

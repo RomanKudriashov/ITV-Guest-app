@@ -108,39 +108,21 @@ def hotel_rooms_rule(request: HttpRequest, hotel_id: str, payload: RoomRuleIn):
 @router.put("/hotels/{hotel_id}/rooms/{room_id}/place", summary="Позиция номера на этаже, заданная руками")
 @requires(WRITE)
 def hotel_room_place(request: HttpRequest, hotel_id: str, room_id: str, payload: RoomPlaceIn):
-    from apps.core.context import tenant_context
-    from apps.core.errors import NotFoundError
-    from apps.hotels.models import Room
-    from apps.hotels.services import room_numbers
+    """
+    Тот же путь, что у правки номера целиком (63-1): сервис панели пишет
+    «было → стало» в журнал номера и в «Историю» отеля.
+    """
+    from apps.hotels.services.platform import room_edit
 
     hotel = console.get_hotel(hotel_id)
-    value = payload.position.strip()
-    with tenant_context(hotel):
-        room = Room.objects.filter(pk=room_id).first() if _uuid(room_id) else None
-        if room is None:
-            raise NotFoundError("Номер не найден")
-        before = room.position
-        if before != value:
-            room.position = value
-            room.save(update_fields=["position", "updated_at"])
-    if before != value:
-        console.audit_hotel(
-            hotel, "platform.hotel.room_place_set", actor_id=request.user.pk,
-            ip=request.META.get("REMOTE_ADDR"),
-            payload={"room": room.number, "changes": {"room_position": {"from": before, "to": value}}},
-        )
-    place = room_numbers.place_of(room, room_numbers.rule_of(hotel))
-    return {"id": str(room.pk), "number": room.number, "position": place.position, "position_source": place.position_source}
-
-
-def _uuid(value: str) -> bool:
-    import uuid
-
-    try:
-        uuid.UUID(str(value))
-    except ValueError:
-        return False
-    return True
+    detail = room_edit.update_room(hotel, request.user, room_id, {"position": payload.position.strip()})
+    source = "manual" if detail["position"] else ("rule" if detail["rule_position"] else "none")
+    return {
+        "id": detail["id"],
+        "number": detail["number"],
+        "position": detail["position"] or detail["rule_position"],
+        "position_source": source,
+    }
 
 
 @router.get("/hotels/{hotel_id}/history", summary="История отеля: правки из Control с фильтрами")

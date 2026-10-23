@@ -112,6 +112,20 @@ def list_room_pins(hotel: Hotel) -> list[dict]:
         ]
 
 
+def active_pin_room_ids() -> set:
+    """
+    Номера с ДЕЙСТВУЮЩИМ PIN — одно правило на все экраны (партия 63-1).
+
+    Раньше «есть PIN» считали трижды: здесь — по `RoomPin.is_active`, в
+    номерном фонде Control (`room_list`, `room_map`) — своим фильтром по хэшу
+    и сроку. Правило было одинаковым по смыслу, но три копии расходятся при
+    первой же правке одной из них. Вызывать под `tenant_context`.
+    """
+    from apps.grms.models import RoomPin
+
+    return {record.room_id for record in RoomPin.objects.only("room_id", "pin_hash", "valid_until") if record.is_active}
+
+
 def rooms_without_pin(hotel: Hotel) -> list[str]:
     """
     Управляемые номера без действующего PIN (партия 60).
@@ -128,11 +142,8 @@ def rooms_without_pin(hotel: Hotel) -> list[str]:
         controlled = set(
             RoomTypeRoom.objects.filter(room__is_active=True).values_list("room__number", flat=True)
         )
-        covered = {
-            record.room.number
-            for record in RoomPin.objects.select_related("room")
-            if record.is_active
-        }
+        live = active_pin_room_ids()
+        covered = set(RoomPin.objects.filter(room_id__in=live).values_list("room__number", flat=True))
     return sorted(controlled - covered, key=lambda number: (len(number), number))
 
 

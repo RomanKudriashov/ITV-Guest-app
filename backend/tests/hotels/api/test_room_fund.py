@@ -691,7 +691,12 @@ def test_restore_reports_what_came_back_in_numbers(cms, crystal):
     assert body["restored"] is True
     assert body["restored_sessions"] == 1
     assert body["restored_orders"] == orders_before
-    assert body["revoked_sessions"] == 1, "доступ прежнего гостя отозван — и это сказано"
+    # С 63-1 доступ гасит уже УДАЛЕНИЕ (разведка 19.10: удалённый номер
+    # продолжал пускать гостя) — к возврату отзывать нечего, и ответ честно
+    # говорит ноль. Что сессия погашена, проверяем фактом.
+    assert body["revoked_sessions"] == 0
+    with tenant_context(crystal):
+        assert GuestSession.objects.get(pk=session.pk).revoked_at is not None, "удаление не отозвало сессию гостя"
 
     with tenant_context(crystal):
         session.refresh_from_db()

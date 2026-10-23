@@ -99,7 +99,7 @@ test.describe.serial('Номерной фонд — схема', () => {
     await request.delete(`${API}/api/v1/platform/hotels/${hotelId}`, { headers })
   })
 
-  test('вид по умолчанию — «Схема»: этажи сверху вниз, «Что исправить» сверху', async ({ page }) => {
+  test('вид по умолчанию — «Схема»: «Что исправить» сверху, правило словами', async ({ page }) => {
     await login(page)
     await openFond(page)
     await expect(page.getByTestId('admin-rooms-view-scheme')).toHaveAttribute('aria-pressed', 'true')
@@ -107,17 +107,20 @@ test.describe.serial('Номерной фонд — схема', () => {
     await expect(page.getByTestId('admin-rooms-table')).toHaveCount(0)
     await expect(page.getByTestId('admin-rooms-fix-no_variant')).toContainText('Нет варианта')
     await expect(page.getByTestId('admin-rooms-rule')).toContainText('по умолчанию')
+    await expect(page.getByTestId('admin-rooms-rule-stats')).toHaveText('Этажи и позиции у всех номеров — по правилу.')
     // «Показать» оставляет только эти номера и красит «Что мешает».
     await page.getByTestId('admin-rooms-fix-show-no_variant').click()
     await expect(page).toHaveURL(/problem=no_variant/)
     await expect(page).toHaveURL(/layer=problems/)
   })
 
-  test('карточка номера — у курсора и не уходит за край экрана', async ({ page }) => {
+  for (const tile of ['a', 'b', 'c']) test(`плитка «${tile}»: карточка номера — у курсора и не уходит за край экрана`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await login(page)
-    await openFond(page)
+    await openFond(page, `&tile=${tile}`)
+    await expect(page.getByTestId('admin-rooms-scheme-none')).toHaveAttribute('data-tile', tile)
     for (const number of ['3340', '3380']) {
+      await page.getByTestId(`admin-room-${number}`).scrollIntoViewIfNeeded()
       const cell = page.getByTestId(`admin-room-${number}`)
       const box = (await cell.boundingBox())!
       const x = box.x + box.width / 2
@@ -175,15 +178,37 @@ test.describe.serial('Номерной фонд — схема', () => {
     })
   }
 
-  test('на телефоне номер открывается листом снизу', async ({ page }) => {
+  test('переключатель плитки меняет вид, выбор переживает F5; «Блоки» ведут на схему', async ({ page }) => {
+    await login(page)
+    await openFond(page)
+    // По умолчанию — «Карточка».
+    await expect(page.getByTestId('admin-rooms-tile-b')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('admin-rooms-scheme-none')).toHaveAttribute('data-tile', 'b')
+    await page.getByTestId('admin-rooms-tile-c').click()
+    await expect(page).toHaveURL(/tile=c/)
+    await expect(page.getByTestId('admin-rooms-scheme-none')).toHaveAttribute('data-tile', 'c')
+    // Адрес без `tile` — выбор помнит браузер.
+    await page.goto(fond())
+    await expect(page.getByTestId('admin-rooms-scheme-none')).toHaveAttribute('data-tile', 'c', { timeout: 30_000 })
+    await page.reload()
+    await expect(page.getByTestId('admin-rooms-scheme-none')).toHaveAttribute('data-tile', 'c', { timeout: 30_000 })
+    await expect(page.getByTestId('admin-rooms-tile-c')).toHaveAttribute('aria-pressed', 'true')
+    // Старый адрес «Блоков» — схема.
+    await page.goto(fond('&view=blocks'))
+    await expect(page.getByTestId('admin-rooms-view-scheme')).toHaveAttribute('aria-pressed', 'true', { timeout: 30_000 })
+    await expect(page.getByTestId('admin-rooms-view-blocks')).toHaveCount(0)
+  })
+
+  test('на телефоне номер открывается окном во весь экран', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await login(page)
-    await openFond(page, '&view=blocks')
+    await openFond(page)
     await page.getByTestId('admin-room-2201').click()
-    const sheet = page.getByTestId('admin-room-sheet')
-    await expect(sheet).toBeVisible()
-    await expect(sheet).toContainText('Номер 2201')
-    const box = (await sheet.boundingBox())!
-    expect(box.y + box.height, 'лист не прижат к низу').toBeGreaterThan(780)
+    const dialog = page.getByTestId('admin-room-dialog').locator('.MuiDialog-paper')
+    await expect(dialog).toBeVisible()
+    await expect(page.getByTestId('admin-room-dialog-title')).toContainText('Номер 2201')
+    const box = (await dialog.boundingBox())!
+    expect(box.width, 'окно не во всю ширину').toBeGreaterThanOrEqual(389)
+    expect(box.height, 'окно не во всю высоту').toBeGreaterThanOrEqual(843)
   })
 })

@@ -29,7 +29,12 @@ LEGACY_DUPLICATES = ("platform.hotel.entered", "grms.published", "grms.rolled_ba
 SUPPORT_ACTIONS = ("impersonation.started", "impersonation.revoked")
 NODE_ACTIONS = ("platform.node.registered", "platform.node.reissued", "platform.node.revoked")
 ADMIN_ACTIONS = ("platform.hotel.admin_set", "platform.hotel.admin_email_changed", "platform.hotel.admin_removed")
+# Номерной фонд (63-1): правило номеров, номера, корпуса, категории. Записи
+# номера пишут сервисы панели — от имени того, кто правит; в «Историю» из них
+# попадают правки Control (актор — платформа).
 ROOMS_ACTIONS = ("platform.hotel.rooms_rule_set", "platform.hotel.room_place_set")
+ROOMS_PREFIXES = ("room.", "building.", "room_category.")
+ROOMS_Q = Q(action__in=ROOMS_ACTIONS) | Q(action__startswith="room.") | Q(action__startswith="building.") | Q(action__startswith="room_category.")
 
 # Раздел «Истории» → действия. Поля профиля — ключи `changes`.
 SECTIONS: dict[str, Q] = {
@@ -40,7 +45,7 @@ SECTIONS: dict[str, Q] = {
     "group": Q(action="platform.hotel.updated", payload__changes__has_key="group"),
     "activation": Q(action__in=("platform.hotel.activated", "platform.hotel.deactivated")),
     "admins": Q(action__in=ADMIN_ACTIONS),
-    "rooms": Q(action__in=ROOMS_ACTIONS),
+    "rooms": ROOMS_Q,
     "roomControl": Q(action__startswith="grms."),
     "support": Q(action__startswith="impersonation."),
     "data": Q(action__in=("platform.hotel.offboard_marked", "platform.hotel.purged", "platform.hotel.offboard_cancelled", "platform.hotel.exported")),
@@ -72,7 +77,7 @@ def _matches(key: str, action: str, payload: dict) -> bool:
     if key == "admins":
         return action in ADMIN_ACTIONS
     if key == "rooms":
-        return action in ROOMS_ACTIONS
+        return action in ROOMS_ACTIONS or action.startswith(ROOMS_PREFIXES)
     if key == "roomControl":
         return action.startswith("grms.")
     if key == "support":
@@ -266,8 +271,12 @@ def object_of(row: AuditLog) -> dict | None:
         return {"kind": "node", "name": payload["node"]}
     if row.action.startswith("grms.") and payload.get("type"):
         return {"kind": "variant", "code": payload["type"], "version": payload.get("version") or payload.get("new_version")}
-    if row.action == "platform.hotel.room_place_set" and payload.get("room"):
+    if (row.action in ("platform.hotel.room_place_set", "grms.pin_set", "grms.pin_cleared") or row.action.startswith("room.")) and payload.get("room"):
         return {"kind": "room", "number": payload["room"]}
+    if row.action.startswith("building.") and payload.get("title"):
+        return {"kind": "building", "name": payload["title"]}
+    if row.action.startswith("room_category.") and payload.get("title"):
+        return {"kind": "category", "name": payload["title"]}
     if row.action.startswith("impersonation."):
         return {"kind": "support"}
     return None
@@ -276,7 +285,11 @@ def object_of(row: AuditLog) -> dict | None:
 def details_of(row: AuditLog) -> dict:
     """Подробности, которых нет в «было → стало»: причина, дата, число, версия."""
     payload = row.payload or {}
-    keep = ("reason", "enable_on", "auto", "bulk", "group", "to_version", "ttl_minutes", "count", "purpose", "types")
+    keep = (
+        "reason", "enable_on", "auto", "bulk", "group", "to_version", "ttl_minutes", "count", "purpose", "types",
+        # Номерной фонд (63-1): сколько заведено, перенесено, отозвано сессий.
+        "created", "skipped", "moved", "revoked",
+    )
     return {key: payload[key] for key in keep if key in payload and payload[key] not in (None, "")}
 
 

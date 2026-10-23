@@ -5,7 +5,6 @@ from __future__ import annotations
 from django.http import HttpRequest, HttpResponse
 from ninja import Router
 
-from apps.accounts.services.roles import require_hotel_admin
 from apps.core.schemas import OkOut
 from apps.hotels.schemas.cms import (
     BulkRoomsIn,
@@ -25,7 +24,6 @@ from apps.hotels.schemas.cms import (
 )
 from apps.hotels.services import admin_services as svc
 from apps.hotels.services import qr
-from apps.hotels.services.hotel import current_hotel
 
 router = Router(tags=["cms:hotel-admin"])
 
@@ -122,8 +120,8 @@ def update_building(request: HttpRequest, building_id: str, payload: BuildingPat
 
 
 @router.delete("/buildings/{building_id}", response=OkOut, summary="Удалить корпус")
-def delete_building(request: HttpRequest, building_id: str):
-    svc.delete_building(building_id)
+def delete_building(request: HttpRequest, building_id: str, move_to: str = ""):
+    svc.delete_building(building_id, move_to=move_to or None)
     return {"ok": True}
 
 
@@ -152,8 +150,8 @@ def update_room_category(request: HttpRequest, category_id: str, payload: RoomCa
 
 
 @router.delete("/room-categories/{category_id}", response=OkOut, summary="Удалить категорию")
-def delete_room_category(request: HttpRequest, category_id: str):
-    svc.delete_room_category(category_id)
+def delete_room_category(request: HttpRequest, category_id: str, move_to: str = ""):
+    svc.delete_room_category(category_id, move_to=move_to or None)
     return {"ok": True}
 
 
@@ -218,16 +216,9 @@ def check_out_room(request: HttpRequest, room_id: str):
     а не в разделе управления номером, — отелю без оборудования выезд нужен
     ровно так же.
     """
-    from apps.accounts.services.guest_checkout import check_out_room as revoke
-
-    require_hotel_admin()
-    room = svc.get_room(room_id)
-    result = revoke(current_hotel(), room, actor_id=getattr(request.user, "pk", None))
-    return {
-        "room": room.number,
-        "revoked": result.revoked,
-        "verified_revoked": result.verified_revoked,
-    }
+    # С 63-1 выезд снимает и PIN проживания, и сокеты гостя — общий сервис
+    # с Control, `services.admin_services.check_out`.
+    return svc.check_out(room_id, actor_id=getattr(request.user, "pk", None))
 
 
 @router.get("/rooms/{room_id}/qr.svg", summary="QR номера (SVG)")

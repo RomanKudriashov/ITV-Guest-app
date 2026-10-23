@@ -59,6 +59,8 @@ export function useJournalWords() {
     // Правило номеров (партия 63-1): «0» у этажа — «всё перед позицией», не число.
     if (key === 'room_floor_digits') return item === '0' ? t('admin.card.rooms.rule.floorAll') : t('admin.card.rooms.rule.floorFirst', { n: item });
     if (key === 'room_position_digits') return t('admin.card.rooms.rule.lastDigits', { n: item });
+    // Уборка — словом панели отеля, а не кодом из базы (63-1).
+    if (key === 'room_housekeeping') return t(`entityCard.room.housekeeping.${item}`, { defaultValue: unknown });
     return item;
   };
   const value = (change: JournalChange, side: unknown): string => {
@@ -79,6 +81,8 @@ export function useJournalWords() {
     if (o.kind === 'module') return t(`admin.module.${o.code}`, { defaultValue: t('admin.hotels.filter.unknownValue') });
     if (o.kind === 'node') return withData('admin.journal.object.node', 'name', String(o.name ?? ''));
     if (o.kind === 'room') return withData('admin.journal.object.room', 'number', String(o.number ?? ''));
+    if (o.kind === 'building') return withData('admin.journal.object.building', 'name', String(o.name ?? ''));
+    if (o.kind === 'category') return withData('admin.journal.object.category', 'name', String(o.name ?? ''));
     if (o.kind === 'variant') return o.version ? t('admin.journal.object.variantVersion', { code: o.code, version: o.version }) : t('admin.journal.object.variant', { code: o.code });
     return '';
   };
@@ -111,6 +115,10 @@ export function useJournalWords() {
     if (typeof d.group === 'string' && d.group) lines.push(withData('admin.journal.detail.group', 'group', d.group));
     if (d.bulk === true) lines.push(t('admin.journal.detail.bulk'));
     if (typeof d.to_version === 'number') lines.push(t('admin.journal.detail.toVersion', { version: d.to_version }));
+    // Номерной фонд (63-1): сколько добавлено, перенесено, закрыто сессий.
+    if (typeof d.created === 'number' && d.created) lines.push(t('admin.journal.detail.created', { count: d.created }));
+    if (typeof d.moved === 'number' && d.moved) lines.push(t('admin.journal.detail.moved', { count: d.moved }));
+    if (typeof d.revoked === 'number' && d.revoked) lines.push(t('admin.journal.detail.revoked', { count: d.revoked }));
     // Запись модулей до партии 62-D: только число, без «было → стало».
     if (typeof d.count === 'number' && !entry.changes.length) lines.push(t('admin.journal.detail.legacyCount', { count: d.count }));
     return lines;

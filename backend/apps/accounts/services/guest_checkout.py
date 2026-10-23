@@ -57,7 +57,13 @@ def check_out_room(hotel, room, *, actor_id=None) -> CheckoutResult:
         room=room, revoked_at__isnull=True, expires_at__gt=now
     )
     verified_revoked = live.filter(room_verified_at__isnull=False).count()
+    session_ids = list(live.values_list("pk", flat=True))
     revoked = live.update(revoked_at=now, updated_at=now)
+    # Открытые сокеты этих сессий — закрыть после фиксации (63-1): иначе гость
+    # продолжал видеть заказ и номер, пока сокет не оборвётся сам.
+    from apps.realtime.sessions import close_sockets, guest_session_group
+
+    close_sockets([guest_session_group(pk) for pk in session_ids])
 
     AuditLog.record(
         # Литералом, а не переменной: сторож кодов событий ищет строку в вызове

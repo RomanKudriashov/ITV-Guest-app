@@ -302,6 +302,29 @@ test.describe('Сетка номерного фонда', () => {
     await page.getByTestId('room-panel-close').click()
     await expect(page.getByTestId('room-panel')).toBeHidden()
   })
+
+  test('УКУС: после сохранения панель показывает НОВОЕ значение, без переоткрытия (разведка 19.10)', async ({ page, request }) => {
+    const headers = apiHeaders(await apiToken(request, ADMIN))
+    const rooms = await (await request.get(`${API}/api/cms/rooms?search=${DEMO_ROOM}`, { headers })).json()
+    const room = rooms.items.find((entry: { number: string }) => entry.number === DEMO_ROOM)
+    const before: string = room.housekeeping
+    const target = before === 'dirty' ? 'clean' : 'dirty'
+    try {
+      await openAdmin(page, '/cms/rooms?view=grid')
+      await expect(page.getByTestId('rooms-grid')).toBeVisible({ timeout: 20_000 })
+      await page.getByTestId(`room-cube-${DEMO_ROOM}`).click()
+      await expect(page.getByTestId('room-panel')).toBeVisible({ timeout: 15_000 })
+      await pickOption(page, 'room-panel-housekeeping', { value: target })
+      await expect(page.getByTestId('room-panel-housekeeping')).toHaveAttribute('data-value', target, { timeout: 15_000 })
+      // Сервер и правда сохранил, а не только поле перерисовалось.
+      const saved = (await (await request.get(`${API}/api/cms/rooms?search=${DEMO_ROOM}`, { headers })).json()).items.find(
+        (entry: { number: string }) => entry.number === DEMO_ROOM,
+      )
+      expect(saved.housekeeping).toBe(target)
+    } finally {
+      await request.patch(`${API}/api/cms/rooms/${room.id}`, { headers, data: { housekeeping: before } })
+    }
+  })
 })
 
 test.describe('Аналитика: разрез по категории номера', () => {

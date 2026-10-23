@@ -700,6 +700,13 @@
   "/api/v1/platform/hotels/{hotel_id}/aliases/{old}": [
     "DELETE"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/buildings": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/buildings/{item_id}": [
+    "DELETE",
+    "PATCH"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/disable": [
     "POST"
   ],
@@ -807,7 +814,52 @@
   "/api/v1/platform/hotels/{hotel_id}/readiness": [
     "GET"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/room-categories": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/room-categories/{item_id}": [
+    "DELETE",
+    "PATCH"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/rooms": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/bulk": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/bulk/preview": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/dictionaries": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/map": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/rule": [
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/delete-check": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/detail": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/history": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/pin": [
+    "DELETE",
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/place": [
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms/{room_id}/rename-check": [
     "GET"
   ],
   "/api/v1/platform/impersonations": [

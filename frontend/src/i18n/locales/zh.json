@@ -2950,7 +2950,9 @@
         "plan_frames": "已上传平面图",
         "plan_copied": "已复制平面分区",
         "published": "配置已发布",
-        "rolled_back": "配置已回滚"
+        "rolled_back": "配置已回滚",
+        "pin_set": "已发放客房 PIN",
+        "pin_cleared": "已移除客房 PIN"
       },
       "guest_session": {
         "created": "客人打开了应用",
@@ -2975,7 +2977,12 @@
         "renamed": "房间已重命名",
         "restored": "已删除的房间已恢复",
         "bulk_created": "已批量创建房间",
-        "bulk_updated": "已批量修改房间"
+        "bulk_updated": "已批量修改房间",
+        "created": "已添加客房",
+        "updated": "已修改客房",
+        "deleted": "已删除客房",
+        "variant_set": "已更改客房方案",
+        "device_set": "已更改客房设备名称"
       },
       "notification": {
         "event_settings_changed": "通知设置已更改",
@@ -3003,6 +3010,16 @@
       "bot": {
         "take": "通过 Telegram 按钮接单",
         "triage": "通过 Telegram 按钮处理评价"
+      },
+      "building": {
+        "created": "已添加楼栋",
+        "updated": "已更改楼栋名称",
+        "deleted": "已删除楼栋"
+      },
+      "room_category": {
+        "created": "已添加客房类别",
+        "updated": "已更改客房类别名称",
+        "deleted": "已删除客房类别"
       }
     },
     "enter": {
@@ -3694,7 +3711,6 @@
         "view": {
           "label": "视图",
           "table": "表格",
-          "blocks": "方块",
           "scheme": "布局"
         },
         "layer": {
@@ -3748,8 +3764,8 @@
           "label": "缩放",
           "in": "放大",
           "out": "缩小",
-          "fit": "适应",
-          "fitted": "整栋楼"
+          "fit": "正常大小",
+          "fitted": "正常大小"
         },
         "rule": {
           "title": "如何读取房号",
@@ -3758,7 +3774,6 @@
           "floorAll": "位置之前的全部数字",
           "floorFirst": "开头位数：{{n}}",
           "byDefault": "默认",
-          "stats": "{{rule}} 间的楼层取自房号，{{manual}} 间的位置为手动设置。",
           "help": "位置相同的客房上下对齐，在布局中位于同一列。客房上设置的楼层和手动位置优先于规则。",
           "edit": "修改规则",
           "dialogTitle": "如何读取房号",
@@ -3771,7 +3786,13 @@
           "exampleNoFloor": "例如“{{number}}”：房号中没有楼层，位置 {{position}}。",
           "save": "保存",
           "cancel": "取消",
-          "saved": "规则已保存"
+          "saved": "规则已保存",
+          "allByRule": "所有客房的楼层和位置均按规则。",
+          "floorsAllRule": "所有客房的楼层均按规则。",
+          "floorsAllRoom": "楼层已在客房上设置。",
+          "floorsSomeRule_other": "{{count}} 间客房的楼层按规则。",
+          "positionsManual_other": "{{count}} 间客房的位置为手动设置。",
+          "positionsRule": "位置按规则。"
         },
         "card": {
           "title": "客房 {{number}}",
@@ -3811,6 +3832,189 @@
           "pin": "PIN",
           "control": "就绪",
           "problem": "阻碍"
+        },
+        "part": "位置 {{from}}–{{to}}",
+        "tile": {
+          "label": "方块",
+          "a": "色条",
+          "b": "卡片",
+          "c": "棋盘"
+        },
+        "short": {
+          "ok": "就绪",
+          "off": "未接入",
+          "inactive": "已禁用",
+          "no_link": "无连接",
+          "no_variant": "无方案",
+          "not_published": "草稿",
+          "no_pin": "无 PIN",
+          "demo_entry": "演示进入",
+          "pinYes": "有 PIN",
+          "noVariant": "无方案",
+          "none": "正常"
+        },
+        "tiny": {
+          "ok": "就绪",
+          "off": "未接入",
+          "inactive": "禁用",
+          "no_link": "无连接",
+          "no_variant": "无方案",
+          "not_published": "草稿",
+          "no_pin": "无 PIN",
+          "demo_entry": "演示",
+          "pinYes": "PIN ✓",
+          "noVariant": "无方案",
+          "none": "正常"
+        },
+        "add": {
+          "button": "添加客房",
+          "first": "添加第一批客房",
+          "firstExample": "例如：“101-120, 201-220” — 一次添加两层共四十间客房。",
+          "onFloor": "在 {{floor}} 层添加客房",
+          "title": "添加客房",
+          "subtitle": "一个房号、列表或范围。已存在的客房不会重复。",
+          "spec": "房号",
+          "specHelp": "用逗号分隔：“201-212” 为范围，“3A” 和 “套房-1” 按原样添加。保留前导零：“008-012”。",
+          "example": "201-212, 3A, 套房-1",
+          "limit": "一次最多 500 间。",
+          "floorHelp": "留空 — 按规则从房号读取楼层。",
+          "previewEmpty": "输入房号 — 这里会显示将要添加的内容。",
+          "will": "将添加 — {{count}}：",
+          "exists": "已存在 — {{count}}，将跳过：",
+          "buried": "曾被删除 — {{count}}：",
+          "restore": "连同历史恢复",
+          "fresh": "重新创建",
+          "restoreHelp": "客房连同以往订单和聊天恢复；上一位客人的 PIN 和会话将被移除。",
+          "freshHelp": "创建无历史的新客房；已删除的客房以其他名称保留在归档中。",
+          "submit": "添加 — {{count}}",
+          "submitNone": "没有可添加的",
+          "done": "已添加客房：{{count}}"
+        },
+        "edit": {
+          "prev": "上一间",
+          "prevHint": "上一间 (←)",
+          "next": "下一间",
+          "nextHint": "下一间 (→)",
+          "section": {
+            "main": "基本",
+            "control": "控制",
+            "access": "访问",
+            "state": "状态",
+            "problems": "阻碍",
+            "history": "历史"
+          },
+          "loading": "加载中…",
+          "none": "— 未设置 —",
+          "numberHelp": "更改房号会改变二维码链接 — 保存前会显示后果。",
+          "floorHelp": "此处设置的楼层优先于“如何读取房号”规则。留空 — 从房号读取楼层。",
+          "byRule": "按规则：{{value}}",
+          "floorSet": "楼层已在客房上设置。",
+          "floorRule": "留空 — 按规则：{{value}}。",
+          "floorNone": "房号中没有楼层 — 请手动设置。",
+          "positionSet": "位置为手动设置 — 优先于规则。",
+          "guestLink": "客人链接：",
+          "noVariant": "— 无方案 —",
+          "noVariants": "酒店还没有方案 — 在“客房控制”标签中创建。",
+          "device": "设备名称",
+          "deviceHelp": "客房在控制服务器中的名称。通常按方案模板；如果此客房名称不同，请手动设置。",
+          "byTemplate": "按模板：{{value}}",
+          "deviceNeedsVariant": "请先选择方案。",
+          "deviceManual": "手动设置。",
+          "deviceByTemplate": "留空 — 按方案模板。",
+          "is_active": "客人进入",
+          "is_activeHelp": "客房是否允许客人扫码进入。禁用的客房不对客人开放，也不打印在二维码表中。",
+          "is_activeOn": "客房允许客人扫码进入。",
+          "is_activeOff": "扫码进入已关闭 — 客人无法打开客房。",
+          "out_of_service": "停售",
+          "out_of_serviceHelp": "客房在维修或关闭。不影响客人 — 这是给酒店的标记。",
+          "out_of_serviceOn": "客房已标记为停售。",
+          "out_of_serviceOff": "客房在售。",
+          "noProblems": "没有阻碍：客人可以控制客房。",
+          "why": {
+            "no_link": "与酒店服务器无连接 — 客人的指令无法发出。请检查连接。",
+            "no_variant": "客房没有控制方案 — 客人无可控制之物。",
+            "not_published": "客房方案尚未发布 — 客人看不到。",
+            "no_pin": "客房没有 PIN，且无 PIN 进入已关闭 — 客人无法进入控制。",
+            "demo_entry": "没有 PIN，客人通过演示进入无需代码 — 仅限演示期间。"
+          },
+          "fix": "修复",
+          "historyEmpty": "暂无修改。",
+          "saved": "已保存",
+          "save": "保存",
+          "cancel": "取消",
+          "leaveTitle": "有未保存的修改",
+          "leaveBody": "如果离开，此客房的修改将丢失。",
+          "leaveOk": "不保存离开",
+          "renameTitle": "将“{{from}}”改名为“{{to}}”？",
+          "renameQr": "二维码链接将改变 — 需要重新打印客房内的贴纸。",
+          "renameDevice": "设备名称将改变：“{{from}}” → “{{to}}”。",
+          "renameSessions": "客房内的活动客人会话：{{count}} — 将继续有效。",
+          "renameOk": "改名"
+        },
+        "access": {
+          "until": "PIN 有效期至 {{date}}。",
+          "noEnd": "PIN 在更改前一直有效。",
+          "expired": "PIN 已过期 — 客人无法进入。",
+          "demo": "没有 PIN — 客人通过演示进入无需代码。",
+          "none": "没有 PIN — 客人无法控制客房。",
+          "help": "PIN 是入住代码：客人输入后即可控制客房。仅保存代码的指纹，无法查看代码本身。",
+          "copy": "复制",
+          "once": "代码只显示一次 — 请记下或告诉客人。之后无法再次查看。",
+          "validUntil": "有效期至",
+          "validUntilHelp": "退房日期；留空 — 无期限。",
+          "pin": "PIN",
+          "pinHelp": "4 到 12 位数字。",
+          "generate": "生成 PIN",
+          "manual": "手动设置",
+          "saveManual": "保存 PIN",
+          "clear": "移除 PIN",
+          "clearTitle": "移除客房 {{number}} 的 PIN？",
+          "clearBody": "使用此 PIN 进入的客人将失去客房控制。"
+        },
+        "del": {
+          "button": "删除客房",
+          "title": "删除客房 {{number}}？",
+          "lead": "客房将从客房库存中消失。此外：",
+          "pin": "客房 PIN 将被移除。",
+          "noPin": "客房没有 PIN。",
+          "sessions": "将关闭客人会话：{{count}}。",
+          "noSessions": "没有活动的客人会话。",
+          "variant": "客房将与方案“{{variant}}”解除绑定。",
+          "noVariant": "客房没有方案。",
+          "history": "订单和聊天保留在历史中；重新添加即可恢复客房。",
+          "ok": "删除"
+        },
+        "dict": {
+          "building": {
+            "title": "楼栋",
+            "open": "+ 楼栋",
+            "subtitle": "在酒店的每种语言中填写名称。有客房的楼栋只能在迁移客房后删除。",
+            "add": "+ 添加楼栋",
+            "rename": "改名",
+            "delete": "删除",
+            "titleIn": "名称（{{language}}）",
+            "empty": "暂无楼栋。",
+            "deleteTitle": "删除楼栋“{{name}}”？",
+            "busy": "楼栋内客房：{{count}}。迁移到哪里？",
+            "moveTo": "将客房迁移到",
+            "moveNone": "无楼栋",
+            "free": "楼栋内没有客房 — 将立即删除。"
+          },
+          "category": {
+            "title": "类别",
+            "open": "类别",
+            "subtitle": "在酒店的每种语言中填写名称。有客房的类别只能在迁移客房后删除。",
+            "add": "+ 添加类别",
+            "rename": "改名",
+            "delete": "删除",
+            "titleIn": "名称（{{language}}）",
+            "empty": "暂无类别。",
+            "deleteTitle": "删除类别“{{name}}”？",
+            "busy": "该类别客房：{{count}}。迁移到哪里？",
+            "moveTo": "将客房迁移到",
+            "moveNone": "无类别",
+            "free": "该类别没有客房 — 将立即删除。"
+          }
         }
       },
       "journal": {
@@ -3948,13 +4152,24 @@
         "subdomain_alias": "重定向",
         "room_floor_digits": "房号中的楼层",
         "room_position_digits": "房号中的位置",
-        "room_position": "楼层内位置"
+        "room_position": "楼层内位置",
+        "room_floor": "楼层",
+        "room_building": "楼栋",
+        "room_category": "类别",
+        "room_is_active": "客人进入",
+        "room_out_of_service": "停售",
+        "room_housekeeping": "清洁",
+        "room_variant": "方案",
+        "room_device": "设备名称",
+        "title": "名称"
       },
       "object": {
         "node": "连接器“{{name}}”",
         "variant": "方案“{{code}}”",
         "variantVersion": "方案“{{code}}”，版本 {{version}}",
-        "room": "客房“{{number}}”"
+        "room": "客房“{{number}}”",
+        "building": "楼栋“{{name}}”",
+        "category": "类别“{{name}}”"
       },
       "detail": {
         "ttl_other": "时长 {{count}} 分钟",
@@ -3962,7 +4177,10 @@
         "bulk": "通过“酒店”批量操作",
         "toVersion": "回到版本 {{version}}",
         "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节",
-        "inDevelopment": "模块开发中——在改为无套餐模块时关闭"
+        "inDevelopment": "模块开发中——在改为无套餐模块时关闭",
+        "created": "已添加客房：{{count}}",
+        "moved": "已迁移客房：{{count}}",
+        "revoked": "已关闭客人会话：{{count}}"
       },
       "otherAction": "其他操作",
       "sort": {

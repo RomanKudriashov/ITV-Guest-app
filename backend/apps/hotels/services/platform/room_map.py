@@ -24,8 +24,6 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from django.db.models import Q
-from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.core.listing import natural_key, sort_rows
@@ -51,22 +49,19 @@ SORTS = {
 
 
 def room_map(hotel: Hotel, params: dict[str, str]) -> dict[str, Any]:
-    from apps.grms.models import PublishedConfig, RoomPin, RoomTypeRoom
+    from apps.grms.models import PublishedConfig, RoomTypeRoom
+    from apps.grms.services.access import active_pin_room_ids
     from apps.hotels.models import HotelModule, OnPremNode, Room
     from apps.hotels.services.onprem import GRMS_PURPOSES, link_state
 
     rule = room_numbers.rule_of(hotel)
-    now = timezone.now()
     with tenant_context(hotel):
         module = HotelModule.objects.filter(code=HotelModule.Code.ROOM_CONTROL, is_enabled=True).first()
         rooms = list(Room.objects.select_related("building", "category").order_by("sort_key", "number"))
         links = {link.room_id: link.room_type for link in RoomTypeRoom.objects.select_related("room_type")}
         published = set(PublishedConfig.objects.filter(is_current=True).values_list("room_type_id", flat=True))
-        pins = set(
-            RoomPin.objects.exclude(pin_hash="")
-            .filter(Q(valid_until__isnull=True) | Q(valid_until__gt=now))
-            .values_list("room_id", flat=True)
-        )
+        # «Есть PIN» — то же правило, что у «Доступа» панели (63-1, укус 401).
+        pins = active_pin_room_ids()
         link = link_state(list(OnPremNode.objects.filter(purpose__in=GRMS_PURPOSES)))
 
     context = {
