@@ -321,6 +321,24 @@ services:
       - backend
       - iridi-emulator
 
+  # Коннектор «Сиалии» (партия 64-1). Один коннектор = один узел = один отель:
+  # ключ узла выдаёт мастер подключения Control, у «Сиалии» он свой. Профиль
+  # отдельный — без ключа служба не нужна и сама не поднимается:
+  # Локально эмулятор и бэкенд живут в профиле grms — нужны оба профиля:
+  #   ITV_CONNECTOR_KEY_SIALIA=… docker compose --profile grms --profile sialia up -d connector-sialia
+  connector-sialia:
+    profiles: ["sialia"]
+    build: ./connector
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY_SIALIA:-}"
+    volumes:
+      - ./connector/config.sialia.dev.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      - backend
+      - iridi-emulator
+
 volumes:
   postgres_data:
   minio_data:

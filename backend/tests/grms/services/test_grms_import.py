@@ -277,3 +277,33 @@ def test_replace_retires_only_the_keys_missing_from_the_new_file(crystal, previe
     builder.save_import(crystal, preview, replace=True)
     with tenant_context(crystal):
         assert Variable.objects.filter(room_type__code=type_code, key=dropped).count() == 1
+
+
+# --- ПНР «Сиалии» (партия 64-1) --------------------------------------------
+#
+# Свой файл объекта, присланный как есть: «Отдельный номер (Номер 100)» вместо
+# «ТИП1 (Номер 701)», без списка комнат, подписи групп в колонке E, свет с нуля.
+
+SIALIA = FIXTURES / "pnr-sialia-standard.xlsx"
+
+
+def test_sialia_free_text_type_header_is_read():
+    parsed = importer.parse(SIALIA.read_bytes())
+    assert [t.name for t in parsed.types] == ["Отдельный номер"], "свободное название типа не распознано"
+    sialia = parsed.types[0]
+    assert sialia.reference_room == "100"
+    assert sialia.device_name_template == "Modbus TCP Server (Slave mode) {room}"
+    keys = [v.key for v in sialia.variables]
+    assert keys[:4] == ["dnd", "mur", "wait", "sos"]
+    assert [k for k in keys if k.startswith("light_")] == [f"light_{i}" for i in range(12)], "свет с нуля"
+    # Подпись группы из колонки E — в описании канала: инженер видит «гр. 2.3.1».
+    light0 = next(v for v in sialia.variables if v.key == "light_0")
+    assert "L1 (гр. 2.3.1)" in light0.description
+    assert any(w.code == importer.W_NO_ROOMS for w in parsed.warnings)
+
+
+def test_old_type_header_still_normalized():
+    """ТИП-заголовки 240701 — как раньше: «ТИП1» без пробелов, списки комнат на месте."""
+    parsed = importer.parse(PNR.read_bytes())
+    assert [t.name for t in parsed.types] == ["ТИП1", "ТИП2", "ТИП3"]
+    assert {t.name: len(t.rooms) for t in parsed.types} == {"ТИП1": 97, "ТИП2": 6, "ТИП3": 13}

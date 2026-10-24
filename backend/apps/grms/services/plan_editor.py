@@ -126,6 +126,41 @@ def save_geometry(hotel, code: str, payload_in) -> dict:
     return payload(hotel, code)
 
 
+# Светлый фон под прозрачный кадр (64-1): тёплый белый плиты, не чистый белый.
+OPAQUE_BACKGROUND = (244, 242, 238)
+
+
+def _opaque(raw: bytes) -> bytes:
+    """
+    Кадр с прозрачностью — на светлый фон, иначе файл как есть.
+
+    Планировки с сайтов приходят PNG с прозрачным фоном (у «Сиалии» прозрачно
+    64% кадра). Дальше кадр переводится в RGB — и при расчёте ночного кадра, и
+    при сравнении пары, — а у прозрачных пикселей под альфой обычно чёрный: план
+    на чёрном поле. Кладём на светлый фон один раз, на входе. Непрозрачный кадр
+    не перекодируется вовсе — байты остаются те, что прислали.
+    """
+    import io
+
+    from PIL import Image
+
+    try:
+        with Image.open(io.BytesIO(raw)) as image:
+            has_alpha = image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info)
+            if not has_alpha:
+                return raw
+            rgba = image.convert("RGBA")
+            if rgba.getchannel("A").getextrema()[0] == 255:
+                return raw
+            flat = Image.new("RGBA", rgba.size, OPAQUE_BACKGROUND + (255,))
+            flat.alpha_composite(rgba)
+            out = io.BytesIO()
+            flat.convert("RGB").save(out, "PNG")
+            return out.getvalue()
+    except Exception:  # noqa: BLE001 — нечитаемое отвергнет проверка ниже, как и раньше
+        return raw
+
+
 def store_frames(hotel, code: str, *, lit, off=None) -> dict:
     """
     Один светлый кадр — ночной считается на сервере фоновой задачей.
@@ -147,6 +182,7 @@ def store_frames(hotel, code: str, *, lit, off=None) -> dict:
     lit_raw = lit.read()
     if len(lit_raw) > MAX_PLAN_BYTES:
         raise ValidationError("Кадр больше 12 МБ", field="lit")
+    lit_raw = _opaque(lit_raw)
 
     with tenant_context(hotel):
         level = builder._type(code).plan_level
@@ -181,6 +217,7 @@ def store_frames(hotel, code: str, *, lit, off=None) -> dict:
     if off_raw is not None:
         if len(off_raw) > MAX_PLAN_BYTES:
             raise ValidationError("Кадр больше 12 МБ", field="off")
+        off_raw = _opaque(off_raw)
         verdict = pair.compare(lit_raw, off_raw)
         if not verdict.ok:
             # НЕ сохраняем ничего: половина пары в конфигурации хуже, чем её

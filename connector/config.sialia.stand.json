@@ -1,0 +1,30 @@
+{
+  "backend_url": "wss://app.147.45.245.172.sslip.io/ws/v1/onprem/connector",
+  "node_key_file": "/etc/itv-connector/key",
+  "heartbeat_interval_s": 60,
+  "max_concurrent_requests": 8,
+  "allowedTargets": [
+    {
+      "host": "iridi-emulator",
+      "ports": [
+        1085
+      ]
+    }
+  ],
+  "endpoints": {
+    "iridi": {
+      "baseUrl": "http://iridi-emulator:1085",
+      "allowedMethods": [
+        "GET",
+        "POST"
+      ],
+      "allowedPaths": [
+        "/"
+      ],
+      "timeoutMs": 3000,
+      "maxRequestBytes": 8192,
+      "maxResponseBytes": 65536,
+      "followRedirects": false
+    }
+  }
+}

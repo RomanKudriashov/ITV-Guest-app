@@ -281,6 +281,25 @@ services:
       iridi-emulator: {condition: service_started}
     networks: [internal]
 
+  # Коннектор «Сиалии» (партия 64-1): свой узел и свой ключ, разрешённый круг —
+  # тот же эмулятор. ПРОФИЛЬ «sialia» — обычный `up -d` выкатки его НЕ поднимает:
+  # без ключа служба ушла бы в рестарт-петлю. Запуск — только осознанно, после
+  # выдачи ключа мастером подключения:
+  #   ITV_CONNECTOR_KEY_SIALIA=… dc --profile sialia up -d connector-sialia
+  connector-sialia:
+    profiles: ["sialia"]
+    build: ./connector
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY_SIALIA:-}"
+    volumes:
+      - ./connector/config.sialia.stand.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      backend: {condition: service_healthy}
+      iridi-emulator: {condition: service_started}
+    networks: [internal]
+
 volumes:
   mailpit_data:
   postgres_data:

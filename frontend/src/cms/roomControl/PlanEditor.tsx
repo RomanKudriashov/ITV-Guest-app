@@ -150,7 +150,12 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
         и «отпустил», компонент перерисовывается, и жест теряется.
       */
       if (dirtyRef.current) return false;
-      return data?.frames.lit && !data.frames.off ? 3000 : false;
+      // И пока кадр ещё обрабатывается (64-1): адреса у него нет до конца
+      // обработки, а у загруженной ПАРЫ ночной кадр уже есть — без этого опрос
+      // не включался вовсе, и редактор стоял на «Кадра нет», пока его не
+      // закроешь и не откроешь.
+      const processing = Boolean(data?.frames.lit && (!data.frames.lit.url || (data.frames.off && !data.frames.off.url)));
+      return data?.frames.lit && (!data.frames.off || processing) ? 3000 : false;
     },
   });
 

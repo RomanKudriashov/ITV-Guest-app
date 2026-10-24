@@ -37,8 +37,18 @@ _MAIN = NS["m"]
 _HEADER_COMMAND = {"commans", "command", "commands", "команда", "команды"}
 
 _TYPE_HEADER = re.compile(r"^\s*(?P<name>ТИП\s*\d+|TYPE\s*\d+)\s*\(\s*(?:Номер|Room)\s*(?P<room>[\w-]+)\s*\)", re.I)
+# Заголовок со СВОБОДНЫМ названием типа (64-1): у «Сиалии» файл ПНР начинается с
+# «Отдельный номер (Номер 100)», а не с «ТИП1 (Номер 701)». Название без цифр и
+# скобок, затем «(Номер N)» в конце строки — так переменная (C_…) или путь к
+# устройству («…(Slave mode) 100») заголовком не прикинутся.
+_TYPE_HEADER_FREE = re.compile(r"^\s*(?P<name>[^()\d:«»\"]{2,60}?)\s*\(\s*(?:Номер|Room)\s*(?P<room>[\w-]+)\s*\)\s*$", re.I)
 _DEVICE_PATH = re.compile(r'["«]([^"»]+)["»]')
-_ROOM_LIST = re.compile(r"^\s*(?P<name>ТИП\s*\d+|TYPE\s*\d+)\s*:\s*(?P<rooms>.+)$", re.I | re.S)
+_ROOM_LIST = re.compile(r"^\s*(?P<name>ТИП\s*\d+|TYPE\s*\d+|[^:\d]{2,60}?)\s*:\s*(?P<rooms>[\w-]+(?:\s*[,;\n]\s*[\w-]+)*)\s*,?\s*$", re.I | re.S)
+
+
+def _list_key(name: str) -> str:
+    """Ключ сопоставления «тип — список комнат»: без пробелов и регистра."""
+    return re.sub(r"\s+", "", name).upper()
 
 # Диапазоны, как их пишет ПНР: «0/1», «0-1», «0-3», «16-32».
 _RANGE = re.compile(r"^\s*(-?\d+)\s*[/\-–]\s*(-?\d+)\s*$")
@@ -277,15 +287,18 @@ def parse(data: bytes) -> ImportPreview:
                 continue
             match = _ROOM_LIST.match(str(value))
             if match:
-                name = re.sub(r"\s+", "", match.group("name")).upper()
+                name = _list_key(match.group("name"))
                 rooms = [r.strip() for r in re.split(r"[,\n;]+", match.group("rooms")) if r.strip()]
                 room_lists[name] = rooms
 
         header = _TYPE_HEADER.match(first)
-        if header:
+        free = None if header else _TYPE_HEADER_FREE.match(first)
+        if header or free:
+            # «ТИП1» нормализуется как раньше; свободное название остаётся как
+            # написано — оно станет названием варианта в Control.
             current = ParsedType(
-                name=re.sub(r"\s+", "", header.group("name")).upper(),
-                reference_room=header.group("room"),
+                name=_list_key(header.group("name")) if header else " ".join(free.group("name").split()),
+                reference_room=(header or free).group("room"),
             )
             preview.types.append(current)
             continue
@@ -343,7 +356,11 @@ def parse(data: bytes) -> ImportPreview:
             min_value=low,
             max_value=high,
             raw_range=raw_range,
-            description=(cells.get("D") or "").strip(),
+            description=" · ".join(
+                part
+                for part in ((cells.get("D") or "").strip(), (cells.get("E") or "").strip())
+                if part
+            ),
         )
         current.variables.append(variable)
 
@@ -395,7 +412,7 @@ def parse(data: bytes) -> ImportPreview:
 
 def _attach_rooms(preview: ImportPreview, room_lists: dict[str, list[str]]) -> None:
     for parsed in preview.types:
-        parsed.rooms = room_lists.get(parsed.name, [])
+        parsed.rooms = room_lists.get(_list_key(parsed.name), [])
         if not parsed.rooms:
             preview.warnings.append(
                 Warning_(
@@ -413,7 +430,7 @@ def _attach_rooms(preview: ImportPreview, room_lists: dict[str, list[str]]) -> N
                 )
             )
 
-    unknown = set(room_lists) - {parsed.name for parsed in preview.types}
+    unknown = set(room_lists) - {_list_key(parsed.name) for parsed in preview.types}
     for name in sorted(unknown):
         preview.warnings.append(
             Warning_(

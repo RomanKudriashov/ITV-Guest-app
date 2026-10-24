@@ -54,19 +54,22 @@ DEFAULT_LATENCY_RANGE = (1.0, 3.0)
 DEVICE_TEMPLATE = "Modbus TCP Server (Slave mode) {room}"
 
 
-def _channels_for(lights: int, curtains: int, fcus: int, scenes: int) -> dict[str, int]:
+def _channels_for(lights: int, curtains: int, fcus: int, scenes: int, base: int = 1) -> dict[str, int]:
     """
     Набор каналов номера. Имена — РОВНО те, что найдены на боевом сервере
     (iridi-probe.md §6.3), включая пробел перед номером: «C_Light 1», а не
     «C_Light_1». Расхождение здесь означало бы, что эмулятор проверяет
     несуществующий протокол.
     """
+    # `base` — с какого номера считаются свет и фанкойлы. На объекте ПНР 240701
+    # — с единицы; у «Сиалии» в её собственном ПНР — с нуля («C_Light 0»), и
+    # эмулятор повторяет файл объекта, а не наше удобство (64-1).
     state: dict[str, int] = {"DND": 0, "MUR": 0}
-    for i in range(1, lights + 1):
+    for i in range(base, base + lights):
         state[f"Light {i}"] = 0
     for i in range(1, curtains + 1):
         state[f"Curtain {i}"] = 0
-    for i in range(1, fcus + 1):
+    for i in range(base, base + fcus):
         state[f"FCU_MainSw {i}"] = 0
         state[f"FCU_Speed {i}"] = 0
         state[f"FCU_Setpoint {i}"] = 22
@@ -99,6 +102,25 @@ ROOM_PROFILES: dict[str, dict[str, int]] = {
     # разное от номера к номеру, и демо-номер моделирует тот, где их четыре.
     "305": {"lights": 5, "curtains": 2, "fcus": 1, "scenes": 4},
 }
+
+# «СИАЛИЯ», ОТЕЛЬНЫЙ НОМЕР (партия 64-1). Профиль — по её собственному ПНР
+# («стандартный номер»): 8 групп света C_Light 0…7 = гр. 2.3.1…2.3.8 из
+# проекта шоурума, одна штора, один фанкойл с номером 0. Сцены в ПНР нет — одна
+# сцена «Выключить всё» добавлена для демо (решение Олега 24.10), и это свойство
+# эмулятора, а не находка на объекте.
+#
+# УСТРОЙСТВА СВОИ: «… S202», а не «… 202». Номер 202 есть и у «Азура», а
+# устройство адресуется только номером — без префикса два отеля делили бы одно
+# состояние: свет, включённый гостем «Азура», горел бы у гостя «Сиалии».
+SIALIA_HOTEL_ROOM = {"lights": 8, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0}
+_SIALIA_HOTEL_ROOMS = ["S202"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in range(1, 7)]
+ROOM_PROFILES.update({room: SIALIA_HOTEL_ROOM for room in _SIALIA_HOTEL_ROOMS})
+
+# «СИАЛИЯ», РЕЗИДЕНЦИЯ (64-1): десять групп света C_Light 0…9 = гр. 2.3.1…2.3.10
+# из проекта шоурума «Резиденция»; штора, фанкойл 0 — как у отельного номера.
+SIALIA_RESIDENCE = {"lights": 10, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0}
+_SIALIA_RESIDENCES = ["S204"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in (7, 8)]
+ROOM_PROFILES.update({room: SIALIA_RESIDENCE for room in _SIALIA_RESIDENCES})
 # Комнаты, за которые эмулятор отвечает.
 #
 # Два разных источника, и смешивать их не надо:
@@ -129,7 +151,7 @@ _AZURE_ROOMS = [f"1{n:02d}" for n in range(1, 9)] + [f"2{n:02d}" for n in range(
 _LUMEN_ROOMS = [f"{n:02d}" for n in range(1, 13)]
 
 DEFAULT_ROOMS = sorted(
-    set(_SURVEYED_ROOMS) | set(_CRYSTAL_ROOMS) | set(_AZURE_ROOMS) | set(_LUMEN_ROOMS)
+    set(_SURVEYED_ROOMS) | set(_CRYSTAL_ROOMS) | set(_AZURE_ROOMS) | set(_LUMEN_ROOMS) | set(_SIALIA_HOTEL_ROOMS) | set(_SIALIA_RESIDENCES)
 )
 
 # Что сцена ДЕЛАЕТ с каналами.
@@ -174,6 +196,12 @@ SCENE_PRESETS: dict[str, dict[str, dict[str, int]]] = {
         },
     },
 }
+
+
+# «Выключить всё» у «Сиалии»: гаснут все восемь групп; шторы и климат не
+# трогаются — так работает Master Switch в проекте шоурума (гасит свет).
+SCENE_PRESETS.update({room: {"Scene_1": {f"Light {i}": 0 for i in range(8)}} for room in _SIALIA_HOTEL_ROOMS})
+SCENE_PRESETS.update({room: {"Scene_1": {f"Light {i}": 0 for i in range(10)}} for room in _SIALIA_RESIDENCES})
 
 
 def _fallback_scene(index: int, profile: dict[str, int]) -> dict[str, int]:
