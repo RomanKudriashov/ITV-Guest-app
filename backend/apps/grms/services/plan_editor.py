@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from apps.core.context import tenant_context
 from apps.core.errors import ValidationError
-from apps.grms.services import builder, publishing
+from apps.grms.services import builder, nightframe, publishing
 
 # Кадр плана — фотография или рендер комнаты: 12 МБ хватает даже для снимка с
 # телефона без сжатия, а больше означает, что грузят не то.
@@ -57,6 +57,7 @@ def payload(hotel, code: str) -> dict:
             "lit": plan_geometry.frame_payload(draft.get("asset_id")),
             "off": plan_geometry.frame_payload(draft.get("asset_off_id")),
             "off_source": draft.get("asset_off_source") or "",
+            "off_pending": bool(draft.get("asset_off_pending")),
         }
 
         status = publishing.current(hotel, code)
@@ -81,6 +82,9 @@ def payload(hotel, code: str) -> dict:
             # По умолчанию гасим: на нормальном рендере это то, ради чего
             # расчёт и делается. Отсутствие ключа — старый план, а не отказ.
             "extinguish_sources": bool(draft.get("extinguish_sources", True)),
+            "night_brightness": nightframe.clamp_brightness(
+                draft.get("night_brightness", nightframe.BRIGHTNESS_DEFAULT)
+            ),
         },
         "frames": frames,
         # Привязывать можно только к ОПУБЛИКОВАННЫМ элементам: план едет гостю
@@ -99,12 +103,33 @@ def save_geometry(hotel, code: str, payload_in) -> dict:
     уезжает в номер мимо публикации, а откат конфигурации возвращает геометрию
     своей версии.
     """
+    from apps.grms.models import RoomType
     from apps.grms.services import plan as plan_geometry
+    from apps.grms.tasks import bake_room_plan_night
 
     with tenant_context(hotel):
         room_type = builder._type(code)
+        rebake = {"lit": None}
 
         def apply(plan: dict) -> None:
+            # Яркость ночного кадра сменилась, а кадр посчитан сервером —
+            # считаем заново. Принесённый ночной кадр не трогаем: он свой.
+            #
+            # СТАРЫЙ КАДР ОСТАЁТСЯ, пока не готов новый: публикация в эти
+            # секунды увезла бы гостю план без ночного кадра вовсе (так и
+            # случилось на репетиции). Признак `asset_off_pending` — для
+            # редактора: он ждёт новый кадр, задача признак снимает.
+            brightness = nightframe.clamp_brightness(payload_in.night_brightness)
+            before = nightframe.clamp_brightness(plan.get("night_brightness", nightframe.BRIGHTNESS_DEFAULT))
+            plan["night_brightness"] = brightness
+            if (
+                brightness != before
+                and plan.get("asset_id")
+                and plan.get("asset_off_source") == "baked"
+                and room_type.plan_level == RoomType.PlanLevel.FULL
+            ):
+                plan["asset_off_pending"] = True
+                rebake["lit"] = plan["asset_id"]
             plan.update(
                 {
                     "aspect": payload_in.aspect or plan.get("aspect"),
@@ -123,6 +148,10 @@ def save_geometry(hotel, code: str, payload_in) -> dict:
         # Журнал разметки пишет ВЫЗЫВАЮЩИЙ: у CMS это сотрудник отеля, у
         # NaviRoom Control — наш оператор, и запись обязана называть
         # разных людей разными акторами.
+
+    # Пересчёт — после выхода из блокировки: задача сама берёт её на запись.
+    if rebake["lit"]:
+        bake_room_plan_night.delay(hotel_id=str(hotel.pk), room_type_code=code, lit_asset_id=rebake["lit"])
     return payload(hotel, code)
 
 

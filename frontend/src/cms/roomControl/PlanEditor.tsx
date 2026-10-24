@@ -12,14 +12,17 @@ import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Skeleton from '@mui/material/Skeleton';
+import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import { ApiError } from '@/api/client';
 import {
@@ -91,6 +94,7 @@ const EMPTY: PlanGeometry = {
   points: [],
   mirrored: false,
   extinguish_sources: true,
+  night_brightness: 1,
 };
 
 /** Пропорция по умолчанию, пока кадра нет: сцена не должна схлопываться в полоску. */
@@ -155,7 +159,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
       // не включался вовсе, и редактор стоял на «Кадра нет», пока его не
       // закроешь и не откроешь.
       const processing = Boolean(data?.frames.lit && (!data.frames.lit.url || (data.frames.off && !data.frames.off.url)));
-      return data?.frames.lit && (!data.frames.off || processing) ? 3000 : false;
+      return data?.frames.lit && (!data.frames.off || processing || data.frames.off_pending) ? 3000 : false;
     },
   });
 
@@ -497,9 +501,11 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
             <Chip
               size="small"
               data-testid="grms-plan-night-state"
-              color={offUrl ? 'success' : 'default'}
+              color={offUrl && !plan.frames.off_pending ? 'success' : 'default'}
               label={
-                offUrl
+                plan.frames.off_pending
+                  ? t('roomControl.plan.night.baking')
+                  : offUrl
                   ? t(`roomControl.plan.night.${plan.frames.off_source || 'baked'}`)
                   : litUrl
                     ? t(`roomControl.plan.night.${bakeGaveUp ? 'failed' : 'baking'}`)
@@ -604,6 +610,37 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
               {t('roomControl.plan.extinguishHint')}
             </Typography>
+
+            {/*
+              Яркость ночного кадра (64-1) — только у посчитанного: принесённый
+              кадр свой, и множитель к нему не применяется. Сохранение с новым
+              значением пересчитывает кадр; редактор ждёт его, как после загрузки.
+            */}
+            {isSimple || plan.frames.off_source === 'uploaded' ? null : (
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1, maxWidth: 520 }}>
+                <Typography variant="body2" sx={{ flex: 'none' }}>
+                  {t('roomControl.plan.nightBrightness')}
+                </Typography>
+                <Slider
+                  size="small"
+                  min={0.5}
+                  max={3}
+                  step={0.1}
+                  value={draft.night_brightness ?? 1}
+                  valueLabelDisplay="auto"
+                  onChange={(_, value) =>
+                    setDraft((prev) => ({ ...prev, night_brightness: value as number }))
+                  }
+                  data-testid="grms-plan-night-brightness"
+                />
+                <Typography variant="body2" sx={{ flex: 'none', minWidth: 32 }}>
+                  ×{(draft.night_brightness ?? 1).toFixed(1)}
+                </Typography>
+                <Tooltip title={t('roomControl.plan.nightBrightnessHelp')}>
+                  <HelpOutlineIcon fontSize="small" color="action" data-testid="grms-plan-night-brightness-help" />
+                </Tooltip>
+              </Stack>
+            )}
 
             {litUrl ? (
               <Box

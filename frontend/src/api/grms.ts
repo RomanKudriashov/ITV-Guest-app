@@ -405,6 +405,11 @@ export interface PlanGeometry {
    * свой рендер.
    */
   extinguish_sources: boolean;
+  /**
+   * Яркость посчитанного ночного кадра, 0.5–3.0 (64-1). Смена пересчитывает
+   * кадр на сервере; принесённый ночной кадр она не трогает.
+   */
+  night_brightness: number;
 }
 
 export interface PlanFrame {
@@ -424,7 +429,8 @@ export interface PlanControl {
 
 export interface PlanState {
   geometry: PlanGeometry;
-  frames: { lit: PlanFrame | null; off: PlanFrame | null; off_source: string };
+  /** `off_pending` — ночной кадр пересчитывается (сменилась яркость); старый пока на месте. */
+  frames: { lit: PlanFrame | null; off: PlanFrame | null; off_source: string; off_pending?: boolean };
   controls: PlanControl[];
   published: boolean;
 }

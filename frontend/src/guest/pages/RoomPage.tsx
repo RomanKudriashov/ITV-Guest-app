@@ -907,6 +907,14 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
 
   const fanOptions = useMemo(() => {
     if (!fanRange) return [];
+    // Таблица объекта (64-1): у «Сиалии» 0 — низкая, 4 — авто. Подписи по ней.
+    if (fanRange.speeds?.length) {
+      let number = 0;
+      return fanRange.speeds.map((speed) => ({
+        value: speed.value,
+        label: speed.auto ? t('guest.roomControl.fanAuto') : String((number += 1)),
+      }));
+    }
     const options = [];
     for (let value = fanRange.min; value <= fanRange.max; value += fanRange.step || 1) {
       // `0` подписан «Авто», а не «выкл»: выключение фанкойла это toggle, и

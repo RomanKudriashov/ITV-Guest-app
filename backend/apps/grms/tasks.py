@@ -290,9 +290,14 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
         # проход по источникам либо не срабатывает вовсе, либо съедает светлые
         # поверхности, и решать это может только тот, кто видит свой рендер.
         extinguish = bool((room_type.plan or {}).get("extinguish_sources", True))
+        brightness = nightframe.clamp_brightness(
+            (room_type.plan or {}).get("night_brightness", nightframe.BRIGHTNESS_DEFAULT)
+        )
 
         raw = storage.get_bytes(lit.object_key)
-        baked, _size = nightframe.bake_bytes(raw, extinguish_sources=extinguish)
+        baked, _size = nightframe.bake_bytes(
+            raw, extinguish_sources=extinguish, brightness=brightness
+        )
         night = upload_asset(
             content=baked,
             filename=f"night-{lit.original_filename or 'plan.png'}",
@@ -306,6 +311,7 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
             # Признак происхождения: посчитанный кадр совмещён по построению, и
             # проверять его парность незачем — в отличие от принесённой пары.
             plan["asset_off_source"] = "baked"
+            plan.pop("asset_off_pending", None)
 
         # ТОЛЬКО СВОЁ ПОЛЕ И ПОД БЛОКИРОВКОЙ. Расчёт идёт секунды, и всё это
         # время администратор размечает план; запись целиком своей копией

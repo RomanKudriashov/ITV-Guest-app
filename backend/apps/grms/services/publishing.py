@@ -111,6 +111,12 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                     "max": variable.max_value,
                     "kind": variable.value_kind,
                 }
+                # Таблица скоростей объекта (64-1): какое значение — «авто», какое —
+                # первая, вторая… Нет таблицы — экран по-прежнему считает 0 «авто».
+                if binding.capability == "fan_speed":
+                    speeds = catalog.parse_speeds(variable.description)
+                    if speeds:
+                        control["range"]["fan_speed"]["speeds"] = speeds
             zone["controls"].append(control)
 
         published = sorted(zones.values(), key=lambda z: (z["sort_order"], z["code"]))

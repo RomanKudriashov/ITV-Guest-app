@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from ninja import Schema
+from ninja import Field, Schema
 
 
 
@@ -85,6 +85,8 @@ class PlanGeometryIn(Schema):
     # на светлых кадрах, где порог «ярче окружения» не срабатывает и проход
     # либо не даёт ничего, либо съедает светлые поверхности.
     extinguish_sources: bool = True
+    # Яркость посчитанного ночного кадра (64-1), 0.5–3.0. Смена пересчитывает кадр.
+    night_brightness: float = Field(default=1.0, ge=0.5, le=3.0)
 
 class PlanCopyIn(Schema):
     source: str

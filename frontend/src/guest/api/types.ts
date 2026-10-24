@@ -858,6 +858,11 @@ export interface RoomRange {
   min: number;
   max: number;
   step: number;
+  /**
+   * Скорости вентилятора объекта по порядку показа (64-1): «авто» первым, затем
+   * от низкой к высокой. Нет — 0 считается «авто», остальные по номеру.
+   */
+  speeds?: Array<{ value: number; auto: boolean }>;
 }
 
 export interface RoomControl {

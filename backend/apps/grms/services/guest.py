@@ -728,6 +728,8 @@ def _ranges_for(capabilities: list[str], ranges: dict) -> dict:
         if "min" not in entry or "max" not in entry:
             continue
         exposed[capability] = {"min": entry["min"], "max": entry["max"], "step": 1}
+        if entry.get("speeds"):
+            exposed[capability]["speeds"] = entry["speeds"]
     return exposed
 
 

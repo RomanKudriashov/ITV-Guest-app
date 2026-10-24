@@ -65,6 +65,22 @@ GAMMA = 1.2
 GAIN = {"R": 0.27, "G": 0.31, "B": 0.43}
 # Подложка: не даём кадру стать чёрным прямоугольником.
 FLOOR = {"R": 0.012, "G": 0.016, "B": 0.026}
+# Яркость ночного кадра — множитель остатков света, настройка плана (64-1).
+# Константы выше подобраны на нашем рендере; вечерний кадр Gemini («Сиалия»,
+# 204) при 1.0 уходит в черноту, и мебель не читается. Решает тот, кто видит
+# свой кадр, — поэтому ползунок в редакторе, а не новая константа.
+BRIGHTNESS_MIN = 0.5
+BRIGHTNESS_MAX = 3.0
+BRIGHTNESS_DEFAULT = 1.0
+
+
+def clamp_brightness(value) -> float:
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return BRIGHTNESS_DEFAULT
+    # Шаг ползунка 0.1: 2.000000000000001 из суммы шагов — тот же 2.0.
+    return round(max(BRIGHTNESS_MIN, min(BRIGHTNESS_MAX, value)), 2)
 
 # --- Гашение самих источников (шаг 5) ---------------------------------------
 #
@@ -181,7 +197,7 @@ def extinguish(night: Image.Image, mask: Image.Image) -> Image.Image:
     return Image.composite(around, night, mask)
 
 
-def bake(source: Image.Image, *, extinguish_sources: bool = True) -> Image.Image:
+def bake(source: Image.Image, *, extinguish_sources: bool = True, brightness: float = BRIGHTNESS_DEFAULT) -> Image.Image:
     """
     Светлый кадр → ночной. Размер и геометрия не меняются ни на пиксель.
 
@@ -209,9 +225,10 @@ def bake(source: Image.Image, *, extinguish_sources: bool = True) -> Image.Image
     red, green, blue = (ImageChops.multiply(band, damp) for band in (red, green, blue))
 
     # 3–4. Сжатие альбедо, яркость и холод — по каналам.
-    red = red.point(_channel_curve(GAIN["R"], FLOOR["R"]))
-    green = green.point(_channel_curve(GAIN["G"], FLOOR["G"]))
-    blue = blue.point(_channel_curve(GAIN["B"], FLOOR["B"]))
+    brightness = clamp_brightness(brightness)
+    red = red.point(_channel_curve(GAIN["R"] * brightness, FLOOR["R"]))
+    green = green.point(_channel_curve(GAIN["G"] * brightness, FLOOR["G"]))
+    blue = blue.point(_channel_curve(GAIN["B"] * brightness, FLOOR["B"]))
 
     night = Image.merge("RGB", (red, green, blue))
 
@@ -227,11 +244,13 @@ def bake(source: Image.Image, *, extinguish_sources: bool = True) -> Image.Image
     return extinguish(night, emitter_mask(image))
 
 
-def bake_bytes(raw: bytes, *, extinguish_sources: bool = True) -> tuple[bytes, tuple[int, int]]:
+def bake_bytes(
+    raw: bytes, *, extinguish_sources: bool = True, brightness: float = BRIGHTNESS_DEFAULT
+) -> tuple[bytes, tuple[int, int]]:
     """Байты светлого кадра → байты ночного (PNG) и размер кадра."""
     with Image.open(io.BytesIO(raw)) as source:
         size = source.size
-        result = bake(source, extinguish_sources=extinguish_sources)
+        result = bake(source, extinguish_sources=extinguish_sources, brightness=brightness)
     if result.size != size:
         raise ValueError("размер кадра изменился — кадры перестанут совмещаться")
 

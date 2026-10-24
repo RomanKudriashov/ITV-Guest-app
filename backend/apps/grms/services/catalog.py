@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import re as _re
 from dataclasses import dataclass, field
 
 
@@ -186,3 +187,37 @@ CAPABILITY_CODES = tuple(CAPABILITIES)
 # Choices для полей моделей — каталог остаётся единственным источником правды.
 ELEMENT_CHOICES = [(e.code, e.title_ru) for e in ELEMENTS.values()]
 CAPABILITY_CHOICES = [(code, code) for code in CAPABILITY_CODES]
+
+
+# --- Скорости вентилятора из описания канала (64-1) --------------------------
+#
+# Порядок скоростей у объектов разный: в ПНР 240701 «0 — авто, 1 — низкая…»,
+# у «Сиалии» «0 — низкая, 1 — средняя, 2 — высокая, 4 — авто». Экран гостя
+# раньше считал 0 всегда «авто» — и у «Сиалии» подписывал низкую скорость
+# автоматом. Таблица берётся из описания канала (оно приходит с импортом ПНР);
+# нет описания или оно не разобралось — прежнее правило, ничего не меняется.
+
+
+_SPEED_PAIR = _re.compile(r"(\d+)\s*[-–—:=]\s*([A-Za-zА-Яа-яЁё]+)")
+_SPEED_WORDS = (
+    ("auto", 0, ("auto", "авто")),
+    ("low", 1, ("low", "min", "низ")),
+    ("med", 2, ("med", "mid", "сред")),
+    ("high", 3, ("high", "max", "выс")),
+)
+
+
+def parse_speeds(description: str) -> list[dict] | None:
+    """«0 -Low, 1 - Med, 2 - High, 4 - Auto» → [{value: 4, auto: True}, {value: 0}, {value: 1}, {value: 2}]."""
+    found: list[tuple[int, int, bool]] = []
+    for raw_value, word in _SPEED_PAIR.findall(description or ""):
+        word = word.lower()
+        for name, rank, marks in _SPEED_WORDS:
+            if any(word.startswith(mark) for mark in marks):
+                found.append((rank, int(raw_value), name == "auto"))
+                break
+    values = [value for _, value, _ in found]
+    if len(found) < 2 or len(set(values)) != len(values) or not any(not auto for _, _, auto in found):
+        return None
+    found.sort(key=lambda item: (item[0], item[1]))
+    return [{"value": value, "auto": auto} for _, value, auto in found]
