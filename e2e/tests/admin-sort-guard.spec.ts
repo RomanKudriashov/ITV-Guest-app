@@ -37,6 +37,9 @@ async function columnTexts(table: Locator, index: number): Promise<string[]> {
   )
 }
 
+/** Заглушки пустой ячейки — не значения. */
+const EMPTY = new Set(['—', '–', '-', '…'])
+
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle').catch(() => undefined)
   await page.waitForTimeout(600)
@@ -68,11 +71,14 @@ async function checkTables(page: Page, screen: string, report: string[]) {
       await expect(table.locator('thead th').nth(hi)).toHaveAttribute('aria-sort', 'descending')
       await expect(page).toHaveURL(/dir=desc/)
       const down = await rowTexts(table)
-      const distinct = new Set(values.filter(Boolean)).size
+      // «—» и пустая ячейка — это «нет значения», а не второе значение: столбец
+      // «dnd / —» сортировке проверить нечем (пустые встают одинаково в обе
+      // стороны), и сторож не должен краснеть от данных (63-4).
+      const distinct = new Set(values.map((v) => v.trim()).filter((v) => v && !EMPTY.has(v))).size
       if (up.length > 1 && distinct > 1) {
         expect(down, `${screen}: «${key}» — ↑ и ↓ дают один порядок`).not.toEqual(up)
       } else {
-        report.push(`${screen}: «${key}» — значения одинаковы или строк меньше двух, порядок не проверить`)
+        report.push(`${screen}: «${key}» — меньше двух разных непустых значений, данные не позволяют проверить порядок`)
       }
       await table.locator('thead th').nth(hi).getByRole('button').first().click()
       await settle(page)

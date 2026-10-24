@@ -40,7 +40,9 @@ const DATA_FIELDS = new Set([
   'button_zone',
   'button_order',
 ]);
-const isData = (field: string) => DATA_FIELDS.has(field) || field.startsWith('binding:');
+// Действие над многими номерами (63-2): «номер: было → стало» — названия
+// вариантов, категорий, корпусов; это данные, а не слова экрана.
+const isData = (field: string) => DATA_FIELDS.has(field) || field.startsWith('binding:') || field.startsWith('room:');
 
 export function ActorLabel({ actor }: { actor: JournalActor }) {
   const { t } = useTranslation();
@@ -161,7 +163,7 @@ export function useJournalWords() {
     // Действие над многими номерами (63-2): какое и с каким значением.
     if (typeof d.batch === 'string') {
       const kind = t(`admin.card.rooms.batch.kind.${d.batch}`, { defaultValue: unknown });
-      lines.push(typeof d.value === 'string' && d.value ? t('admin.journal.detail.batchValue', { kind, value: d.value }) : t('admin.journal.detail.batch', { kind }));
+      lines.push(typeof d.value === 'string' && d.value ? withData('admin.journal.detail.batchValue', 'value', d.value, { kind }) : t('admin.journal.detail.batch', { kind }));
     }
     // Варианты номеров (63-4).
     if (typeof d.rooms === 'number') lines.push(t('admin.journal.detail.publishedRooms', { count: d.rooms }));
