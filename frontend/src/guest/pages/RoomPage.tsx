@@ -42,6 +42,7 @@ import {
   IconWardrobe,
 } from '@/icons';
 import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
+import { planShape } from './roomPlanShape';
 import { RoomStatusPills } from '../components/RoomStatusPills';
 import {
   groupControls,
@@ -298,6 +299,10 @@ export function RoomPage() {
   */
   const stateUnknown = unavailable || declared || roomUnreachable;
 
+  // Форма номера по пропорции кадра — от неё раскладка десктопа (64-1).
+  const planAspect = snapshot?.plan?.aspect ?? PLATE_FALLBACK_ASPECT;
+  const shape = planShape(snapshot?.plan ? planAspect : null);
+
   const plate = snapshot?.plan ? (
     <RoomPlanPlate
       plan={snapshot.plan}
@@ -502,7 +507,55 @@ export function RoomPage() {
           заглушка совпадает с кадром и раскладка не прыгает вовсе. */}
       {state.isPending ? <RoomSkeleton aspect={snapshot?.plan?.aspect ?? PLATE_FALLBACK_ASPECT} /> : null}
 
-      {isDesktop ? (
+      {isDesktop && shape === 'wide' ? (
+        /*
+          ШИРОКИЙ ПЛАН (64-1, «Сиалия» 2.1–2.5): во всю ширину, панели — под ним.
+
+          В половине ширины вытянутый кадр становился полоской 516×203: комнаты
+          мелкие, а под планом зияло место. Во всю ширину тот же кадр 1048×412 —
+          комнаты читаются, и план работает как карта номера. Не липкий: широкий
+          план на прокрутке закрывал бы треть экрана над списком.
+
+          Колонки под ним разложены по высотам, как и в квадратной раскладке:
+          свет — самая длинная панель, напротив неё климат со шторами и сценами.
+        */
+        <Stack spacing={roomCard.section} sx={{ mt: 2 }} data-testid="room-layout-wide">
+          {plate ? (
+            <Box
+              sx={{
+                width: '100%',
+                // Потолок по высоте экрана: план вместе со строкой состояния
+                // помещается в первый экран, даже если номер «пошире» квадрата
+                // совсем немного. Пропорция держится — кадр не обрезается.
+                maxWidth: `calc((100svh - ${plateLayer.top}px - ${WIDE_PLAN_RESERVE}px) * ${planAspect.toFixed(3)})`,
+                mx: 'auto',
+              }}
+            >
+              <PlateBlock plate={plate} />
+            </Box>
+          ) : null}
+          {notices}
+          {unavailable || !hasControls ? (
+            body
+          ) : (
+            <Box
+              sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'start', gap: roomCard.section }}
+              data-testid="room-two-columns"
+            >
+              <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
+                {panelsFor(['light'])}
+                {panelsFor(['service'])}
+              </Stack>
+              <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
+                {panelsFor(['climate'])}
+                {panelsFor(['curtain'])}
+                {panelsFor(['scene'])}
+                {quickActions}
+              </Stack>
+            </Box>
+          )}
+        </Stack>
+      ) : isDesktop ? (
         /* Десктоп: две колонки как в макете — план слева и залипает, панели
            стопкой справа. Вкладок нет: на широком экране прятать половину
            управления за переключателем незачем. */
@@ -524,12 +577,15 @@ export function RoomPage() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            // Вертикальный план (64-1) — в колонке поуже: в половине ширины он
+            // вырастал бы выше экрана, а панелям справа нужна ширина.
+            gridTemplateColumns: shape === 'tall' ? '2fr 3fr' : '1fr 1fr',
             alignItems: 'start',
             gap: roomCard.section,
             mt: 2,
           }}
           data-testid="room-two-columns"
+          data-plan-shape={shape}
         >
           <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
             {/*
@@ -537,7 +593,18 @@ export function RoomPage() {
               под ним уезжают под него на прокрутке ровно так же, как список
               контролов на телефоне: это уже язык экрана, а не новое поведение.
             */}
-            <Box sx={{ position: 'sticky', top: `${plateLayer.top}px`, zIndex: 1 }}>
+            <Box
+              sx={{
+                position: 'sticky',
+                top: `${plateLayer.top}px`,
+                zIndex: 1,
+                // Вертикальный план целиком в высоту экрана: ширина плиты
+                // сужается по пропорции, а не кадр обрезается снизу.
+                ...(shape === 'tall'
+                  ? { maxWidth: `calc((100svh - ${plateLayer.top}px - ${TALL_PLAN_RESERVE}px) * ${planAspect.toFixed(3)})`, mx: 'auto', width: '100%' }
+                  : null),
+              }}
+            >
               <PlateBlock plate={plate} />
             </Box>
             {unavailable || !hasControls ? null : panelsFor(['climate'])}
@@ -1209,6 +1276,14 @@ function planReadings(readings: Readings): Record<string, PlanReading> {
  * пришёл, берётся она.
  */
 const PLATE_FALLBACK_ASPECT = 1.6;
+
+/** Место под строкой состояния и отступами, которое широкий план оставляет в первом экране. */
+const WIDE_PLAN_RESERVE = 140;
+/**
+ * Запас под вертикальным планом: строка состояния над плитой (до прокрутки она
+ * стоит выше плана) и воздух снизу. С 24 план уходил за низ экрана на 42 px.
+ */
+const TALL_PLAN_RESERVE = 96;
 
 /** Пауза после последнего изменения, по истечении которой уходит команда. */
 const SETPOINT_SETTLE_MS = 500;
