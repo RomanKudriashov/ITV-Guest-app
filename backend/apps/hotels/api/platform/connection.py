@@ -1,6 +1,11 @@
 """
 Подключение управления номером в Control (партия 63-3): сервер управления
 отеля, цепочка звеньев, проверки. Правка — `WRITE`; у «только чтение» — 403.
+
+НЕСКОЛЬКО ПОДКЛЮЧЕНИЙ (партия 65). Ручки `control-server*` принимают
+`?connection=<id>`; без него работают с подключением «по умолчанию» — так, как
+до партии 65. `?new=1` на PUT заводит новое подключение. Список —
+`/connections`, назначение номеров — `/connections/assign`.
 """
 
 from __future__ import annotations
@@ -29,93 +34,118 @@ class ControlServerIn(Schema):
     timeout_ms: int = 3000
     is_enabled: bool = True
     node_id: str | None = None
+    name: str = Field(default="", max_length=120)
+
+
+class ConnectionAssignIn(Schema):
+    # Пусто — вернуть номера на подключение «по умолчанию».
+    connection: str | None = None
+    room_ids: list[str] = Field(default_factory=list, max_length=5000)
 
 
 class RoomCheckIn(Schema):
     room_id: str
 
 
-def _chain(hotel) -> dict:
-    """Звенья цепочки: облако — коннектор — сервер управления — номера."""
-    from apps.core.context import tenant_context
-    from apps.grms.models import PublishedConfig, RoomTypeRoom
-    from apps.grms.services import control_server, liveness
-    from apps.hotels.models import HotelModule, OnPremNode, Room
-    from apps.hotels.services.onprem import GRMS_PURPOSES, link_state, pick_node
+@router.get("/hotels/{hotel_id}/connections", summary="Подключения управления номером отеля")
+@requires(READ)
+def connections_list(request: HttpRequest, hotel_id: str):
+    from apps.grms.services import control_server
 
-    with tenant_context(hotel):
-        nodes = list(OnPremNode.objects.filter(is_revoked=False, purpose__in=GRMS_PURPOSES).order_by("name"))
-        room_control = HotelModule.objects.filter(code=HotelModule.Code.ROOM_CONTROL, is_enabled=True).exists()
-        rooms = Room.objects.filter(is_active=True).count()
-        published = set(PublishedConfig.objects.filter(is_current=True).values_list("room_type_id", flat=True))
-        bound = RoomTypeRoom.objects.filter(room__is_active=True).count()
-        ready = RoomTypeRoom.objects.filter(room__is_active=True, room_type_id__in=published).count()
-    node = pick_node(nodes)
-    link = link_state(nodes)
-    server = control_server.get(hotel)
-    source = control_server.source_of(hotel.pk)
-    reachable = liveness.endpoint_reachable(hotel.pk) if link == "online" else None
-    return {
-        "room_control": room_control,
-        "connector": {
-            "state": "none" if node is None else ("online" if link == "online" else ("never" if node.last_seen_at is None else "silent")),
-            "id": str(node.pk) if node else None,
-            "name": node.name if node else None,
-            "version": node.version if node else None,
-            "seconds": node.seconds_since_seen if node else None,
-        },
-        "server_link": {
-            "state": "unknown" if link != "online" else ("ok" if reachable else "down" if reachable is False else "unknown"),
-            "source": (source or {}).get("source"),
-            "configured": server is not None,
-        },
-        "rooms": {"total": rooms, "bound": bound, "ready": ready},
-        "nodes": [
-            {"id": str(n.pk), "name": n.name, "online": n.is_online, "version": n.version, "never": n.last_seen_at is None}
-            for n in nodes
-        ],
-        "connector_url": hotel.public_guest_url("/ws/v1/onprem/connector").replace("https://", "wss://").replace("http://", "ws://"),
-    }
+    hotel = console.get_hotel(hotel_id)
+    return {"items": [control_server.summary(hotel, server) for server in control_server.list_servers(hotel)]}
+
+
+@router.post("/hotels/{hotel_id}/connections/{connection_id}/default", summary="Сделать подключение «по умолчанию»")
+@requires(WRITE)
+def connections_default(request: HttpRequest, hotel_id: str, connection_id: str):
+    from apps.grms.services import control_server
+
+    hotel = console.get_hotel(hotel_id)
+    _valid_id(connection_id)
+    control_server.set_default(hotel, connection_id, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"))
+    return {"items": [control_server.summary(hotel, server) for server in control_server.list_servers(hotel)]}
+
+
+@router.post("/hotels/{hotel_id}/connections/assign", summary="Назначить номерам подключение")
+@requires(WRITE)
+def connections_assign(request: HttpRequest, hotel_id: str, payload: ConnectionAssignIn):
+    from apps.grms.services import control_server
+
+    hotel = console.get_hotel(hotel_id)
+    if payload.connection:
+        _valid_id(payload.connection)
+    for room_id in payload.room_ids:
+        _valid_id(room_id)
+    changed = control_server.assign_rooms(
+        hotel, payload.connection, payload.room_ids, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR")
+    )
+    return {"changed": changed, "items": [control_server.summary(hotel, server) for server in control_server.list_servers(hotel)]}
+
+
+def _valid_id(value: str) -> None:
+    from apps.core.errors import NotFoundError
+
+    try:
+        uuid.UUID(str(value))
+    except ValueError:
+        raise NotFoundError("Не найдено") from None
 
 
 @router.get("/hotels/{hotel_id}/control-server", summary="Сервер управления и цепочка подключения")
 @requires(READ)
-def control_server_get(request: HttpRequest, hotel_id: str):
+def control_server_get(request: HttpRequest, hotel_id: str, connection: str | None = None):
     from apps.grms.services import control_server
 
     hotel = console.get_hotel(hotel_id)
-    return {"server": control_server.serialize(control_server.get(hotel)), **_chain(hotel)}
+    if connection:
+        _valid_id(connection)
+    server = control_server.get(hotel, connection)
+    return {"server": control_server.serialize(server), **control_server.chain(hotel, server)}
 
 
 @router.put("/hotels/{hotel_id}/control-server", summary="Задать сервер управления отеля")
 @requires(WRITE)
-def control_server_put(request: HttpRequest, hotel_id: str, payload: ControlServerIn):
+def control_server_put(
+    request: HttpRequest, hotel_id: str, payload: ControlServerIn, connection: str | None = None, new: bool = False
+):
     from apps.grms.services import control_server
 
     hotel = console.get_hotel(hotel_id)
-    control_server.save(hotel, payload.dict(), actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"))
-    return {"server": control_server.serialize(control_server.get(hotel)), **_chain(hotel)}
+    if connection:
+        _valid_id(connection)
+    server = control_server.save(
+        hotel, payload.dict(), actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"),
+        server_id=connection, create=new,
+    )
+    server = control_server.get(hotel, server.pk)
+    return {"server": control_server.serialize(server), **control_server.chain(hotel, server)}
 
 
 @router.delete("/hotels/{hotel_id}/control-server", summary="Убрать адрес из Control: коннектор — по своему файлу")
 @requires(WRITE)
-def control_server_delete(request: HttpRequest, hotel_id: str):
+def control_server_delete(request: HttpRequest, hotel_id: str, connection: str | None = None):
     from apps.grms.services import control_server
 
     hotel = console.get_hotel(hotel_id)
-    control_server.remove(hotel, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"))
-    return {"server": None, **_chain(hotel)}
+    if connection:
+        _valid_id(connection)
+    control_server.remove(hotel, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"), server_id=connection)
+    return {"server": None, **control_server.chain(hotel)}
 
 
 @router.post("/hotels/{hotel_id}/control-server/check", summary="Проверить связь с сервером управления (без команд)")
 # Проверка ничего не меняет в отеле, но шлёт запрос на объект: POST — правом правки.
 @requires(WRITE)
-def control_server_check(request: HttpRequest, hotel_id: str):
+def control_server_check(request: HttpRequest, hotel_id: str, connection: str | None = None):
     from apps.grms.services import control_server
 
     hotel = console.get_hotel(hotel_id)
-    result = control_server.check(hotel)
-    return {"check": result, "server": control_server.serialize(control_server.get(hotel)), **_chain(hotel)}
+    if connection:
+        _valid_id(connection)
+    result = control_server.check(hotel, connection)
+    server = control_server.get(hotel, connection)
+    return {"check": result, "server": control_server.serialize(server), **control_server.chain(hotel, server)}
 
 
 @router.post("/hotels/{hotel_id}/control-server/room-check", summary="Прочитать состояние номера (только чтение)")

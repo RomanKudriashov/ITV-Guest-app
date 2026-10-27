@@ -1348,6 +1348,15 @@
           "seen": "Last seen",
           "version": "Version",
           "key": "Key issued"
+        },
+        "list": {
+          "title": "Room control connections",
+          "add": "Add connection",
+          "lead": "Each connection has its own connector and control server. Rooms are assigned to connections in “Rooms”; a room without an assignment uses the default connection.",
+          "default": "default",
+          "rooms": "Rooms: {{count}}",
+          "open": "Open",
+          "makeDefault": "Make default"
         }
       },
       "rooms": {
@@ -1375,7 +1384,8 @@
           "variant": "Variant",
           "pin": "PIN",
           "position": "Position",
-          "control": "Readiness"
+          "control": "Readiness",
+          "connection": "Connection"
         },
         "noBuilding": "No building",
         "noFloor": "No floor",
@@ -1401,8 +1411,10 @@
             "variant": "Which control setup the room has. Identical rooms — usually stacked above each other — share one variant.",
             "pin": "Whether the room has a valid PIN for guest access to room control.",
             "problems": "The most important thing blocking the room. All reasons are in the room card.",
-            "occupancy": "Occupied, vacant, cleaning. Will appear once the hotel booking system is connected."
-          }
+            "occupancy": "Occupied, vacant, cleaning. Will appear once the hotel booking system is connected.",
+            "connection": "Which control server the room goes through. A hotel can have several connections — e.g. an emulator for demos and the property iRidi. A room without its own assignment uses the default connection."
+          },
+          "connection": "Connection"
         },
         "control": {
           "ok": "All working",
@@ -1488,7 +1500,8 @@
           "noVariant": "not assigned",
           "yes": "yes",
           "no": "no",
-          "open": "Click to open the room"
+          "open": "Click to open the room",
+          "connection": "Connection"
         },
         "place": {
           "title": "Position on the floor",
@@ -1508,7 +1521,8 @@
           "variant": "Variant",
           "pin": "PIN",
           "control": "Readiness",
-          "problem": "What blocks"
+          "problem": "What blocks",
+          "connection": "Connection"
         },
         "part": "positions {{from}}–{{to}}",
         "tile": {
@@ -1714,7 +1728,8 @@
             "category": "Category…",
             "building": "Building…",
             "state": "Status…",
-            "delete": "Delete…"
+            "delete": "Delete…",
+            "connection": "Connection…"
           },
           "title": {
             "variant": "Control variant — rooms: {{count}}",
@@ -1722,7 +1737,8 @@
             "category": "Category — rooms: {{count}}",
             "building": "Building — rooms: {{count}}",
             "state": "Status — rooms: {{count}}",
-            "delete": "Delete rooms — {{count}}"
+            "delete": "Delete rooms — {{count}}",
+            "connection": "Connection — rooms: {{count}}"
           },
           "subtitle": "First we show what changes for each room. Exactly what is shown runs, in one step.",
           "help": {
@@ -1731,7 +1747,8 @@
             "category": "The room category from the hotel's list.",
             "building": "The room's building. “Remove building” leaves the room without a building.",
             "state": "“Out of order” is a note for the hotel. “Guest entry” — whether the room lets a guest in by QR.",
-            "delete": "Deletion is soft: a room can be restored by adding it again."
+            "delete": "Deletion is soft: a room can be restored by adding it again.",
+            "connection": "Assign a connection to the selected rooms — which control server their commands go through. “Default” removes the own assignment: the room follows the default connection."
           },
           "variantSet": "Assign variant",
           "variantClear": "Remove variant",
@@ -1804,8 +1821,14 @@
             "out_of_service": "out of order changed",
             "active": "guest entry changed",
             "delete": "rooms deleted"
-          }
-        }
+          },
+          "connectionLead": "Which connection the selected rooms’ commands go through.",
+          "connectionByDefault": "Default",
+          "noConnections": "The hotel has no connections yet — add them on the “Connections” tab."
+        },
+        "noConnection": "No connection",
+        "connectionByDefault": "default",
+        "connectionDefaultShort": "default"
       },
       "journal": {
         "support": "Support entries",
@@ -1967,7 +1990,10 @@
           "timeoutHelp": "How long the connector waits for the server's reply to one command. From 500 to 30,000.",
           "enabled": "Enabled",
           "enabledHelp": "A disabled server is not sent to the connector — the connector uses the address from its file.",
-          "save": "Save"
+          "save": "Save",
+          "name": "Connection name",
+          "nameHelp": "How the connection is named on screens: “Emulator (demo)”, “Property iRidi”. Empty — by the connector name.",
+          "namePlaceholder": "e.g. Property iRidi"
         },
         "wiz": {
           "title": "Connect room control",
@@ -2020,7 +2046,9 @@
           "done1": "Connected:",
           "doneConnector": "connector “{{name}}” is online;",
           "doneServer": "control server —",
-          "doneRooms": "rooms ready: {{ready}} of {{total}}."
+          "doneRooms": "rooms ready: {{ready}} of {{total}}.",
+          "titleNew": "New room control connection",
+          "noRoomsConnection": "This connection has no rooms yet. Assign them in “Rooms” — select rooms and choose “Connection”."
         }
       }
     },

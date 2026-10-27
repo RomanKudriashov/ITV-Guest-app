@@ -707,6 +707,15 @@
     "DELETE",
     "PATCH"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/connections": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/connections/assign": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/connections/{connection_id}/default": [
+    "POST"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/control-server": [
     "DELETE",
     "GET",

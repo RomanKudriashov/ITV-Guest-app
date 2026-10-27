@@ -143,6 +143,8 @@ interface Form {
   position: string;
   category_id: string;
   variant: string;
+  /** Подключение (партия 65): id назначенного; пусто — «по умолчанию». */
+  connection: string;
   device_name: string;
   is_active: boolean;
   out_of_service: boolean;
@@ -156,6 +158,7 @@ function formOf(room: RoomDetail): Form {
     position: room.position,
     category_id: room.category_id ?? '',
     variant: room.variant?.code ?? '',
+    connection: room.connection?.explicit ? room.connection.id : '',
     device_name: room.device.override,
     is_active: room.is_active,
     out_of_service: room.out_of_service,
@@ -170,6 +173,7 @@ function diff(before: Form, after: Form): RoomPatch {
   if (before.position !== after.position) patch.position = after.position.trim();
   if (before.category_id !== after.category_id) patch.category_id = after.category_id || null;
   if (before.variant !== after.variant) patch.variant = after.variant;
+  if (before.connection !== after.connection) patch.connection = after.connection || null;
   if (before.device_name !== after.device_name) patch.device_name = after.device_name.trim();
   if (before.is_active !== after.is_active) patch.is_active = after.is_active;
   if (before.out_of_service !== after.out_of_service) patch.out_of_service = after.out_of_service;
@@ -474,6 +478,7 @@ function ControlSection({ room, form, set, dict, canWrite }: { room: RoomDetail;
   const { t } = useTranslation();
   const template = dict?.variants.find((v) => v.code === form.variant)?.device_template ?? '';
   const byTemplate = template.replace('{room}', form.number);
+  const defaultName = dict?.connections.find((c) => c.default)?.name ?? '';
   return (
     <Box>
       {!room.room_control ? <Typography sx={{ ...typo.body, color: ink.mid, mb: 2 }}>{t('admin.card.rooms.fix.moduleOff')}</Typography> : null}
@@ -501,6 +506,23 @@ function ControlSection({ room, form, set, dict, canWrite }: { room: RoomDetail;
           helperText={!form.variant ? t('admin.card.rooms.edit.deviceNeedsVariant') : form.device_name ? t('admin.card.rooms.edit.deviceManual') : t('admin.card.rooms.edit.deviceByTemplate')}
         />
       </FieldRow>
+      {/* Подключение (партия 65): через какой сервер управления идёт номер. */}
+      {dict?.connections.length ? (
+        <FieldRow>
+          <SelectField
+            label={<LabelWithHelp label={t('admin.card.rooms.col.connection')} help={t('admin.card.rooms.layer.help.connection')} />}
+            value={form.connection}
+            onChange={(v) => set('connection', v)}
+            options={[
+              { value: '', label: `${t('admin.card.rooms.batch.connectionByDefault')}${defaultName ? ` (${defaultName})` : ''}` },
+              ...dict.connections.map((c) => ({ value: c.id, label: c.default ? `${c.name} · ${t('admin.card.rooms.connectionDefaultShort')}` : c.name })),
+            ]}
+            disabled={!canWrite}
+            testId="admin-room-connection"
+            fieldSx={fieldSx}
+          />
+        </FieldRow>
+      ) : null}
     </Box>
   );
 }

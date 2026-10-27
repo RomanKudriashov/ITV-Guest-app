@@ -20,7 +20,7 @@ from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
-from apps.grms.consumers import group_name
+from apps.grms.consumers import group_name, node_group
 from apps.grms.transport.emulator import serve_in_thread
 from apps.hotels.models import OnPremNode
 from apps.hotels.services.onprem import register_node
@@ -29,8 +29,11 @@ from tests.conftest import host_for
 
 
 class FakeConnectorRuntime:
-    def __init__(self, hotel_id: str, endpoints: dict):
+    def __init__(self, hotel_id: str, endpoints: dict, node_id: str = ""):
         self.hotel_id = hotel_id
+        # Задания идут в группу КОННЕКТОРА (партия 65) — как у настоящего
+        # потребителя, слушаем и её, и группу отеля.
+        self.node_id = node_id
         self.endpoints = endpoints
         self.seen: list[dict] = []
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -48,7 +51,7 @@ class FakeConnectorRuntime:
         сообщение теряется, и тест падает с TTL_EXPIRED на исправной трубе.
         """
         async_to_sync(get_channel_layer().group_send)(
-            group_name(self.hotel_id),
+            node_group(self.node_id) if self.node_id else group_name(self.hotel_id),
             {"type": "connector.dispatch", "envelope": {"__stop__": True}, "reply_to": ""},
         )
         self._thread.join(timeout=10)
@@ -63,6 +66,8 @@ class FakeConnectorRuntime:
         layer = RedisChannelLayer(hosts=settings.CHANNEL_LAYERS["default"]["CONFIG"]["hosts"])
         channel = await layer.new_channel()
         await layer.group_add(group_name(self.hotel_id), channel)
+        if self.node_id:
+            await layer.group_add(node_group(self.node_id), channel)
         self._ready.set()
 
         while True:
@@ -87,7 +92,7 @@ def wire(hotel, *, latency_range=(0.35, 0.55)):
         OnPremNode.objects.filter(pk=node.pk).update(last_seen_at=timezone.now())
 
     runtime = FakeConnectorRuntime(
-        str(hotel.pk), {"iridi": Endpoint(base_url=f"http://127.0.0.1:{port}", timeout_ms=2000)}
+        str(hotel.pk), {"iridi": Endpoint(base_url=f"http://127.0.0.1:{port}", timeout_ms=2000)}, node_id=str(node.pk)
     )
     runtime.start()
 
@@ -136,3 +141,24 @@ def _session(client, hotel, room: str = DEMO_ROOM) -> str:
     )
     assert response.status_code == 200, response.content
     return response.json()["token"]
+
+
+# --- Живость — по коннектору (партия 65) -------------------------------------
+# Признак «сервер управления отвечает» хранится по коннектору подключения, а
+# молчание комнат — по отелю. Тестам, которые «забывают» живость или читают её,
+# нужны оба ключа.
+
+
+def link_id(hotel):
+    """Коннектор, через который идут номера отеля без своего назначения."""
+    from apps.grms.transport import transport
+
+    node = transport.resolve_node(hotel)
+    return node.pk if node is not None else hotel.pk
+
+
+def forget_link(hotel) -> None:
+    from apps.grms.services import liveness
+
+    liveness.forget(hotel.pk)
+    liveness.forget(link_id(hotel))

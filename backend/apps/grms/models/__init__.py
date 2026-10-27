@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from .element import Binding, ControlElement
 from .pin import RoomPin
-from .control_server import ControlServer
+from .control_server import ControlServer, RoomConnection
 from .published import PublishedConfig
 from .room_type import RoomType, RoomTypeRoom
 from .variable import Variable
@@ -33,6 +33,7 @@ __all__ = [
     "PublishedConfig",
     "RoomPin",
     "ControlServer",
+    "RoomConnection",
     "RoomType",
     "RoomTypeRoom",
     "Variable",

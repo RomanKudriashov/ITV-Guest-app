@@ -46,7 +46,7 @@ class TitleIn(Schema):
     title: dict
 
 
-class OrderIn(Schema):
+class VariantOrderIn(Schema):
     items: list[str]
 
 
@@ -81,7 +81,7 @@ class PublishIn(Schema):
     rooms: int
 
 
-class RollbackIn(Schema):
+class VariantRollbackIn(Schema):
     to_version: int
     confirm: bool = False
 
@@ -149,7 +149,7 @@ def zone_delete(request: HttpRequest, hotel_id: str, code: str, zone: str):
 
 @router.post(f"{V}/{{code}}/zones-order", summary="Порядок зон")
 @requires(WRITE)
-def zones_order(request: HttpRequest, hotel_id: str, code: str, payload: OrderIn):
+def zones_order(request: HttpRequest, hotel_id: str, code: str, payload: VariantOrderIn):
     variant_edit.zones_order(_hotel(hotel_id), code, zones=payload.items, actor_id=_actor(request))
     return {"ok": True}
 
@@ -182,7 +182,7 @@ def button_delete(request: HttpRequest, hotel_id: str, code: str, slug: str):
 
 @router.post(f"{V}/{{code}}/buttons-order", summary="Порядок кнопок")
 @requires(WRITE)
-def buttons_order(request: HttpRequest, hotel_id: str, code: str, payload: OrderIn):
+def buttons_order(request: HttpRequest, hotel_id: str, code: str, payload: VariantOrderIn):
     variant_edit.elements_order(_hotel(hotel_id), code, slugs=payload.items, actor_id=_actor(request))
     return {"ok": True}
 
@@ -226,5 +226,5 @@ def publish(request: HttpRequest, hotel_id: str, code: str, payload: PublishIn):
 
 @router.post(f"{V}/{{code}}/rollback", summary="Вернуть версию — с подтверждением")
 @requires(WRITE)
-def rollback(request: HttpRequest, hotel_id: str, code: str, payload: RollbackIn):
+def rollback(request: HttpRequest, hotel_id: str, code: str, payload: VariantRollbackIn):
     return variant_edit.rollback(_hotel(hotel_id), code, to_version=payload.to_version, confirm=payload.confirm, actor_id=_actor(request))

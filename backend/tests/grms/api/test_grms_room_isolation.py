@@ -4,7 +4,7 @@
 Дефект, ради которого написан файл. Признак живости вёлся НА ОТЕЛЬ:
 
     liveness.observe(context.hotel.pk, False)     # в guest.py, по молчанию ОДНОЙ комнаты
-    if liveness.endpoint_reachable(hotel.pk):     # читается на ВЕСЬ отель
+    if liveness.endpoint_reachable(link_id(hotel)):     # читается на ВЕСЬ отель
 
 Достаточно было одному гостю открыть номер, за которым нет оборудования, —
 и весь отель проваливался в «недоступно» до следующего heartbeat, включая
@@ -29,7 +29,7 @@ from apps.core.context import tenant_context
 from apps.grms.services import commands, liveness
 from apps.grms.models import RoomType, RoomTypeRoom
 from apps.hotels.models import Room
-from tests.grms.grms_harness import GuestClient, _session
+from tests.grms.grms_harness import GuestClient, _session, forget_link, link_id
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
@@ -80,7 +80,7 @@ def test_a_silent_room_does_not_take_the_hotel_down(client, crystal, stand, monk
     «недоступна» с пустыми зонами, хотя её собственное устройство отвечало.
     """
     _bind(crystal, NEIGHBOUR_ROOM)
-    liveness.forget(crystal.pk)
+    forget_link(crystal)
     _silence_one_room(monkeypatch, NEIGHBOUR_ROOM)
 
     dead = GuestClient(client, crystal, _session(client, crystal, room=NEIGHBOUR_ROOM))
@@ -119,7 +119,7 @@ def test_a_silent_room_does_not_poison_the_hotel_wide_flag(
     это утверждение про весь объект, и делать его вправе только коннектор.
     """
     _bind(crystal, NEIGHBOUR_ROOM)
-    liveness.forget(crystal.pk)
+    forget_link(crystal)
     _silence_one_room(monkeypatch, NEIGHBOUR_ROOM)
 
     dead = GuestClient(client, crystal, _session(client, crystal, room=NEIGHBOUR_ROOM))
@@ -127,7 +127,7 @@ def test_a_silent_room_does_not_poison_the_hotel_wide_flag(
     time.sleep(commands.READ_COALESCE_S + 0.1)
     _state(dead)
 
-    assert liveness.endpoint_reachable(crystal.pk) is not False, (
+    assert liveness.endpoint_reachable(link_id(crystal)) is not False, (
         "молчание одной комнаты записалось в признак живости ОТЕЛЯ — "
         "следующий опрос любой другой комнаты получит отказ, не сходив к железу"
     )

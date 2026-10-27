@@ -54,8 +54,8 @@ import { BatchDialog, SelectionPanel, useMarquee, type Group } from './roomBatch
  * отеля. Правка — через те же сервисы, что у панели отеля.
  */
 
-const FACET_KEYS = ['building', 'floor', 'category', 'variant', 'pin', 'control', 'problem'] as const;
-const SORT_KEYS = ['number', 'building', 'floor', 'position', 'category', 'variant', 'pin', 'control'] as const;
+const FACET_KEYS = ['building', 'floor', 'category', 'variant', 'connection', 'pin', 'control', 'problem'] as const;
+const SORT_KEYS = ['number', 'building', 'floor', 'position', 'category', 'variant', 'connection', 'pin', 'control'] as const;
 type View = 'table' | 'scheme';
 const TILE_KEY = 'itv.admin.rooms.tile';
 
@@ -435,6 +435,7 @@ function facetLabel(t: (k: string, o?: Record<string, unknown>) => string, key: 
     if (key === 'building') return t('admin.card.rooms.noBuilding');
     if (key === 'floor') return t('admin.card.rooms.noFloor');
     if (key === 'variant') return t('admin.card.rooms.noVariantValue');
+    if (key === 'connection') return t('admin.card.rooms.noConnection');
     return t('admin.card.rooms.none');
   }
   if (key === 'pin') return t(`admin.card.rooms.pinValue.${value}`, { defaultValue: t('admin.hotels.filter.unknownValue') });
@@ -747,7 +748,7 @@ function RoomsTable({
                 <Hl text={room.number} q={search} />
               </Box>
               <Box sx={{ ...typo.caption, color: ink.mid }}>
-                {[room.building, room.floor && t('admin.card.rooms.floorLong', { floor: room.floor }), room.category].filter(Boolean).join(' · ')}
+                {[room.building, room.floor && t('admin.card.rooms.floorLong', { floor: room.floor }), room.category, room.connection?.explicit ? room.connection.name : null].filter(Boolean).join(' · ')}
               </Box>
             </Box>
             <ControlPill room={room} />
@@ -792,6 +793,9 @@ function RoomsTable({
               <Box component="td" sx={cell}>{room.category ? <span data-words="data">{room.category}</span> : '—'}</Box>
               <Box component="td" sx={cell}>
                 {room.variant ? <span data-words="data">{room.variant.title}</span> : <Box component="span" sx={{ color: ink.low }}>{t('admin.card.rooms.noVariant')}</Box>}
+              </Box>
+              <Box component="td" sx={cell} data-testid={`admin-room-connection-${room.number}`}>
+                <ConnectionName connection={room.connection} />
               </Box>
               <Box component="td" sx={cell}><Pill tone={room.pin ? 'ok' : 'muted'}>{t(`admin.card.rooms.pin.${room.pin ? 'yes' : 'no'}`)}</Pill></Box>
               <Box component="td" sx={cell}><ControlPill room={room} /></Box>
@@ -847,6 +851,7 @@ function RoomFacts({ room, swatches }: { room: MapRoom; swatches: Swatches }) {
       )}
       {row(t('admin.card.rooms.card.category'), room.category ? <span data-words="data">{room.category}</span> : t('admin.card.rooms.card.notSet'))}
       {row(t('admin.card.rooms.card.variant'), room.variant ? <span data-words="data">{room.variant.title}</span> : t('admin.card.rooms.card.noVariant'))}
+      {row(t('admin.card.rooms.card.connection'), <ConnectionName connection={room.connection} />)}
       {row(t('admin.card.rooms.card.pin'), t(room.pin ? 'admin.card.rooms.card.yes' : 'admin.card.rooms.card.no'))}
       {row(t('admin.card.rooms.card.control'), `${control.glyph} ${control.label}`)}
       {room.problems.length ? (
@@ -858,6 +863,24 @@ function RoomFacts({ room, swatches }: { room: MapRoom; swatches: Swatches }) {
         </Box>
       ) : null}
       <Box sx={{ color: ink.low, pt: 0.5 }}>{t('admin.card.rooms.card.open')}</Box>
+    </Box>
+  );
+}
+
+/**
+ * Подключение номера словами (партия 65): имя; у номера без своего
+ * назначения — «по умолчанию», потому что он поедет за подключением по
+ * умолчанию, если его сменят.
+ */
+export function ConnectionName({ connection }: { connection: MapRoom['connection'] }) {
+  const { t } = useTranslation();
+  if (!connection) return <Box component="span" sx={{ color: ink.low }}>{t('admin.card.rooms.noConnection')}</Box>;
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span data-words="data">{connection.name}</span>
+      {!connection.explicit ? (
+        <Box component="span" sx={{ ...typo.caption, color: ink.low }}>{t('admin.card.rooms.connectionByDefault')}</Box>
+      ) : null}
     </Box>
   );
 }

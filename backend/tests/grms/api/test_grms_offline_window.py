@@ -28,6 +28,7 @@ from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.grms.services import commands, liveness
+from tests.grms.grms_harness import forget_link, link_id
 from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
 from apps.hotels.models import OnPremNode, Room
 
@@ -56,7 +57,7 @@ def _connector_dies(stand, hotel):
     stand["connector"].stop()
     with tenant_context(hotel):
         OnPremNode.objects.all().update(last_seen_at=timezone.now())
-    liveness.forget(hotel.pk)
+    forget_link(hotel)
     time.sleep(commands.READ_COALESCE_S + 0.1)
 
 
@@ -167,11 +168,11 @@ def test_a_failed_read_is_remembered_so_the_next_poll_is_not_paid_for_twice(
     молчащей, повторное чтение к железу НЕ идёт, а признак отеля чист.
     """
     _connector_dies(stand, crystal)
-    assert liveness.endpoint_reachable(crystal.pk) is None, "до опроса знать неоткуда"
+    assert liveness.endpoint_reachable(link_id(crystal)) is None, "до опроса знать неоткуда"
 
     guest.get("/api/v1/guest/room/state")
     assert (
-        liveness.endpoint_reachable(crystal.pk) is None
+        liveness.endpoint_reachable(link_id(crystal)) is None
     ), "по ОДНОМУ молчанию ничего решать нельзя — повтор превратился бы в бутафорию"
 
     time.sleep(commands.READ_COALESCE_S + 0.1)
@@ -182,7 +183,7 @@ def test_a_failed_read_is_remembered_so_the_next_poll_is_not_paid_for_twice(
     assert liveness.room_is_silent(
         crystal.pk, room.pk, attempts=2, coalesce_s=commands.READ_COALESCE_S
     ), "молчание комнаты не запомнилось — следующий опрос снова отстоит все таймауты"
-    assert liveness.endpoint_reachable(crystal.pk) is not False, (
+    assert liveness.endpoint_reachable(link_id(crystal)) is not False, (
         "молчание комнаты записалось в признак ОТЕЛЯ — соседние номера погаснут вместе с ней"
     )
 
@@ -207,7 +208,7 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     # Подмена идёт МИМО схлопывания (оно внутри `read_many`), поэтому здесь
     # достаточно снять признак живости — пережидать нечего.
     monkeypatch.setattr(commands, "read_many", all_reads_fail)
-    liveness.forget(crystal.pk)
+    forget_link(crystal)
     # Два молчания и пауза между ними: отказ объявляется по подтверждённому
     # молчанию, а не по первому.
     assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
@@ -220,13 +221,13 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     )
 
     monkeypatch.undo()
-    liveness.forget(crystal.pk)
+    forget_link(crystal)
 
     payload = guest.get("/api/v1/guest/room/state").json()
     assert payload["availability"] == "online"
     assert payload["zones"]
     assert payload["can_command"] is True
-    assert liveness.endpoint_reachable(crystal.pk) is True
+    assert liveness.endpoint_reachable(link_id(crystal)) is True
     with tenant_context(crystal):
         room = Room.objects.get(number=DEMO_ROOM)
     assert not liveness.room_is_silent(

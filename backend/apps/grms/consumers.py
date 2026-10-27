@@ -29,6 +29,15 @@ def group_name(hotel_id) -> str:
     return f"onprem.{hotel_id}"
 
 
+def node_group(node_id) -> str:
+    """
+    Группа ОДНОГО коннектора (партия 65). Задания и настройки идут сюда: у
+    отеля может быть несколько коннекторов на разных подключениях, и каждому —
+    только своё.
+    """
+    return f"onprem.node.{node_id}"
+
+
 @database_sync_to_async
 def _authenticate(key: str):
     """
@@ -56,38 +65,38 @@ def _touch(key: str, version: str) -> None:
 
 
 @database_sync_to_async
-def _remember_endpoints(hotel_id: str, endpoints) -> None:
+def _remember_endpoints(node_id: str, endpoints) -> None:
     from apps.grms.services import liveness
 
-    liveness.remember_endpoints(hotel_id, endpoints)
+    liveness.remember_endpoints(node_id, endpoints)
 
 
 @database_sync_to_async
-def _settings(hotel_id: str) -> dict:
+def _settings(node_id: str) -> dict:
     from apps.grms.services import control_server
 
-    return control_server.settings_message(hotel_id)
+    return control_server.settings_message(node_id)
 
 
 @database_sync_to_async
-def _record_settings(hotel_id: str, result: dict) -> None:
+def _record_settings(node_id: str, result: dict) -> None:
     from apps.grms.services import control_server
 
-    control_server.record_result(hotel_id, result)
+    control_server.record_result(node_id, result)
 
 
 @database_sync_to_async
-def _remember_source(hotel_id: str, settings) -> None:
+def _remember_source(node_id: str, settings) -> None:
     from apps.grms.services import control_server
 
-    control_server.remember_source(hotel_id, settings)
+    control_server.remember_source(node_id, settings)
 
 
 @database_sync_to_async
-def _forget_endpoints(hotel_id: str) -> None:
+def _forget_endpoints(node_id: str) -> None:
     from apps.grms.services import liveness
 
-    liveness.forget(hotel_id)
+    liveness.forget(node_id)
 
 
 class ConnectorConsumer(AsyncJsonWebsocketConsumer):
@@ -116,8 +125,11 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
         self.key = key
         self.pending: dict[str, str] = {}
         self.group = group_name(node["hotel_id"])
+        # Своя группа коннектора (партия 65): задания и настройки — только ему.
+        self.own_group = node_group(node["node_id"])
 
         await self.channel_layer.group_add(self.group, self.channel_name)
+        await self.channel_layer.group_add(self.own_group, self.channel_name)
         await self.accept()
         await self.send_json(
             {
@@ -142,12 +154,15 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        own_group = getattr(self, "own_group", None)
+        if own_group:
+            await self.channel_layer.group_discard(own_group, self.channel_name)
         node = getattr(self, "node", None)
         if node:
             # Узел отключился — прежние пробы endpoint'ов больше ничего не
             # значат. Оставить их значило бы отвечать гостю «связь есть» по
             # замеру, сделанному до обрыва.
-            await _forget_endpoints(node["hotel_id"])
+            await _forget_endpoints(node["node_id"])
 
     async def receive_json(self, content, **kwargs):
         kind = content.get("type")
@@ -169,24 +184,25 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
             # было бы половиной решения — большой TTL всё равно однажды
             # истечёт на долгоживущем соединении.
             await self.channel_layer.group_add(self.group, self.channel_name)
+            await self.channel_layer.group_add(self.own_group, self.channel_name)
             await _touch(self.key, content.get("version") or "")
             # Коннектор прикладывает результат ЛОКАЛЬНОЙ пробы каждого
             # endpoint'а. До G5 это поле никто не читал; гостевой признак
             # доступности собирается в том числе из него.
-            await _remember_endpoints(self.node["hotel_id"], content.get("endpoints"))
+            await _remember_endpoints(self.node["node_id"], content.get("endpoints"))
             # Откуда у коннектора адрес сервера управления (63-3).
-            await _remember_source(self.node["hotel_id"], content.get("settings"))
+            await _remember_source(self.node["node_id"], content.get("settings"))
             return
 
         if kind == "connector.settings.request":
             # Коннектор (1.1+) сам спрашивает настройки при подключении: они
             # живут у него только в памяти. Сервер не задан в Control — ответ
             # `endpoints: null`, и коннектор работает по своему файлу.
-            await self.send_json(await _settings(self.node["hotel_id"]))
+            await self.send_json(await _settings(self.node["node_id"]))
             return
 
         if kind == "connector.settings.result":
-            await _record_settings(self.node["hotel_id"], content)
+            await _record_settings(self.node["node_id"], content)
             logger.info(
                 "коннектор ответил на настройки: узел=%s принял=%s причина=%s",
                 self.node["node_id"], content.get("ok"), content.get("reason") or "-",
@@ -206,7 +222,7 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
 
     async def connector_settings_push(self, message):
         """Сервер управления поправили в Control — отдать узлу новые настройки."""
-        await self.send_json(await _settings(self.node["hotel_id"]))
+        await self.send_json(await _settings(self.node["node_id"]))
 
     async def connector_dispatch(self, message):
         """Задание от backend → в сокет узла."""

@@ -16,7 +16,16 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../../useRights';
 import { ink, primaryButtonSx, quietButtonSx, secondaryButtonSx, shape, surface, typo } from '../../adminTokens';
 import { ChoiceField, Field, FormCell, FormGrid } from '../../form';
-import { createNode, getHotelNodes, reissueHotelNode, revokeHotelNode, type NodeRow } from '../../adminClient';
+import {
+  createNode,
+  getConnections,
+  getHotelNodes,
+  reissueHotelNode,
+  revokeHotelNode,
+  setDefaultConnection,
+  type ConnectionSummary,
+  type NodeRow,
+} from '../../adminClient';
 import { Empty, FilterBar, Help, Panel, Pill, type Facet } from '../hotels/hotelsUi';
 import { SortBar, useSort } from '../../sort';
 import { ConnectWizard, ConnectionScreen, connectionKey } from './connection';
@@ -35,14 +44,28 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
   const actionFailed = useActionFailed();
   // Состояние, назначение и текст — в адресе, считает сервер (партия 62-D).
   const [params, setParams] = useSearchParams();
-  // Мастер подключения (63-3) открывается и из «Обзора» — адресом `connect=1`.
-  const wizard = params.get('connect') === '1';
-  const setWizard = (open: boolean) =>
+  // Мастер подключения (63-3) открывается и из «Обзора» — адресом `connect=1`;
+  // `connect=new` — мастер НОВОГО подключения (партия 65).
+  const wizard = params.get('connect') === '1' || params.get('connect') === 'new';
+  const creatingConnection = params.get('connect') === 'new';
+  // Выбранное подключение — в адресе (партия 65); пусто — «по умолчанию».
+  const connection = params.get('connection');
+  const setWizard = (open: boolean | 'new') =>
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (open) next.set('connect', '1');
+        if (open) next.set('connect', open === 'new' ? 'new' : '1');
         else next.delete('connect');
+        return next;
+      },
+      { replace: true },
+    );
+  const pickConnection = (id: string | null) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('connection', id);
+        else next.delete('connection');
         return next;
       },
       { replace: true },
@@ -65,6 +88,8 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
     void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotelId] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
     void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
+    void qc.invalidateQueries({ queryKey: ['admin', 'connections', hotelId] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'hotel-rooms-map', hotelId] });
   };
   const create = useMutation({
     mutationFn: () => createNode(hotelId, { name: form.name.trim(), purpose: form.purpose }),
@@ -90,10 +115,13 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
 
   return (
     <Box sx={{ display: 'grid', gap: 2 }} data-testid="admin-connections">
-      <ConnectionScreen hotelId={hotelId} onWizard={() => setWizard(true)} />
+      <ConnectionsList hotelId={hotelId} selected={connection} onSelect={pickConnection} onCreate={() => setWizard('new')} onChanged={changed} />
+      <ConnectionScreen hotelId={hotelId} connection={connection} onWizard={() => setWizard(true)} />
       {wizard ? (
         <ConnectWizard
           hotelId={hotelId}
+          connection={creatingConnection ? null : connection}
+          create={creatingConnection}
           onClose={() => {
             setWizard(false);
             changed();
@@ -307,6 +335,128 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
     <Box sx={{ minWidth: 0 }}>
       <Box sx={{ color: ink.low }}>{label}</Box>
       <Box sx={{ color: ink.hi, overflowWrap: 'anywhere' }}>{children}</Box>
+    </Box>
+  );
+}
+
+/**
+ * ПОДКЛЮЧЕНИЯ ОТЕЛЯ СПИСКОМ (партия 65).
+ *
+ * У отеля может быть несколько подключений управления номером — например,
+ * демо-номера на эмуляторе и номер на настоящем iRidi объекта. Каждое — свой
+ * коннектор и свой сервер; номер назначается подключению в «Номерном фонде»,
+ * без назначения — через подключение «по умолчанию».
+ */
+function ConnectionsList({
+  hotelId,
+  selected,
+  onSelect,
+  onCreate,
+  onChanged,
+}: {
+  hotelId: string;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+  onCreate: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const { canWrite } = useRights();
+  const actionFailed = useActionFailed();
+  const k = 'admin.card.connections.list';
+  const list = useQuery({ queryKey: ['admin', 'connections', hotelId], queryFn: () => getConnections(hotelId), refetchInterval: 30_000 });
+  const makeDefault = useMutation({ mutationFn: (id: string) => setDefaultConnection(hotelId, id), onSuccess: onChanged, onError: actionFailed });
+  const items = list.data?.items ?? [];
+  // Пустой список — ничего не показываем: экран ниже сам ведёт к первому подключению.
+  if (!items.length) return null;
+  const active = selected ?? items.find((c) => c.is_default)?.id ?? items[0].id;
+  return (
+    <Panel
+      title={t(`${k}.title`)}
+      aside={
+        canWrite ? (
+          <Button size="small" sx={secondaryButtonSx} onClick={onCreate} data-testid="admin-connection-new">
+            {t(`${k}.add`)}
+          </Button>
+        ) : null
+      }
+    >
+      <Box sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>{t(`${k}.lead`)}</Box>
+      <Box sx={{ display: 'grid', gap: 1 }} data-testid="admin-connections-list">
+        {items.map((c) => (
+          <ConnectionRow
+            key={c.id}
+            c={c}
+            active={c.id === active}
+            onOpen={() => onSelect(c.is_default ? null : c.id)}
+            onDefault={canWrite && !c.is_default ? () => makeDefault.mutate(c.id) : undefined}
+            busy={makeDefault.isPending}
+          />
+        ))}
+      </Box>
+    </Panel>
+  );
+}
+
+function ConnectionRow({
+  c,
+  active,
+  onOpen,
+  onDefault,
+  busy,
+}: {
+  c: ConnectionSummary;
+  active: boolean;
+  onOpen: () => void;
+  onDefault?: () => void;
+  busy: boolean;
+}) {
+  const { t } = useTranslation();
+  const k = 'admin.card.connections.list';
+  const connector = c.connector.state;
+  const tone = connector === 'online' ? (c.server_link.state === 'down' ? 'warn' : 'ok') : connector === 'none' ? 'muted' : 'bad';
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr) auto' },
+        gap: 1.5,
+        alignItems: 'center',
+        p: 1.5,
+        borderRadius: `${shape.radiusSmall}px`,
+        bgcolor: active ? surface.s3 : 'transparent',
+        border: `1px solid ${active ? surface.line : 'transparent'}`,
+      }}
+      data-testid={`admin-connection-${c.id}`}
+      data-default={c.is_default ? 'true' : 'false'}
+      data-active={active ? 'true' : 'false'}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box component="span" sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }} data-words="data">{c.label}</Box>
+          {c.is_default ? <Pill tone="info">{t(`${k}.default`)}</Pill> : null}
+        </Box>
+        <Box sx={{ ...typo.caption, color: ink.mid }} data-words="data">{`${c.host}:${c.port}`}</Box>
+      </Box>
+      <Box sx={{ ...typo.caption, color: ink.mid, minWidth: 0 }}>
+        <Pill tone={tone}>{t(`admin.card.conn.connector.${connector === 'never' ? 'never' : connector}`)}</Pill>{' '}
+        <span data-words="data">{c.connector.name ?? '—'}</span>
+      </Box>
+      <Box sx={{ ...typo.caption, color: ink.mid }} data-testid={`admin-connection-rooms-${c.id}`}>
+        {t(`${k}.rooms`, { count: c.rooms.total })}
+      </Box>
+      <Box sx={{ display: 'flex', gap: 1, justifyContent: { md: 'flex-end' }, flexWrap: 'wrap' }}>
+        {!active ? (
+          <Button size="small" sx={quietButtonSx} onClick={onOpen} data-testid={`admin-connection-open-${c.id}`}>
+            {t(`${k}.open`)}
+          </Button>
+        ) : null}
+        {onDefault ? (
+          <Button size="small" sx={quietButtonSx} onClick={onDefault} disabled={busy} data-testid={`admin-connection-default-${c.id}`}>
+            {t(`${k}.makeDefault`)}
+          </Button>
+        ) : null}
+      </Box>
     </Box>
   );
 }

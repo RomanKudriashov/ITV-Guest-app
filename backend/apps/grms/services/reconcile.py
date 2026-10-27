@@ -116,7 +116,8 @@ def reconcile_type(hotel, *, type_name: str, device_name_template: str,
     device = _device_for(device_name_template, reference_room)
     report = TypeReport(type_name=type_name, device=device)
 
-    if not transport.node_is_online(hotel):
+    # Коннектор подключения ЭТАЛОННОЙ комнаты (партия 65).
+    if not transport.node_is_online(hotel, number=reference_room):
         # Осознанно НЕ ошибка: объект настраивают и до подключения коробки.
         report.reason = STATUS_NOT_CHECKED
         return report
@@ -177,7 +178,9 @@ def rooms_present_on_server(hotel, *, device_name_template: str, rooms: list[str
     115 комнат в файле, стенд заведомо частичный. Поэтому результат делится на
     «есть» и «не найдено», а не на «ок» и «сломано».
     """
-    if not transport.node_is_online(hotel):
+    # Коннектор подключения первой комнаты (партия 65): комнаты одного типа
+    # обычно на одном подключении; чтение каждой всё равно идёт своим путём.
+    if not transport.node_is_online(hotel, number=rooms[0] if rooms else ""):
         return {"checked": False, "present": [], "absent": []}
 
     present, absent = [], []

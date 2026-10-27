@@ -34,8 +34,8 @@ import type { MapBuilding, MapRoom, RoomProblem } from '../../adminClient';
  * стояки внутри части по-прежнему друг под другом.
  */
 
-export type Layer = 'control' | 'variant' | 'pin' | 'problems';
-export const LAYERS: Layer[] = ['control', 'variant', 'pin', 'problems'];
+export type Layer = 'control' | 'variant' | 'connection' | 'pin' | 'problems';
+export const LAYERS: Layer[] = ['control', 'variant', 'connection', 'pin', 'problems'];
 export const PROBLEM_ORDER: RoomProblem[] = ['no_link', 'no_variant', 'not_published', 'no_pin', 'demo_entry'];
 export type Tile = 'a' | 'b' | 'c';
 export const TILES: Tile[] = ['a', 'b', 'c'];
@@ -78,6 +78,12 @@ export function useSwatches(rooms: MapRoom[]) {
     for (const room of rooms) if (room.variant && !seen.has(room.variant.code)) seen.set(room.variant.code, room.variant.title);
     return [...seen.entries()].sort(([, a], [, b]) => a.localeCompare(b, 'ru', { numeric: true }));
   }, [rooms]);
+  // Подключения номеров (партия 65): «по умолчанию» первым, остальные по имени.
+  const connections = useMemo(() => {
+    const seen = new Map<string, { name: string; default: boolean }>();
+    for (const room of rooms) if (room.connection && !seen.has(room.connection.id)) seen.set(room.connection.id, { name: room.connection.name, default: room.connection.default });
+    return [...seen.entries()].sort(([, a], [, b]) => Number(b.default) - Number(a.default) || a.name.localeCompare(b.name, 'ru', { numeric: true }));
+  }, [rooms]);
 
   return useMemo(() => {
     const off: Swatch = { value: 'off', label: t('admin.card.rooms.control.off'), base: MUTED, glyph: '–', hatch: false, tone: 'off' };
@@ -99,6 +105,17 @@ export function useSwatches(rooms: MapRoom[]) {
         })),
         { value: 'v:', label: t('admin.card.rooms.noVariantValue'), base: MUTED, glyph: '–', hatch: true, tone: 'off' },
       ],
+      connection: [
+        ...connections.map(([id, c], i) => ({
+          value: `c:${id}`,
+          label: c.default ? `${c.name} · ${t('admin.card.rooms.connectionDefaultShort')}` : c.name,
+          base: VARIANT_HUES[(i + 3) % VARIANT_HUES.length],
+          glyph: VARIANT_GLYPHS[i] ?? '•',
+          hatch: false,
+          tone: 'info' as Tone,
+        })),
+        { value: 'c:', label: t('admin.card.rooms.noConnection'), base: MUTED, glyph: '–', hatch: true, tone: 'off' },
+      ],
       pin: [
         { value: 'yes', label: t('admin.card.rooms.pinValue.yes'), base: state.ok, glyph: '✓', hatch: false, tone: 'ok' },
         { value: 'no', label: t('admin.card.rooms.pinValue.no'), base: state.bad, glyph: '✕', hatch: true, tone: 'bad' },
@@ -119,6 +136,8 @@ export function useSwatches(rooms: MapRoom[]) {
           return room.control;
         case 'variant':
           return `v:${room.variant?.code ?? ''}`;
+        case 'connection':
+          return `c:${room.connection?.id ?? ''}`;
         case 'pin':
           return room.pin ? 'yes' : 'no';
         case 'problems':
@@ -134,6 +153,7 @@ export function useSwatches(rooms: MapRoom[]) {
     const wordOf = (room: MapRoom, layer: Layer, tiny = false): string => {
       const set = tiny ? 'tiny' : 'short';
       if (layer === 'variant') return room.variant ? room.variant.title : t(`admin.card.rooms.${set}.noVariant`);
+      if (layer === 'connection') return room.connection ? room.connection.name : t('admin.card.rooms.noConnection');
       if (layer === 'pin') return t(`admin.card.rooms.${set}.${room.pin ? 'pinYes' : 'no_pin'}`);
       if (room.control === 'off') return t(`admin.card.rooms.${set}.${room.is_active ? 'off' : 'inactive'}`);
       if (layer === 'control' && room.control === 'ok') return t(`admin.card.rooms.${set}.ok`);
@@ -141,7 +161,7 @@ export function useSwatches(rooms: MapRoom[]) {
       return first ? t(`admin.card.rooms.${set}.${first}`) : t(`admin.card.rooms.${set}.none`);
     };
     return { lists, valueOf, swatchOf, wordOf };
-  }, [t, variants]);
+  }, [t, variants, connections]);
 }
 
 export type Swatches = ReturnType<typeof useSwatches>;

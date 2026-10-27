@@ -51,12 +51,17 @@ type Tone = 'ok' | 'bad' | 'warn' | 'muted';
 const TONE: Record<Tone, string> = { ok: state.ok, bad: state.bad, warn: state.warn, muted: ink.low };
 const errorText = (error: unknown) => (error instanceof PlatformError ? error.message : error instanceof Error ? error.message : String(error));
 
-export const connectionKey = (hotelId: string) => ['admin', 'connection', hotelId];
+/**
+ * Ключ запроса подключения. Без `connection` — подключение «по умолчанию»
+ * (как до партии 65); префикс `['admin','connection',hotelId]` сбрасывает все.
+ */
+export const connectionKey = (hotelId: string, connection?: string | null) =>
+  connection ? ['admin', 'connection', hotelId, connection] : ['admin', 'connection', hotelId];
 
-export function useConnection(hotelId: string, poll = false) {
+export function useConnection(hotelId: string, poll = false, connection?: string | null) {
   return useQuery({
-    queryKey: connectionKey(hotelId),
-    queryFn: () => getConnection(hotelId),
+    queryKey: [...connectionKey(hotelId), connection ?? 'default'],
+    queryFn: () => getConnection(hotelId, connection),
     // Ждём ответа коннектора на правку — часто: обычно он отвечает за секунды.
     refetchInterval: (query) => {
       const c = query.state.data;
@@ -236,13 +241,30 @@ function Chips<V extends string>({ value, options, onChange, testId, disabled }:
   );
 }
 
-export function ServerForm({ hotelId, c, onSaved }: { hotelId: string; c: ConnectionState; onSaved?: (next: ConnectionState) => void }) {
+export function ServerForm({
+  hotelId,
+  c,
+  onSaved,
+  connection,
+  create = false,
+  nodeId,
+}: {
+  hotelId: string;
+  c: ConnectionState;
+  onSaved?: (next: ConnectionState) => void;
+  /** Подключение, которое правим (партия 65); без него — «по умолчанию». */
+  connection?: string | null;
+  /** Новое подключение: сервер ещё не задан, коннектор выбран в мастере. */
+  create?: boolean;
+  nodeId?: string | null;
+}) {
   const { t } = useTranslation();
   const { canWrite } = useRights();
   const qc = useQueryClient();
   const k = 'admin.card.conn.form';
-  const s = c.server;
+  const s = create ? null : c.server;
   const [form, setForm] = useState<ControlServerIn>(() => ({
+    name: s?.name ?? '',
     kind: s?.kind ?? 'iridi',
     protocol: s?.protocol ?? 'http',
     host: s?.host ?? '',
@@ -252,13 +274,20 @@ export function ServerForm({ hotelId, c, onSaved }: { hotelId: string; c: Connec
     secret: null,
     timeout_ms: s?.timeout_ms ?? 3000,
     is_enabled: s?.is_enabled ?? true,
-    node_id: s?.node_id ?? c.connector.id,
+    node_id: create ? nodeId ?? null : s?.node_id ?? c.connector.id,
   }));
   const [editSecret, setEditSecret] = useState(!s?.has_secret);
   const save = useMutation({
-    mutationFn: () => putControlServer(hotelId, { ...form, secret: editSecret ? form.secret || null : null }),
+    mutationFn: () =>
+      putControlServer(
+        hotelId,
+        { ...form, node_id: create ? nodeId ?? form.node_id : form.node_id, secret: editSecret ? form.secret || null : null },
+        create ? null : connection,
+        create,
+      ),
     onSuccess: (next) => {
-      qc.setQueryData(connectionKey(hotelId), next);
+      void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
+      void qc.invalidateQueries({ queryKey: ['admin', 'connections', hotelId] });
       void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotelId] });
       setEditSecret(!next.server?.has_secret);
       setForm((f) => ({ ...f, secret: null }));
@@ -275,6 +304,17 @@ export function ServerForm({ hotelId, c, onSaved }: { hotelId: string; c: Connec
   const disabled = !canWrite;
   return (
     <Box sx={{ display: 'grid', gap: 2 }} data-testid="admin-conn-server-form">
+      <TextField
+        size="small"
+        label={label(t(`${k}.name`), t(`${k}.nameHelp`))}
+        value={form.name ?? ''}
+        onChange={(e) => set('name', e.target.value.slice(0, 120))}
+        disabled={disabled}
+        sx={fieldSx}
+        InputLabelProps={{ shrink: true }}
+        placeholder={t(`${k}.namePlaceholder`)}
+        inputProps={{ 'data-testid': 'admin-conn-name', 'data-words': 'data' }}
+      />
       <Box>
         <Box sx={{ ...typo.label, color: ink.mid, mb: 0.75, display: 'flex', alignItems: 'center', gap: 0.5 }}>{t(`${k}.kind`)}<Help>{t(`${k}.kindHelp`)}</Help></Box>
         <Chips
@@ -353,25 +393,38 @@ export function ServerForm({ hotelId, c, onSaved }: { hotelId: string; c: Connec
 
 /* ── Постоянный экран «Подключения» ─────────────────────────────────────── */
 
-export function ConnectionScreen({ hotelId, onWizard }: { hotelId: string; onWizard: () => void }) {
+export function ConnectionScreen({
+  hotelId,
+  onWizard,
+  connection,
+}: {
+  hotelId: string;
+  onWizard: () => void;
+  /** Подключение, которое показываем (партия 65); без него — «по умолчанию». */
+  connection?: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const { canWrite } = useRights();
   const qc = useQueryClient();
-  const conn = useConnection(hotelId);
+  const conn = useConnection(hotelId, false, connection);
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
+    void qc.invalidateQueries({ queryKey: ['admin', 'connections', hotelId] });
+  };
   const links = useLinks(conn.data);
   const [editing, setEditing] = useState(false);
   const [checked, setChecked] = useState<ServerCheck | null>(null);
   const k = 'admin.card.conn';
   const check = useMutation({
-    mutationFn: () => checkControlServer(hotelId),
+    mutationFn: () => checkControlServer(hotelId, connection),
     onSuccess: (next) => {
       setChecked(next.check);
-      qc.setQueryData(connectionKey(hotelId), next);
+      refresh();
     },
   });
   const remove = useMutation({
-    mutationFn: () => deleteControlServer(hotelId),
-    onSuccess: (next) => qc.setQueryData(connectionKey(hotelId), next),
+    mutationFn: () => deleteControlServer(hotelId, connection),
+    onSuccess: refresh,
   });
   const c = conn.data;
   if (!c) return null;
@@ -379,7 +432,7 @@ export function ConnectionScreen({ hotelId, onWizard }: { hotelId: string; onWiz
   const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(i18n.language) : '—');
   return (
     <Panel
-      title={t(`${k}.title`)}
+      title={s ? `${t(`${k}.title`)} · ${s.label}` : t(`${k}.title`)}
       aside={
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {canWrite ? (
@@ -435,7 +488,7 @@ export function ConnectionScreen({ hotelId, onWizard }: { hotelId: string; onWiz
       </Box>
       {editing ? (
         <Sheet title={t(`${k}.form.title`)} onClose={() => setEditing(false)} testId="admin-conn-edit-dialog">
-          <ServerForm hotelId={hotelId} c={c} onSaved={() => setEditing(false)} />
+          <ServerForm hotelId={hotelId} c={c} connection={connection} onSaved={() => setEditing(false)} />
         </Sheet>
       ) : null}
     </Panel>
@@ -502,19 +555,38 @@ export function installCommand({ key, url, target, port, host }: { key: string; 
   ].join('\n');
 }
 
-export function ConnectWizard({ hotelId, onClose }: { hotelId: string; onClose: () => void }) {
+export function ConnectWizard({
+  hotelId,
+  onClose,
+  connection,
+  create = false,
+}: {
+  hotelId: string;
+  onClose: () => void;
+  /** Переподключить ЭТО подключение (партия 65); без него — «по умолчанию». */
+  connection?: string | null;
+  /** Новое подключение: свой коннектор и свой сервер, номера назначаются потом. */
+  create?: boolean;
+}) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>(0);
-  const conn = useConnection(hotelId, step === 1 || step === 2);
+  // Подключение мастера: у нового появляется после сохранения сервера.
+  const [connId, setConnId] = useState<string | null>(create ? null : connection ?? null);
+  // Коннектор, выбранный на шаге 2: у нового подключения «на связи» — его, а не коннектора «по умолчанию».
+  const [picked, setPicked] = useState<{ id: string; online: boolean } | null>(null);
+  const fresh = create && !connId;
+  const conn = useConnection(hotelId, step === 1 || step === 2, connId);
   const c = conn.data;
-  const links = useLinks(c);
+  const links = useLinks(fresh ? undefined : c);
   const k = 'admin.card.conn.wiz';
   const active = (['cloud', 'connector', 'server', 'rooms', null] as const)[step];
-  const canNext = step === 0 || (step === 1 && c?.connector.state === 'online') || (step === 2 && Boolean(c?.server) && c?.server?.applied_revision === c?.server?.revision && !c?.server?.apply_error) || step === 3;
+  const connectorOnline = fresh ? Boolean(picked?.online) : c?.connector.state === 'online';
+  const serverReady = !fresh && Boolean(c?.server) && c?.server?.applied_revision === c?.server?.revision && !c?.server?.apply_error;
+  const canNext = step === 0 || (step === 1 && connectorOnline) || (step === 2 && serverReady) || step === 3;
   return (
     <Sheet
-      title={t(`${k}.title`)}
+      title={t(create ? `${k}.titleNew` : `${k}.title`)}
       onClose={onClose}
       testId="admin-conn-wizard"
       footer={
@@ -537,18 +609,29 @@ export function ConnectWizard({ hotelId, onClose }: { hotelId: string; onClose: 
     >
       <Box sx={{ display: 'grid', gap: 2 }} data-testid={`admin-conn-wiz-step-${STEPS[step]}`}>
         <Typography component="h3" sx={{ ...typo.panelTitle, color: ink.hi }}>{`${step + 1}. ${t(`${k}.steps.${STEPS[step]}`)}`}</Typography>
-        {c ? <Chain links={links} active={active} compact={step > 0} /> : null}
+        {c && !fresh ? <Chain links={links} active={active} compact={step > 0} /> : null}
         {step === 0 ? <Box sx={{ ...typo.body, color: ink.mid, display: 'grid', gap: 1 }}><Box>{t(`${k}.what1`)}</Box><Box>{t(`${k}.what2`)}</Box></Box> : null}
-        {step === 1 && c ? <ConnectorStep hotelId={hotelId} c={c} /> : null}
+        {step === 1 && c ? <ConnectorStep hotelId={hotelId} c={c} create={fresh} onPicked={setPicked} /> : null}
         {step === 2 && c ? (
           <Box sx={{ display: 'grid', gap: 2 }}>
             <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.server`)}</Box>
-            <ServerForm hotelId={hotelId} c={c} onSaved={() => void qc.invalidateQueries({ queryKey: connectionKey(hotelId) })} />
-            {c.server ? <ApplyState c={c} /> : null}
-            {c.server ? <InlineCheck hotelId={hotelId} /> : null}
+            <ServerForm
+              key={connId ?? 'new'}
+              hotelId={hotelId}
+              c={c}
+              connection={connId}
+              create={fresh}
+              nodeId={fresh ? picked?.id ?? null : undefined}
+              onSaved={(next) => {
+                if (next.server) setConnId(next.server.id);
+                void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
+              }}
+            />
+            {c.server && !fresh ? <ApplyState c={c} /> : null}
+            {c.server && !fresh ? <InlineCheck hotelId={hotelId} connection={connId} /> : null}
           </Box>
         ) : null}
-        {step === 3 ? <RoomStep hotelId={hotelId} /> : null}
+        {step === 3 ? <RoomStep hotelId={hotelId} connection={connId} /> : null}
         {step === 4 && c ? (
           <Box sx={{ ...typo.body, color: ink.hi, display: 'grid', gap: 1 }} data-testid="admin-conn-wiz-summary">
             <Box>{t(`${k}.done1`)}</Box>
@@ -566,11 +649,24 @@ export function ConnectWizard({ hotelId, onClose }: { hotelId: string; onClose: 
   );
 }
 
-function ConnectorStep({ hotelId, c }: { hotelId: string; c: ConnectionState }) {
+function ConnectorStep({
+  hotelId,
+  c,
+  create = false,
+  onPicked,
+}: {
+  hotelId: string;
+  c: ConnectionState;
+  create?: boolean;
+  onPicked?: (picked: { id: string; online: boolean } | null) => void;
+}) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const k = 'admin.card.conn.wiz';
-  const [choice, setChoice] = useState<string>(c.connector.id ?? 'new');
+  // У коннектора одно подключение (партия 65): для нового подключения —
+  // только свободные коннекторы; занятый коннектор «по умолчанию» тоже занят.
+  const nodes = create ? c.nodes.filter((n) => !n.taken_by && n.id !== c.server?.node_id) : c.nodes.filter((n) => !n.taken_by);
+  const [choice, setChoice] = useState<string>(create ? nodes[0]?.id ?? 'new' : c.connector.id ?? 'new');
   const [name, setName] = useState(t(`${k}.defaultName`));
   const [target, setTarget] = useState(c.server?.host ?? '10.10.20.0/24');
   const [port, setPort] = useState(c.server?.port ?? 1085);
@@ -586,12 +682,15 @@ function ConnectorStep({ hotelId, c }: { hotelId: string; c: ConnectionState }) 
     },
   });
   const chosen = c.nodes.find((n) => n.id === choice);
+  useEffect(() => {
+    onPicked?.(chosen ? { id: chosen.id, online: chosen.online } : null);
+  }, [chosen?.id, chosen?.online]); // eslint-disable-line react-hooks/exhaustive-deps
   const command = useMemo(() => (key ? installCommand({ key, url: c.connector_url, target, port, host: c.server?.host }) : null), [key, c.connector_url, target, port, c.server?.host]);
   const online = chosen?.online;
   return (
     <Box sx={{ display: 'grid', gap: 2 }} data-testid="admin-conn-wiz-connector">
       <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.connectorLead`)}</Box>
-      {c.nodes.length ? (
+      {nodes.length ? (
         <Chips
           value={choice}
           onChange={(v) => {
@@ -599,7 +698,7 @@ function ConnectorStep({ hotelId, c }: { hotelId: string; c: ConnectionState }) 
             setKey(null);
           }}
           testId="admin-conn-node"
-          options={[...c.nodes.map((n) => [n.id, <><span data-words="data">{n.name}</span> · {n.online ? t('admin.card.conn.connector.online') : n.never ? t('admin.card.conn.connector.never') : t('admin.card.conn.connector.silent')}</>] as [string, ReactNode]), ['new', t(`${k}.newConnector`)]]}
+          options={[...nodes.map((n) => [n.id, <><span data-words="data">{n.name}</span> · {n.online ? t('admin.card.conn.connector.online') : n.never ? t('admin.card.conn.connector.never') : t('admin.card.conn.connector.silent')}</>] as [string, ReactNode]), ['new', t(`${k}.newConnector`)]]}
         />
       ) : null}
       {choice === 'new' ? <TextField size="small" label={t(`${k}.connectorName`)} value={name} onChange={(e) => setName(e.target.value.slice(0, 128))} sx={fieldSx} inputProps={{ 'data-testid': 'admin-conn-node-name', 'data-words': 'data' }} /> : null}
@@ -656,15 +755,15 @@ function ConnectorStep({ hotelId, c }: { hotelId: string; c: ConnectionState }) 
   );
 }
 
-function InlineCheck({ hotelId }: { hotelId: string }) {
+function InlineCheck({ hotelId, connection }: { hotelId: string; connection?: string | null }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [result, setResult] = useState<ServerCheck | null>(null);
   const check = useMutation({
-    mutationFn: () => checkControlServer(hotelId),
+    mutationFn: () => checkControlServer(hotelId, connection),
     onSuccess: (next) => {
       setResult(next.check);
-      qc.setQueryData(connectionKey(hotelId), next);
+      void qc.invalidateQueries({ queryKey: connectionKey(hotelId) });
     },
   });
   return (
@@ -682,11 +781,19 @@ function InlineCheck({ hotelId }: { hotelId: string }) {
 // Причины сервера — кодами из разбора номера; слова — по своим ключам.
 const READ_REASON: Record<string, string> = { NO_ROOM: 'no_room', NO_ROOM_TYPE: 'no_type', NO_PUBLISHED_CONFIG: 'no_config' };
 
-function RoomStep({ hotelId }: { hotelId: string }) {
+function RoomStep({ hotelId, connection }: { hotelId: string; connection?: string | null }) {
   const { t } = useTranslation();
   const k = 'admin.card.conn.wiz';
   const map = useQuery({ queryKey: ['admin', 'hotel-rooms-map', hotelId, { wizard: '1' }], queryFn: () => getRoomsMap(hotelId, {}) });
-  const rooms = useMemo(() => (map.data?.buildings ?? []).flatMap((b) => b.floors.flatMap((f) => f.rooms)).filter((r) => r.variant), [map.data]);
+  // Номера ЭТОГО подключения (партия 65): читать номер чужого подключения
+  // здесь бессмысленно — запрос ушёл бы через другой коннектор.
+  const rooms = useMemo(
+    () =>
+      (map.data?.buildings ?? [])
+        .flatMap((b) => b.floors.flatMap((f) => f.rooms))
+        .filter((r) => r.variant && (!connection || r.connection?.id === connection)),
+    [map.data, connection],
+  );
   const [roomId, setRoomId] = useState('');
   useEffect(() => {
     if (!roomId && rooms[0]) setRoomId(rooms[0].id);
@@ -706,7 +813,7 @@ function RoomStep({ hotelId }: { hotelId: string }) {
           </Button>
         </Box>
       ) : (
-        <Box sx={{ ...typo.body, color: state.warn }}>{t(`${k}.noRooms`)}</Box>
+        <Box sx={{ ...typo.body, color: state.warn }}>{t(connection ? `${k}.noRoomsConnection` : `${k}.noRooms`)}</Box>
       )}
       {result ? (
         <Box sx={{ ...typo.body, color: result.ok ? state.ok : state.bad, display: 'grid', gap: 0.5 }} data-testid="admin-conn-room-result" data-ok={result.ok ? 'true' : 'false'}>

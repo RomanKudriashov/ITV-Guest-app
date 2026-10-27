@@ -7,8 +7,15 @@
 (`connector/itv_connector/remote.py`). Не задан — коннектор работает по своему
 локальному файлу, как до 63-3.
 
-Одна запись на отель: сервер управления у отеля один, коннектор — дорога к
-нему. Путь «напрямую из облака» не делаем (решение Олега 23.10).
+ПОДКЛЮЧЕНИЙ У ОТЕЛЯ МОЖЕТ БЫТЬ НЕСКОЛЬКО (партия 65, решение Олега 28.10):
+например, демо-номера на эмуляторе и номер 100 на настоящем iRidi объекта.
+Подключение = сервер управления + коннектор, через который до него идти.
+Номер назначается подключению (`RoomConnection`); без назначения работает
+подключение «по умолчанию» — так у отеля с одним подключением ничего не
+меняется. Один коннектор ведёт ровно одно подключение: у коннектора один
+endpoint `iridi`, и две записи на один коннектор спорили бы за его адрес.
+
+Путь «напрямую из облака» не делаем (решение Олега 23.10).
 """
 
 from __future__ import annotations
@@ -35,6 +42,11 @@ class ControlServer(TenantModel):
         BASIC = "basic", "Логин и пароль"
         TOKEN = "token", "Токен"
 
+    # Имя подключения в Control: «Эмулятор (демо)», «iRidi объекта». Пусто —
+    # экран называет подключение по коннектору и адресу.
+    name = models.CharField(max_length=120, blank=True)
+    # Подключение номеров без своего назначения. Ровно одно на отель.
+    is_default = models.BooleanField(default=False)
     node = models.ForeignKey("hotels.OnPremNode", on_delete=models.SET_NULL, null=True, blank=True, related_name="control_servers")
     kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.IRIDI)
     protocol = models.CharField(max_length=8, choices=Protocol.choices, default=Protocol.HTTP)
@@ -60,13 +72,48 @@ class ControlServer(TenantModel):
         db_table = "grms_control_server"
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel"], condition=models.Q(deleted_at__isnull=True), name="uniq_grms_control_server_per_hotel"
-            )
+                fields=["hotel"],
+                condition=models.Q(deleted_at__isnull=True, is_default=True),
+                name="uniq_grms_control_server_default",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel", "node"],
+                condition=models.Q(deleted_at__isnull=True, node__isnull=False),
+                name="uniq_grms_control_server_node",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.kind}:{self.host}:{self.port}"
 
     @property
+    def label(self) -> str:
+        """Имя для экранов: своё, иначе по коннектору, иначе по адресу."""
+        if self.name:
+            return self.name
+        if self.node_id and self.node:
+            return self.node.name
+        return f"{self.host}:{self.port}"
+
+    @property
     def base_url(self) -> str:
         return f"{self.protocol}://{self.host}:{self.port}"
+
+
+class RoomConnection(TenantModel):
+    """
+    Номер → подключение (партия 65).
+
+    Отдельной таблицей по той же причине, что и `RoomTypeRoom`: hotels не
+    начинает зависеть от grms, модуль снимается целиком. Нет записи — номер
+    идёт через подключение «по умолчанию».
+    """
+
+    room = models.OneToOneField("hotels.Room", on_delete=models.CASCADE, related_name="grms_connection")
+    server = models.ForeignKey(ControlServer, on_delete=models.CASCADE, related_name="rooms")
+
+    class Meta:
+        db_table = "grms_room_connection"
+
+    def __str__(self) -> str:
+        return f"{self.room_id}→{self.server_id}"

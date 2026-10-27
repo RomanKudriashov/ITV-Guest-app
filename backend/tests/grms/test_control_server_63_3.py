@@ -60,7 +60,20 @@ def hotel():
     return provision_hotel(subdomain="srv633", name="Сервер 63-3", admin_email="admin@srv633.test").hotel
 
 
-def test_bite_secret_never_leaves_except_to_connector(api, hotel):
+@pytest.fixture
+def node(hotel):
+    """
+    Коннектор отеля. Настройки отдаются КОННЕКТОРУ, а не отелю (партия 65):
+    у отеля их может быть несколько, и каждый получает своё подключение.
+    """
+    from apps.hotels.models import OnPremNode
+    from apps.hotels.services.onprem import register_node
+
+    created, _ = register_node(hotel, name="Узел 63-3", purpose=OnPremNode.Purpose.GRMS)
+    return created
+
+
+def test_bite_secret_never_leaves_except_to_connector(api, hotel, node):
     from apps.core.models import AuditLog
     from apps.grms.services import control_server
 
@@ -78,27 +91,27 @@ def test_bite_secret_never_leaves_except_to_connector(api, hotel):
     change = next(c for i in history for c in i["changes"] if c["field"] == "control_secret")
     assert change["to"] == "changed"
     # Коннектор получает его заголовком — единственное место расшифровки.
-    message = control_server.settings_message(hotel.pk)
+    message = control_server.settings_message(node.pk)
     expected = "Basic " + base64.b64encode(f"naviroom:{SECRET}".encode()).decode()
     assert message["endpoints"]["iridi"] == {"baseUrl": "http://10.10.20.15:1085", "timeoutMs": 3000, "headers": {"Authorization": expected}}
 
     # Правка без нового секрета — прежний сохраняется; «без входа» — стирается.
     api("put", f"/hotels/{hotel.pk}/control-server", {"host": "10.10.20.16", "port": 1085, "auth": "basic", "login": "naviroom"})
-    assert control_server.settings_message(hotel.pk)["endpoints"]["iridi"]["headers"] == {"Authorization": expected}
+    assert control_server.settings_message(node.pk)["endpoints"]["iridi"]["headers"] == {"Authorization": expected}
     api("put", f"/hotels/{hotel.pk}/control-server", {"host": "10.10.20.16", "port": 1085, "auth": "none"})
-    assert control_server.settings_message(hotel.pk)["endpoints"]["iridi"]["headers"] == {}
+    assert control_server.settings_message(node.pk)["endpoints"]["iridi"]["headers"] == {}
 
 
-def test_bite_without_control_server_connector_uses_local_file(api, hotel):
+def test_bite_without_control_server_connector_uses_local_file(api, hotel, node):
     from apps.grms.services import control_server
 
-    assert control_server.settings_message(hotel.pk)["endpoints"] is None
+    assert control_server.settings_message(node.pk)["endpoints"] is None
     api("put", f"/hotels/{hotel.pk}/control-server", {"host": "10.10.20.15", "port": 1085, "is_enabled": False})
-    assert control_server.settings_message(hotel.pk)["endpoints"] is None, "выключенный сервер не должен уходить коннектору"
+    assert control_server.settings_message(node.pk)["endpoints"] is None, "выключенный сервер не должен уходить коннектору"
     api("put", f"/hotels/{hotel.pk}/control-server", {"host": "10.10.20.15", "port": 1085})
-    assert control_server.settings_message(hotel.pk)["endpoints"]["iridi"]["baseUrl"] == "http://10.10.20.15:1085"
+    assert control_server.settings_message(node.pk)["endpoints"]["iridi"]["baseUrl"] == "http://10.10.20.15:1085"
     assert api("delete", f"/hotels/{hotel.pk}/control-server").json()["server"] is None
-    assert control_server.settings_message(hotel.pk)["endpoints"] is None
+    assert control_server.settings_message(node.pk)["endpoints"] is None
 
 
 def test_soon_kinds_and_validation(api, hotel):
@@ -136,10 +149,14 @@ def test_bite_room_check_only_reads(hotel, monkeypatch):
             self.controls = [{"channels": {"on": {"feedback": "light_fb"}, "level": {"feedback": "dim_fb"}}}]
 
     monkeypatch.setattr(guest, "resolve_context_for_room", lambda h, rid: (Context(), ""))
-    monkeypatch.setattr(transport, "node_is_online", lambda h: True)
+    class OnlineNode:
+        pk = "00000000-0000-0000-0000-000000000063"
+        is_online = True
+
+    monkeypatch.setattr(transport, "resolve_node", lambda h, **kw: OnlineNode())
     sent = []
 
-    async def fake_asend(hotel_id, envelope, *, ttl_ms):
+    async def fake_asend(hotel_id, envelope, *, ttl_ms, node_id):
         sent.append(envelope)
         return {"type": "connector.response", "requestID": envelope["requestID"], "ok": True, "status_code": 200, "raw_body": json.dumps({"requestID": envelope["requestID"], "value": 1}), "duration_ms": 1}
 
@@ -162,12 +179,12 @@ def test_readiness_server_silent_only_when_connector_online(hotel):
     with tenant_context(hotel):
         HotelModule.objects.update_or_create(code="room_control", defaults={"is_enabled": True})
     node, _ = register_node(hotel, name="Узел", purpose=OnPremNode.Purpose.GRMS)
-    liveness.remember_endpoints(hotel.pk, {"iridi": {"reachable": False}})
+    liveness.remember_endpoints(node.pk, {"iridi": {"reachable": False}})
     codes = {p["code"] for p in compute(hotel)["problems"]}
     assert "connector_silent" in codes and "control_server_silent" not in codes, "про сервер за молчащим коннектором говорить нечего"
     with tenant_context(hotel):
         OnPremNode.objects.filter(pk=node.pk).update(last_seen_at=timezone.now())
     codes = {p["code"] for p in compute(hotel)["problems"]}
     assert "control_server_silent" in codes and "connector_silent" not in codes
-    liveness.remember_endpoints(hotel.pk, {"iridi": {"reachable": True}})
+    liveness.remember_endpoints(node.pk, {"iridi": {"reachable": True}})
     assert "control_server_silent" not in {p["code"] for p in compute(hotel)["problems"]}

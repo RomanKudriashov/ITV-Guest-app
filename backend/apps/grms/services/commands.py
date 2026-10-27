@@ -97,7 +97,8 @@ def read(
     envelope = adapter.envelope(request_id=request_id, body=body)
 
     started = time.monotonic()
-    raw = transport.send(hotel, envelope)
+    # Через коннектор подключения ЭТОГО номера (партия 65).
+    raw = transport.send(hotel, envelope, number=room)
     duration_ms = int((time.monotonic() - started) * 1000)
 
     result = _interpret(raw, request_id=request_id, is_read=True)
@@ -196,14 +197,16 @@ def read_many(
             }
 
     started = time.monotonic()
-    if not transport.node_is_online(hotel):
+    # Коннектор подключения номера (партия 65) — один раз на пачку.
+    node = transport.resolve_node(hotel, number=room)
+    if node is None or not node.is_online:
         # Узел офлайн — ходить некуда, и ждать TTL по каждому каналу тем более.
         results = {
             feedback: adapter.IridiResult(ok=False, error=adapter.CONNECTOR_OFFLINE)
             for feedback in feedbacks
         }
     else:
-        results = _read_batch(hotel, device=device, feedbacks=feedbacks, subdevice=subdevice)
+        results = _read_batch(hotel, device=device, feedbacks=feedbacks, subdevice=subdevice, node_id=str(node.pk))
 
     errors = [result.error for result in results.values() if not result.ok]
     _journal(
@@ -248,7 +251,7 @@ def read_many(
     return results
 
 
-def _read_batch(hotel, *, device: str, feedbacks: list[str], subdevice: str) -> dict:
+def _read_batch(hotel, *, device: str, feedbacks: list[str], subdevice: str, node_id: str) -> dict:
     import asyncio
 
     from asgiref.sync import async_to_sync
@@ -267,7 +270,7 @@ def _read_batch(hotel, *, device: str, feedbacks: list[str], subdevice: str) -> 
             envelope = adapter.envelope(request_id=request_id, body=body)
             async with semaphore:
                 raw = await transport.asend(
-                    str(hotel.pk), envelope, ttl_ms=int(envelope["ttl_ms"])
+                    str(hotel.pk), envelope, ttl_ms=int(envelope["ttl_ms"]), node_id=node_id
                 )
             return feedback, _interpret(raw, request_id=request_id, is_read=True)
 
@@ -340,7 +343,7 @@ def send_command(
     envelope = adapter.envelope(request_id=request_id, body=body)
 
     started = time.monotonic()
-    raw = transport.send(hotel, envelope)
+    raw = transport.send(hotel, envelope, number=room)
     set_result = _interpret(raw, request_id=request_id, is_read=False)
 
     base_payload = {

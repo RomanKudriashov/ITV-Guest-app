@@ -1011,10 +1011,19 @@ export interface MapRoom {
   position_source: 'manual' | 'rule' | 'none';
   category: string;
   variant: { code: string; title: string } | null;
+  /** Подключение номера (партия 65): назначенное явно или «по умолчанию». */
+  connection: RoomConnectionRef | null;
   pin: boolean;
   is_active: boolean;
   control: RoomControl;
   problems: RoomProblem[];
+}
+/** Подключение номера на экранах номерного фонда. `explicit: false` — номер на подключении «по умолчанию». */
+export interface RoomConnectionRef {
+  id: string;
+  name: string;
+  default: boolean;
+  explicit: boolean;
 }
 export interface MapBuilding {
   key: string;
@@ -1044,7 +1053,7 @@ export interface RoomsMap {
   buildings: MapBuilding[];
   /** Порядок номеров для таблицы — считает сервер (сортировка 62-F). */
   order: string[];
-  facets: Record<'building' | 'floor' | 'category' | 'variant' | 'pin' | 'control' | 'problem', Array<{ value: string; label: string; count: number }>>;
+  facets: Record<'building' | 'floor' | 'category' | 'variant' | 'connection' | 'pin' | 'control' | 'problem', Array<{ value: string; label: string; count: number }>>;
 }
 export const getRoomsMap = (hotelId: string, params: Record<string, string>) => {
   const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
@@ -1068,6 +1077,8 @@ export interface RoomsDictionaries {
   buildings: DictItem[];
   categories: DictItem[];
   variants: Array<{ code: string; title: string; device_template: string }>;
+  /** Подключения отеля для выбора в карточке номера (партия 65). */
+  connections: Array<{ id: string; name: string; default: boolean }>;
   languages: Array<{ code: string; title: string; is_default: boolean }>;
   room_control: boolean;
 }
@@ -1084,6 +1095,7 @@ export interface RoomDetail {
   is_active: boolean;
   out_of_service: boolean;
   variant: { code: string; title: string } | null;
+  connection: RoomConnectionRef | null;
   device: { override: string; template: string; effective: string };
   pin: { has: boolean; valid_until: string | null; issued_at: string | null; expired: boolean };
   live_sessions: number;
@@ -1103,6 +1115,8 @@ export interface RoomPatch {
   is_active?: boolean;
   out_of_service?: boolean;
   variant?: string;
+  /** Подключение номера (партия 65): id или пусто — «по умолчанию». */
+  connection?: string | null;
   device_name?: string;
 }
 export interface RenameImpact {
@@ -1165,6 +1179,7 @@ export const createRooms = (hotelId: string, body: BulkRequest) => request<BulkR
 export type BatchAction =
   | 'variant_set'
   | 'variant_clear'
+  | 'connection_set'
   | 'pin_issue'
   | 'pin_clear'
   | 'pin_until'
@@ -1204,6 +1219,12 @@ export const runBatch = (hotelId: string, ticket: string, roomIds: string[]) =>
 /* ── Подключение управления номером (партия 63-3) ───────────────────────── */
 
 export interface ControlServer {
+  /** Подключение (партия 65): у отеля их может быть несколько. */
+  id: string;
+  /** Своё имя; пусто — экран называет по `label`. */
+  name: string;
+  label: string;
+  is_default: boolean;
   kind: 'iridi' | 'bittel' | 'other';
   protocol: 'http' | 'https';
   host: string;
@@ -1231,9 +1252,13 @@ export interface ConnectionState {
   connector: { state: 'online' | 'silent' | 'never' | 'none'; id: string | null; name: string | null; version: string | null; seconds: number | null };
   server_link: { state: 'ok' | 'down' | 'unknown'; source: 'control' | 'local' | null; configured: boolean };
   rooms: { total: number; bound: number; ready: number };
-  nodes: Array<{ id: string; name: string; online: boolean; version: string; never: boolean }>;
+  /** `taken_by` — коннектор уже ведёт другое подключение (у коннектора одно подключение). */
+  nodes: Array<{ id: string; name: string; online: boolean; version: string; never: boolean; taken_by: string | null }>;
+  connection_id: string | null;
   connector_url: string;
 }
+/** Подключение в списке «Подключения» (партия 65). */
+export type ConnectionSummary = ControlServer & Pick<ConnectionState, 'connector' | 'server_link' | 'rooms'>;
 export interface ControlServerIn {
   kind: string;
   protocol: string;
@@ -1245,6 +1270,7 @@ export interface ControlServerIn {
   timeout_ms: number;
   is_enabled: boolean;
   node_id?: string | null;
+  name?: string;
 }
 export interface ServerCheck {
   connector: boolean;
@@ -1263,10 +1289,30 @@ export interface RoomRead {
   answered: number;
   values: Record<string, string | number | boolean | null>;
 }
-export const getConnection = (hotelId: string) => request<ConnectionState>(`/hotels/${hotelId}/control-server`);
-export const putControlServer = (hotelId: string, body: ControlServerIn) => request<ConnectionState>(`/hotels/${hotelId}/control-server`, 'PUT', body);
-export const deleteControlServer = (hotelId: string) => request<ConnectionState>(`/hotels/${hotelId}/control-server`, 'DELETE');
-export const checkControlServer = (hotelId: string) => request<ConnectionState & { check: ServerCheck }>(`/hotels/${hotelId}/control-server/check`, 'POST', {});
+/*
+  ПОДКЛЮЧЕНИЯ (партия 65). `connection` — id подключения; без него —
+  подключение «по умолчанию», как до 65. `create` — новое подключение.
+*/
+const connectionQuery = (connection?: string | null, create?: boolean) => {
+  const query = new URLSearchParams();
+  if (connection) query.set('connection', connection);
+  if (create) query.set('new', '1');
+  const text = query.toString();
+  return text ? `?${text}` : '';
+};
+export const getConnection = (hotelId: string, connection?: string | null) =>
+  request<ConnectionState>(`/hotels/${hotelId}/control-server${connectionQuery(connection)}`);
+export const putControlServer = (hotelId: string, body: ControlServerIn, connection?: string | null, create?: boolean) =>
+  request<ConnectionState>(`/hotels/${hotelId}/control-server${connectionQuery(connection, create)}`, 'PUT', body);
+export const deleteControlServer = (hotelId: string, connection?: string | null) =>
+  request<ConnectionState>(`/hotels/${hotelId}/control-server${connectionQuery(connection)}`, 'DELETE');
+export const checkControlServer = (hotelId: string, connection?: string | null) =>
+  request<ConnectionState & { check: ServerCheck }>(`/hotels/${hotelId}/control-server/check${connectionQuery(connection)}`, 'POST', {});
+export const getConnections = (hotelId: string) => request<{ items: ConnectionSummary[] }>(`/hotels/${hotelId}/connections`);
+export const setDefaultConnection = (hotelId: string, connection: string) =>
+  request<{ items: ConnectionSummary[] }>(`/hotels/${hotelId}/connections/${connection}/default`, 'POST', {});
+export const assignConnection = (hotelId: string, connection: string | null, roomIds: string[]) =>
+  request<{ changed: number; items: ConnectionSummary[] }>(`/hotels/${hotelId}/connections/assign`, 'POST', { connection, room_ids: roomIds });
 export const readRoomState = (hotelId: string, roomId: string) => request<RoomRead>(`/hotels/${hotelId}/control-server/room-check`, 'POST', { room_id: roomId });
 
 /* ── Варианты номеров (партия 63-4, шаг A — только чтение) ─────────────── */

@@ -86,10 +86,16 @@ def dictionaries(hotel: Hotel, user) -> dict[str, Any]:
             for lang in HotelLanguage.objects.filter(is_active=True).order_by("sort_order", "code")
         ]
         room_control = HotelModule.objects.filter(code=HotelModule.Code.ROOM_CONTROL, is_enabled=True).exists()
+        from apps.grms.services import links
+
+        connections = [
+            {"id": str(s.pk), "name": s.label, "default": s.is_default} for s in links.servers()
+        ]
     return {
         "buildings": buildings,
         "categories": categories,
         "variants": variants,
+        "connections": connections,
         "languages": languages or [{"code": hotel.default_language, "title": "", "is_default": True}],
         "room_control": room_control,
     }
@@ -131,6 +137,8 @@ def room_detail(hotel: Hotel, user, room_id) -> dict[str, Any]:
         "is_active": room.is_active,
         "out_of_service": room.out_of_service,
         "variant": {"code": link.room_type.code, "title": link.room_type.title_i18n or link.room_type.code} if link is not None else None,
+        # Подключение номера (партия 65): тем же расчётом, что у схемы.
+        "connection": row["connection"] if row else None,
         "device": {
             "override": link.device_name_override if link is not None else "",
             "template": template,
@@ -169,6 +177,26 @@ def update_room(hotel: Hotel, user, room_id, data: dict) -> dict[str, Any]:
             before, after = builder.assign_room_type(hotel, room, data["variant"] or None)
             if before != after:
                 svc._audit_room("room.variant_set", room, {"room": room.number, "changes": {"room_variant": {"from": before, "to": after}}})
+        if "connection" in data:
+            from apps.grms.services import control_server, links
+
+            before = links.describe_room(room)
+            changed = control_server.assign_rooms(hotel, data["connection"] or None, [room.pk], audit=False)
+            if changed:
+                after = links.describe_room(room)
+                svc._audit_room(
+                    "room.connection_set",
+                    room,
+                    {
+                        "room": room.number,
+                        "changes": {
+                            "room_connection": {
+                                "from": before["name"] if before else None,
+                                "to": (after["name"] if after else None) if data["connection"] else "по умолчанию",
+                            }
+                        },
+                    },
+                )
         if "device_name" in data:
             before, after = builder.set_room_device(hotel, room, data["device_name"] or "")
             if before != after:

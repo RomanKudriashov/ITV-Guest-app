@@ -31,8 +31,8 @@ import { Help, Pill } from '../hotels/hotelsUi';
  * рамкой по схеме. Выбор в адресе не хранится — он живёт, пока открыт экран.
  */
 
-export type Group = 'variant' | 'pin' | 'category' | 'building' | 'state' | 'delete';
-const GROUPS: Group[] = ['variant', 'pin', 'category', 'building', 'state', 'delete'];
+export type Group = 'variant' | 'connection' | 'pin' | 'category' | 'building' | 'state' | 'delete';
+const GROUPS: Group[] = ['variant', 'connection', 'pin', 'category', 'building', 'state', 'delete'];
 
 const errorText = (error: unknown) => (error instanceof PlatformError ? error.message : error instanceof Error ? error.message : String(error));
 
@@ -276,6 +276,10 @@ function initial(group: Group, dict?: RoomsDictionaries): Choice {
   switch (group) {
     case 'variant':
       return { action: 'variant_set', value: dict?.variants[0]?.code ?? null };
+    case 'connection':
+      // Первое не «по умолчанию»: назначать номерам подключение по умолчанию
+      // явно — редкий случай; обычно переводят на другое.
+      return { action: 'connection_set', value: dict?.connections.find((c) => !c.default)?.id ?? dict?.connections[0]?.id ?? '' };
     case 'pin':
       return { action: 'pin_issue', value: null };
     case 'category':
@@ -332,6 +336,26 @@ function ChoiceForm({ group, choice, setAction, dict }: { group: Group; choice: 
             <Typography sx={{ ...typo.body, color: ink.mid }}>{t('admin.card.rooms.edit.noVariants')}</Typography>
           )
         ) : null}
+      </Box>
+    );
+  }
+  if (group === 'connection') {
+    const options = [
+      ...(dict?.connections ?? []).map((c) => ({ value: c.id, label: c.default ? `${c.name} · ${t('admin.card.rooms.connectionDefaultShort')}` : c.name })),
+      // Пусто — снять своё назначение: номер пойдёт через подключение «по умолчанию».
+      { value: '', label: t(`${k}.connectionByDefault`) },
+    ];
+    return (
+      <Box sx={{ display: 'grid', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.connectionLead`)}</Box>
+          {help}
+        </Box>
+        {dict?.connections.length ? (
+          <SelectField label={t('admin.card.rooms.col.connection')} value={String(choice.value ?? '')} onChange={(v) => setAction('connection_set', v)} options={options} testId="admin-rooms-batch-connection" fieldSx={fieldSx} />
+        ) : (
+          <Typography sx={{ ...typo.body, color: ink.mid }}>{t(`${k}.noConnections`)}</Typography>
+        )}
       </Box>
     );
   }
@@ -416,6 +440,7 @@ function useWords() {
   return (action: BatchAction, value: string | boolean | null): string => {
     if (value === null || value === '') {
       if (action === 'variant_set' || action === 'variant_clear') return t('admin.card.rooms.noVariantValue');
+      if (action === 'connection_set') return t(`${k}.connectionByDefault`);
       if (action === 'building') return t('admin.card.rooms.noBuilding');
       if (action === 'category') return t(`${k}.noCategory`);
       if (action === 'pin_until') return t(`${k}.noEnd`);

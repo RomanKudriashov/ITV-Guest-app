@@ -43,6 +43,9 @@ TICKET_TTL = 30 * 60
 ACTIONS = (
     "variant_set",
     "variant_clear",
+    # Подключение номеров (партия 65): значение — id подключения, пусто —
+    # вернуть на подключение «по умолчанию».
+    "connection_set",
     "pin_issue",
     "pin_clear",
     "pin_until",
@@ -109,7 +112,12 @@ def _context(hotel: Hotel, ids: list[str]) -> dict:
             str(s)
             for s in GuestSession.objects.filter(room_id__in=clean, revoked_at__isnull=True, expires_at__gt=timezone.now()).values_list("room_id", flat=True)
         )
+        from apps.grms.services import links as grms_links
+
         return {
+            "connections": {str(s.pk): s for s in grms_links.servers()},
+            "connection_of": grms_links.assignments(clean),
+            "default_connection": grms_links.default_server(),
             "rooms": rooms,
             "links": links,
             "pins": pins,
@@ -134,6 +142,13 @@ def _target(action: str, value: Any, ctx: dict):
         if room_type is None:
             raise NotFoundError("Вариант не найден")
         return room_type
+    if action == "connection_set":
+        if value in (None, "", "none"):
+            return None
+        found = ctx["connections"].get(str(value))
+        if found is None:
+            raise NotFoundError("Подключение не найдено")
+        return found
     if action in ("building", "category"):
         if value in (None, "", "none"):
             return None
@@ -166,6 +181,19 @@ def _row(action: str, room, target, valid_until: date | None, ctx: dict) -> dict
         row["variant_changes"] = link is not None and link.code != target.code
     elif action == "variant_clear":
         outcome(_title(link), None)
+    elif action == "connection_set":
+        # «Было → стало» словами; «по умолчанию» — так и написано, потому что
+        # это отдельный смысл: номер пойдёт за подключением по умолчанию, если
+        # его потом сменят.
+        explicit = ctx["connection_of"].get(rid)
+        before = explicit.label if explicit is not None else _default_label(ctx)
+        after = target.label if target is not None else _default_label(ctx)
+        row["from"], row["to"] = before, after
+        same = (explicit is None and target is None) or (
+            explicit is not None and target is not None and explicit.pk == target.pk
+        )
+        if same:
+            row["outcome"] = "same"
     elif action == "pin_issue":
         row["from"], row["to"] = has_pin, True
         row["replaces"] = has_pin
@@ -189,6 +217,11 @@ def _row(action: str, room, target, valid_until: date | None, ctx: dict) -> dict
         row["from"], row["to"] = True, False
         row["consequences"] = {"pin": has_pin, "sessions": rid in ctx["live"], "variant": _title(link)}
     return row
+
+
+def _default_label(ctx: dict) -> str:
+    default = ctx.get("default_connection")
+    return f"по умолчанию ({default.label})" if default is not None else "по умолчанию"
 
 
 def _plan(hotel: Hotel, action: str, value: Any, room_ids: list[str]) -> tuple[list[dict], dict]:
@@ -298,6 +331,11 @@ def _apply(hotel: Hotel, action: str, value: Any, todo: list[dict], ctx: dict, p
         else:
             svc.bulk_update_rooms({"selection": {"ids": ids}, "patch": {field: patch_value}}, audit=False)
         return
+    if action == "connection_set":
+        from apps.grms.services import control_server
+
+        control_server.assign_rooms(hotel, value if value not in (None, "", "none") else None, ids, audit=False)
+        return
     for rid in ids:
         room = rooms[rid]
         if action == "variant_set":
@@ -326,6 +364,9 @@ def _journal(hotel: Hotel, user, action: str, value: Any, todo: list[dict], ctx:
     label = value
     if action == "variant_set":
         label = _title(ctx["types"].get(str(value)))
+    elif action == "connection_set":
+        found = ctx["connections"].get(str(value)) if value not in (None, "", "none") else None
+        label = found.label if found is not None else _default_label(ctx)
     elif action in ("building", "category"):
         pool = ctx["buildings"] if action == "building" else ctx["categories"]
         label = _title(pool.get(str(value))) if value not in (None, "", "none") else None

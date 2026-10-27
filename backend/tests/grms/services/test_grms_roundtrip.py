@@ -65,63 +65,10 @@ FAST_DELAYS = (0.2, 0.5, 1.0)
 UNREACHABLE_LATENCY = (300.0, 300.0)
 
 
-class FakeConnectorRuntime:
-    """
-    Коннектор без сокета: слушает ту же группу Channels и исполняет задания
-    НАСТОЯЩИМ исполнителем. Всё, что ниже группы, — боевой код.
-    """
-
-    def __init__(self, hotel_id: str, endpoints: dict):
-        self.hotel_id = hotel_id
-        self.endpoints = endpoints
-        self.seen: list[dict] = []
-        self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._ready = threading.Event()
-
-    def start(self):
-        self._thread.start()
-        assert self._ready.wait(timeout=10), "коннектор не подписался на группу"
-
-    def stop(self):
-        """
-        Останов сигнальным конвертом, а не отменой receive().
-
-        Отменять `receive()` у channels_redis нельзя: сообщение, уже снятое с
-        очереди в момент отмены, теряется. Первая версия насоса крутила
-        `wait_for(receive, 0.2)`, и ровно на этом один ответ пропадал —
-        тест падал с TTL_EXPIRED там, где труба была исправна.
-        """
-        self._stop.set()
-        async_to_sync(get_channel_layer().group_send)(
-            group_name(self.hotel_id),
-            {"type": "connector.dispatch", "envelope": {"__stop__": True}, "reply_to": ""},
-        )
-        self._thread.join(timeout=10)
-
-    def _run(self):
-        async_to_sync(self._pump)()
-
-    async def _pump(self):
-        # Своя петля — свой экземпляр слоя: делить его между event loop'ами
-        # нельзя, соединение Redis привязано к петле.
-        from channels_redis.core import RedisChannelLayer
-
-        layer = RedisChannelLayer(hosts=settings.CHANNEL_LAYERS["default"]["CONFIG"]["hosts"])
-        channel = await layer.new_channel()
-        await layer.group_add(group_name(self.hotel_id), channel)
-        self._ready.set()
-
-        while True:
-            message = await layer.receive(channel)
-            envelope = message["envelope"]
-            if envelope.get("__stop__"):
-                return
-            self.seen.append(envelope)
-            response = await asyncio.get_running_loop().run_in_executor(
-                None, execute, envelope, self.endpoints
-            )
-            await layer.send(message["reply_to"], {"type": "connector.reply", "payload": response})
+# Коннектор без сокета — общий, из обвязки: своя копия здесь разъехалась бы с
+# ним на первой же смене маршрута заданий (партия 65: задания идут в группу
+# коннектора, а не отеля).
+from tests.grms.grms_harness import FakeConnectorRuntime  # noqa: E402
 
 
 @pytest.fixture
@@ -148,7 +95,7 @@ def wired(crystal, emulator_latency):
         OnPremNode.objects.filter(pk=node.pk).update(last_seen_at=timezone.now())
 
     runtime = FakeConnectorRuntime(
-        str(crystal.pk), {"iridi": Endpoint(base_url=f"http://127.0.0.1:{port}", timeout_ms=2000)}
+        str(crystal.pk), {"iridi": Endpoint(base_url=f"http://127.0.0.1:{port}", timeout_ms=2000)}, node_id=str(node.pk)
     )
     runtime.start()
     try:

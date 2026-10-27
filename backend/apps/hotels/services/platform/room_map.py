@@ -34,7 +34,7 @@ NONE = "none"
 CONTROL_ORDER = ("blocked", "attention", "ok", "off")
 # Порядок «Что исправить»: сначала то, что мешает всем номерам сразу.
 PROBLEMS = ("no_link", "no_variant", "not_published", "no_pin", "demo_entry")
-FACETS = ("building", "floor", "category", "variant", "pin", "control", "problem")
+FACETS = ("building", "floor", "category", "variant", "connection", "pin", "control", "problem")
 
 SORTS = {
     "number": ("natural", lambda r: r["number"]),
@@ -43,6 +43,7 @@ SORTS = {
     "position": ("natural", lambda r: r["position"] or None),
     "category": ("text", lambda r: r["category"] or None),
     "variant": ("text", lambda r: r["variant"]["title"] if r["variant"] else None),
+    "connection": ("text", lambda r: r["connection"]["name"] if r["connection"] else None),
     "pin": ("rank", lambda r: "yes" if r["pin"] else "no", ("no", "yes")),
     "control": ("rank", lambda r: r["control"], CONTROL_ORDER),
 }
@@ -63,12 +64,26 @@ def room_map(hotel: Hotel, params: dict[str, str]) -> dict[str, Any]:
         # «Есть PIN» — то же правило, что у «Доступа» панели (63-1, укус 401).
         pins = active_pin_room_ids()
         link = link_state(list(OnPremNode.objects.filter(purpose__in=GRMS_PURPOSES)))
+        # Подключение номера (партия 65): явное назначение либо «по умолчанию».
+        # Связь — по коннектору ЭТОГО подключения: у отеля их может быть
+        # несколько, и молчание одного не делает «без связи» номера другого.
+        from apps.grms.services import links as grms_links
+
+        explicit = grms_links.assignments([room.pk for room in rooms])
+        fallback = grms_links.default_server()
+        connection_link = {}
+        for server in grms_links.servers():
+            node = grms_links.node_for_server(server)
+            connection_link[str(server.pk)] = "none" if node is None else ("online" if node.is_online else "silent")
 
     context = {
         "room_control": module is not None,
         "demo_entry": bool(module and (module.config or {}).get("guest_entry_demo") is True),
         "link": link,
         "published": published,
+        "explicit": explicit,
+        "fallback": fallback,
+        "connection_link": connection_link,
     }
     rows = [_row(room, links.get(room.pk), room.pk in pins, rule, context) for room in rooms]
 
@@ -109,10 +124,17 @@ def _row(room, room_type, has_pin: bool, rule: dict, context: dict) -> dict[str,
         building_key, building = "", ""
     category = room.category.title_i18n if room.category_id and room.category else ""
     variant = {"code": room_type.code, "title": room_type.title_i18n or room_type.code} if room_type else None
+    from apps.grms.services import links as grms_links
+
+    connection = grms_links.describe_room(room, explicit_map=context.get("explicit", {}), fallback=context.get("fallback"))
+    # Связь номера — по его подключению; подключений нет — по отелю, как раньше.
+    room_link = (
+        context.get("connection_link", {}).get(connection["id"], context["link"]) if connection else context["link"]
+    )
 
     problems: list[str] = []
     if context["room_control"] and room.is_active:
-        if context["link"] != "online":
+        if room_link != "online":
             problems.append("no_link")
         if variant is None:
             problems.append("no_variant")
@@ -140,6 +162,7 @@ def _row(room, room_type, has_pin: bool, rule: dict, context: dict) -> dict[str,
         "position_source": place.position_source,
         "category": category,
         "variant": variant,
+        "connection": connection,
         "pin": has_pin,
         "is_active": room.is_active,
         "control": control,
@@ -149,6 +172,7 @@ def _row(room, room_type, has_pin: bool, rule: dict, context: dict) -> dict[str,
             "floor": place.floor or NONE,
             "category": category or NONE,
             "variant": variant["code"] if variant else NONE,
+            "connection": connection["id"] if connection else NONE,
             "pin": "yes" if has_pin else "no",
             "control": control,
         },
@@ -208,6 +232,8 @@ def _facet(rows: list[dict], key: str) -> list[dict[str, Any]]:
     labels: dict[str, str] = {}
     if key == "variant":
         labels = {row["variant"]["code"]: row["variant"]["title"] for row in rows if row["variant"]}
+    if key == "connection":
+        labels = {row["connection"]["id"]: row["connection"]["name"] for row in rows if row["connection"]}
     if key == "building":
         labels = {row["building_key"]: row["building"] for row in rows if row["building_key"]}
     if key == "control":

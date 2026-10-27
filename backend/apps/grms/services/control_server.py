@@ -10,6 +10,13 @@ Control и доезжают до коннектора отеля сообщен�
 Не задан сервер в Control — коннектор работает по своему локальному файлу,
 как до 63-3: облако отвечает ему `endpoints: null`.
 
+НЕСКОЛЬКО ПОДКЛЮЧЕНИЙ (партия 65). У отеля может быть несколько серверов
+управления, у каждого свой коннектор; номера назначаются подключениям, без
+назначения — «по умолчанию». Коннектор получает настройки ТОЛЬКО своего
+подключения (`links.server_for_node`), отклики и источник адреса считаются по
+коннектору, а не по отелю. Функции без `server_id` работают с подключением
+«по умолчанию» — экраны и вызовы до партии 65 не меняются.
+
 Секрет (пароль, токен) хранится зашифрованным (`apps.grms.vault`) и
 расшифровывается ровно в одном месте — `settings_message`, для коннектора.
 Наружу (API, журнал, логи) — только «задан / не задан» и «изменён».
@@ -50,9 +57,24 @@ class KindSoon(DomainError):
 # --- Чтение ------------------------------------------------------------------
 
 
-def get(hotel) -> ControlServer | None:
+def get(hotel, server_id=None) -> ControlServer | None:
+    """Подключение по id; без id — «по умолчанию»."""
+    from apps.grms.services import links
+
     with tenant_context(hotel):
-        return ControlServer.objects.select_related("node").first()
+        if server_id:
+            server = ControlServer.objects.select_related("node").filter(pk=server_id).first()
+            if server is None:
+                raise NotFoundError("Подключение не найдено")
+            return server
+        return links.default_server()
+
+
+def list_servers(hotel) -> list[ControlServer]:
+    from apps.grms.services import links
+
+    with tenant_context(hotel):
+        return links.servers()
 
 
 def _source_key(hotel_id) -> str:
@@ -76,6 +98,10 @@ def serialize(server: ControlServer | None) -> dict[str, Any] | None:
     if server is None:
         return None
     return {
+        "id": str(server.pk),
+        "name": server.name,
+        "label": server.label,
+        "is_default": server.is_default,
         "kind": server.kind,
         "protocol": server.protocol,
         "host": server.host,
@@ -148,31 +174,65 @@ def _clean(data: dict, current: ControlServer | None) -> dict:
         "timeout_ms": timeout,
         "is_enabled": bool(data.get("is_enabled", True)),
         "node_id": data.get("node_id") or None,
+        "name": str(data.get("name") or "").strip()[:120],
     }
 
 
-TRACKED = ("kind", "protocol", "host", "port", "auth", "login", "timeout_ms", "is_enabled", "node")
+TRACKED = ("name", "kind", "protocol", "host", "port", "auth", "login", "timeout_ms", "is_enabled", "node")
 
 
 def _snapshot(server: ControlServer | None) -> dict:
     if server is None:
         return {key: None for key in TRACKED}
     return {
+        "name": server.name or None,
         "kind": server.kind, "protocol": server.protocol, "host": server.host, "port": server.port,
         "auth": server.auth, "login": server.login, "timeout_ms": server.timeout_ms,
         "is_enabled": server.is_enabled, "node": server.node.name if server.node_id and server.node else None,
     }
 
 
+class NodeTaken(DomainError):
+    status = 409
+    code = "connector_has_connection"
+
+
+def _free_node(exclude_id=None):
+    """Коннектор отеля, ещё не занятый другим подключением (для нового подключения без явного выбора)."""
+    from apps.hotels.models import OnPremNode
+    from apps.hotels.services.onprem import GRMS_PURPOSES, pick_node
+
+    taken = set(
+        ControlServer.objects.exclude(pk=exclude_id).exclude(node__isnull=True).values_list("node_id", flat=True)
+    )
+    free = [n for n in OnPremNode.objects.filter(is_revoked=False, purpose__in=GRMS_PURPOSES) if n.pk not in taken]
+    return pick_node(free)
+
+
 @transaction.atomic
-def save(hotel, data: dict, *, actor_id=None, ip: str | None = None) -> ControlServer:
-    """Сохранить сервер управления и отправить настройки коннектору."""
+def save(hotel, data: dict, *, actor_id=None, ip: str | None = None, server_id=None, create: bool = False) -> ControlServer:
+    """
+    Сохранить подключение и отправить настройки коннектору.
+
+    `server_id` — правка этого подключения; `create` — новое подключение;
+    ни того ни другого — подключение «по умолчанию» (как до партии 65; нет
+    ни одного — заводится первое, и оно становится «по умолчанию»).
+    """
+    from apps.grms.services import links
     from apps.hotels.models import OnPremNode
     from apps.hotels.services.onprem import GRMS_PURPOSES, hotel_node
     from apps.hotels.services.platform import console
 
     with tenant_context(hotel):
-        current = ControlServer.objects.select_related("node").first()
+        if create:
+            current = None
+        elif server_id:
+            current = ControlServer.objects.select_related("node").filter(pk=server_id).first()
+            if current is None:
+                raise NotFoundError("Подключение не найдено")
+        else:
+            current = links.default_server()
+        first = not ControlServer.objects.exists()
         before = _snapshot(current)
         clean = _clean(data, current)
         node = None
@@ -180,11 +240,20 @@ def save(hotel, data: dict, *, actor_id=None, ip: str | None = None) -> ControlS
             node = OnPremNode.objects.filter(pk=clean["node_id"], is_revoked=False, purpose__in=GRMS_PURPOSES).first()
             if node is None:
                 raise NotFoundError("Коннектор не найден или отозван")
+        elif current is not None and current.node_id:
+            node = current.node
         else:
-            node = hotel_node()
-        server = current or ControlServer(hotel_id=hotel.pk)
+            node = hotel_node() if first else _free_node(exclude_id=current.pk if current else None)
+        if node is not None:
+            other = ControlServer.objects.exclude(pk=current.pk if current else None).filter(node=node).first()
+            if other is not None:
+                raise NodeTaken(
+                    f"Коннектор «{node.name}» уже ведёт подключение «{other.label}». Выберите другой коннектор.",
+                    field="node_id",
+                )
+        server = current or ControlServer(hotel_id=hotel.pk, is_default=first)
         secret_changed = False
-        for field in ("kind", "host", "port", "protocol", "auth", "login", "timeout_ms", "is_enabled"):
+        for field in ("name", "kind", "host", "port", "protocol", "auth", "login", "timeout_ms", "is_enabled"):
             setattr(server, field, clean[field])
         server.node = node
         if clean["auth"] == ControlServer.Auth.NONE:
@@ -209,22 +278,117 @@ def save(hotel, data: dict, *, actor_id=None, ip: str | None = None) -> ControlS
         "platform.hotel.control_server_set",
         actor_id=actor_id,
         ip=ip,
-        payload={"changes": changes},
+        payload={"changes": changes, "connection": server.label},
     )
     transaction.on_commit(lambda: push(hotel))
     return server
 
 
-def remove(hotel, *, actor_id=None, ip: str | None = None) -> None:
-    """Убрать адрес из Control: коннектор вернётся к локальному файлу."""
+@transaction.atomic
+def set_default(hotel, server_id, *, actor_id=None, ip: str | None = None) -> ControlServer:
+    """Сделать подключение «по умолчанию»: через него пойдут номера без своего назначения."""
     from apps.hotels.services.platform import console
 
     with tenant_context(hotel):
-        server = ControlServer.objects.select_related("node").first()
+        server = ControlServer.objects.select_related("node").filter(pk=server_id).first()
+        if server is None:
+            raise NotFoundError("Подключение не найдено")
+        previous = ControlServer.objects.filter(is_default=True).exclude(pk=server.pk).first()
+        if previous is None and server.is_default:
+            return server
+        ControlServer.objects.filter(is_default=True).exclude(pk=server.pk).update(is_default=False)
+        server.is_default = True
+        server.save(update_fields=["is_default", "updated_at"])
+    console.audit_hotel(
+        hotel,
+        "platform.hotel.control_server_default",
+        actor_id=actor_id,
+        ip=ip,
+        payload={"changes": {"control_default": {"from": previous.label if previous else None, "to": server.label}}},
+    )
+    transaction.on_commit(lambda: push(hotel))
+    return server
+
+
+@transaction.atomic
+def assign_rooms(hotel, server_id, room_ids, *, actor_id=None, ip: str | None = None, audit: bool = True) -> int:
+    """
+    Назначить номерам подключение. `server_id` пустой — вернуть номера на
+    подключение «по умолчанию» (снять своё назначение). Возвращает, у скольких
+    номеров назначение изменилось.
+    """
+    from apps.grms.models import RoomConnection
+    from apps.hotels.models import Room
+    from apps.hotels.services.platform import console
+
+    with tenant_context(hotel):
+        server = None
+        if server_id:
+            server = ControlServer.objects.select_related("node").filter(pk=server_id).first()
+            if server is None:
+                raise NotFoundError("Подключение не найдено")
+        rooms = list(Room.objects.filter(pk__in=list(room_ids)))
+        # all_objects: мягко удалённая связь тоже держит OneToOne по номеру —
+        # её убираем насовсем, иначе новая не встанет.
+        current = {str(r.room_id): r for r in RoomConnection.all_objects.filter(room__in=rooms)}
+        changed = []
+        for room in rooms:
+            link = current.get(str(room.pk))
+            alive = link is not None and link.deleted_at is None
+            if server is None:
+                if alive:
+                    changed.append(room.number)
+                if link is not None:
+                    link.delete(hard=True)
+                continue
+            if alive and link.server_id == server.pk:
+                continue
+            if link is not None:
+                link.delete(hard=True)
+            RoomConnection.objects.create(hotel_id=hotel.pk, room=room, server=server)
+            changed.append(room.number)
+    if changed and audit:
+        console.audit_hotel(
+            hotel,
+            "platform.hotel.rooms_connection_set",
+            actor_id=actor_id,
+            ip=ip,
+            payload={"rooms": changed[:200], "count": len(changed), "connection": server.label if server else "по умолчанию"},
+        )
+    return len(changed)
+
+
+def remove(hotel, *, actor_id=None, ip: str | None = None, server_id=None) -> None:
+    """
+    Убрать подключение. Его номера возвращаются на подключение «по умолчанию»;
+    убрали «по умолчанию» — им становится следующее. Последнее подключение
+    убрано — коннектор вернётся к локальному файлу, как до 63-3.
+    """
+    from apps.grms.models import RoomConnection
+    from apps.grms.services import links
+    from apps.hotels.services.platform import console
+
+    with tenant_context(hotel):
+        if server_id:
+            server = ControlServer.objects.select_related("node").filter(pk=server_id).first()
+            if server is None:
+                raise NotFoundError("Подключение не найдено")
+        else:
+            server = links.default_server()
         if server is None:
             return
         before = _snapshot(server)
+        # Номера подключения возвращаются на «по умолчанию»: их назначения — насовсем.
+        RoomConnection.all_objects.filter(server=server).hard_delete()
+        was_default = server.is_default
+        server.is_default = False
+        server.save(update_fields=["is_default", "updated_at"])
         server.delete()
+        if was_default:
+            heir = ControlServer.objects.order_by("created_at").first()
+            if heir is not None:
+                heir.is_default = True
+                heir.save(update_fields=["is_default", "updated_at"])
     console.audit_hotel(
         hotel,
         "platform.hotel.control_server_removed",
@@ -248,18 +412,39 @@ def _headers(server: ControlServer) -> dict[str, str]:
     return {}
 
 
-def settings_message(hotel_id) -> dict[str, Any]:
+def _node_and_hotel(node_id):
+    """Коннектор по id поверх тенантов — тем же путём, что `onprem.touch`: коннектор знает себя, а не отель."""
+    from apps.hotels.models import OnPremNode
+    from apps.core.context import platform_scope
+
+    with platform_scope():
+        node = OnPremNode.all_objects.using("platform").select_related("hotel").filter(pk=node_id).first()
+    return (node, node.hotel) if node is not None else (None, None)
+
+
+def server_for_node_id(node_id) -> tuple[Any, ControlServer | None]:
+    """Отель коннектора и подключение, которое он ведёт (партия 65)."""
+    from apps.grms.services import links
+
+    node, hotel = _node_and_hotel(node_id)
+    if node is None:
+        return None, None
+    with tenant_context(hotel):
+        return hotel, links.server_for_node(node)
+
+
+def settings_message(node_id) -> dict[str, Any]:
     """
     Настройки для коннектора — ЕДИНСТВЕННОЕ место, где секрет расшифровывается.
     Сервер не задан, выключен или тип ещё «скоро» — `endpoints: null`:
     коннектор работает по своему файлу.
-    """
-    from apps.hotels.models import Hotel
 
-    hotel = Hotel.objects.filter(pk=hotel_id).first()
+    Только подключение ЭТОГО коннектора (партия 65): чужой адрес коннектор не
+    получает, даже если он у того же отеля.
+    """
+    hotel, server = server_for_node_id(node_id)
     if hotel is None:
         return {"type": "connector.settings", "revision": 0, "endpoints": None}
-    server = get(hotel)
     if server is None or not server.is_enabled or server.kind not in READY_KINDS:
         return {"type": "connector.settings", "revision": server.revision if server else 0, "endpoints": None}
     return {
@@ -275,19 +460,14 @@ def settings_message(hotel_id) -> dict[str, Any]:
     }
 
 
-def record_result(hotel_id, result: dict) -> None:
-    """Ответ коннектора на настройки: принял ли и какую правку."""
-    from apps.hotels.models import Hotel
-
+def record_result(node_id, result: dict) -> None:
+    """Ответ коннектора на настройки: принял ли и какую правку (его подключение)."""
     # Откуда адрес — сразу из ответа, не ждать heartbeat (до 30 с).
-    remember_source(hotel_id, {"source": result.get("source"), "revision": result.get("revision")})
-    hotel = Hotel.objects.filter(pk=hotel_id).first()
-    if hotel is None:
+    remember_source(node_id, {"source": result.get("source"), "revision": result.get("revision")})
+    hotel, server = server_for_node_id(node_id)
+    if hotel is None or server is None:
         return
     with tenant_context(hotel):
-        server = ControlServer.objects.first()
-        if server is None:
-            return
         revision = int(result.get("revision") or 0)
         if revision and revision != server.revision:
             return  # ответ на прежнюю правку — уже не новость
@@ -318,15 +498,19 @@ def push(hotel) -> None:
 # --- Проверки ----------------------------------------------------------------
 
 
-def check(hotel) -> dict[str, Any]:
+def check(hotel, server_id=None) -> dict[str, Any]:
     """
     «Проверить сейчас»: коннектор открывает соединение с сервером управления —
-    ни одной команды оборудованию.
+    ни одной команды оборудованию. Подключение — указанное, иначе «по умолчанию».
     """
+    from apps.grms.services import links
     from apps.grms.transport import transport
 
+    server = get(hotel, server_id)
+    with tenant_context(hotel):
+        node = links.node_for_server(server)
     envelope = {"type": "connector.check", "requestID": adapter.new_request_id(), "endpoint": adapter.ENDPOINT_IRIDI, "ttl_ms": CHECK_TTL_MS}
-    response = transport.send(hotel, envelope, ttl_ms=CHECK_TTL_MS)
+    response = transport.send(hotel, envelope, ttl_ms=CHECK_TTL_MS, node=node) if node is not None else transport._offline(envelope["requestID"])
     result: dict[str, Any]
     if not response.get("ok"):
         code = (response.get("error") or {}).get("code") or "unknown"
@@ -342,9 +526,9 @@ def check(hotel) -> dict[str, Any]:
             "version": probe.get("version"),
             "error": None if probe.get("reachable") else "server_unreachable",
         }
-        remember_source(hotel.pk, {"source": probe.get("source")})
+        if node is not None:
+            remember_source(node.pk, {"source": probe.get("source")})
     with tenant_context(hotel):
-        server = ControlServer.objects.first()
         if server is not None:
             server.last_check_at = timezone.now()
             server.last_check_ok = bool(result.get("reachable"))
@@ -352,8 +536,8 @@ def check(hotel) -> dict[str, Any]:
             server.save(update_fields=["last_check_at", "last_check_ok", "last_check_detail", "updated_at"])
     from apps.grms.services import liveness
 
-    if result["connector"]:
-        liveness.observe(hotel.pk, bool(result["reachable"]))
+    if result["connector"] and node is not None:
+        liveness.observe(node.pk, bool(result["reachable"]))
     return result
 
 
@@ -393,4 +577,87 @@ def read_room(hotel, room_id) -> dict[str, Any]:
         "read": len(feedbacks),
         "answered": len(answered),
         "values": {k: (v if isinstance(v, (int, float, str, bool)) or v is None else str(v)) for k, v in answered.items()},
+    }
+
+
+# --- Цепочка звеньев для Control (вынесено из API: ORM — в сервисах) -------
+
+
+def _connection_rooms(server) -> set:
+    """id номеров подключения: назначенные явно, а у «по умолчанию» — ещё и все без назначения."""
+    from apps.grms.models import RoomConnection
+    from apps.hotels.models import Room
+
+    active = set(Room.objects.filter(is_active=True).values_list("pk", flat=True))
+    if server is None:
+        return active
+    explicit = dict(RoomConnection.objects.filter(room_id__in=active).values_list("room_id", "server_id"))
+    if server.is_default:
+        return {rid for rid in active if explicit.get(rid, server.pk) == server.pk}
+    return {rid for rid, sid in explicit.items() if sid == server.pk}
+
+
+def chain(hotel, server=None) -> dict:
+    """
+    Звенья цепочки ОДНОГО подключения: облако — коннектор — сервер управления —
+    номера. Без подключения — «по умолчанию» (как до партии 65).
+    """
+    from apps.core.context import tenant_context
+    from apps.grms.models import PublishedConfig, RoomTypeRoom
+    from apps.grms.services import links, liveness
+    from apps.hotels.models import HotelModule, OnPremNode
+    from apps.hotels.services.onprem import GRMS_PURPOSES
+
+    with tenant_context(hotel):
+        nodes = list(OnPremNode.objects.filter(is_revoked=False, purpose__in=GRMS_PURPOSES).order_by("name"))
+        room_control = HotelModule.objects.filter(code=HotelModule.Code.ROOM_CONTROL, is_enabled=True).exists()
+        if server is None:
+            server = links.default_server()
+        node = links.node_for_server(server)
+        room_ids = _connection_rooms(server)
+        rooms = len(room_ids)
+        published = set(PublishedConfig.objects.filter(is_current=True).values_list("room_type_id", flat=True))
+        bound = RoomTypeRoom.objects.filter(room_id__in=room_ids).count()
+        ready = RoomTypeRoom.objects.filter(room_id__in=room_ids, room_type_id__in=published).count()
+        taken = {str(s.node_id): s.label for s in links.servers() if s.node_id and (server is None or s.pk != server.pk)}
+    link = "none" if node is None else ("online" if node.is_online else "silent")
+    source = source_of(node.pk) if node is not None else None
+    reachable = liveness.endpoint_reachable(node.pk) if link == "online" else None
+    return {
+        "room_control": room_control,
+        "connector": {
+            "state": "none" if node is None else ("online" if link == "online" else ("never" if node.last_seen_at is None else "silent")),
+            "id": str(node.pk) if node else None,
+            "name": node.name if node else None,
+            "version": node.version if node else None,
+            "seconds": node.seconds_since_seen if node else None,
+        },
+        "server_link": {
+            "state": "unknown" if link != "online" else ("ok" if reachable else "down" if reachable is False else "unknown"),
+            "source": (source or {}).get("source"),
+            "configured": server is not None,
+        },
+        "rooms": {"total": rooms, "bound": bound, "ready": ready},
+        "nodes": [
+            {
+                "id": str(n.pk), "name": n.name, "online": n.is_online, "version": n.version, "never": n.last_seen_at is None,
+                # Коннектор уже ведёт другое подключение (партия 65): у одного
+                # коннектора одно подключение.
+                "taken_by": taken.get(str(n.pk)),
+            }
+            for n in nodes
+        ],
+        "connection_id": str(server.pk) if server is not None else None,
+        "connector_url": hotel.public_guest_url("/ws/v1/onprem/connector").replace("https://", "wss://").replace("http://", "ws://"),
+    }
+
+
+def summary(hotel, server) -> dict:
+    """Подключение для списка: имя, звенья, сколько номеров."""
+    links_ = chain(hotel, server)
+    return {
+        **serialize(server),
+        "connector": links_["connector"],
+        "server_link": links_["server_link"],
+        "rooms": links_["rooms"],
     }

@@ -1312,6 +1312,15 @@
           "seen": "最后信号",
           "version": "版本",
           "key": "密钥签发"
+        },
+        "list": {
+          "title": "房间控制连接",
+          "add": "添加连接",
+          "lead": "每个连接都有自己的连接器和控制服务器。在“房间”中为房间分配连接；未分配的房间使用默认连接。",
+          "default": "默认",
+          "rooms": "房间：{{count}}",
+          "open": "打开",
+          "makeDefault": "设为默认"
         }
       },
       "rooms": {
@@ -1339,7 +1348,8 @@
           "variant": "方案",
           "pin": "PIN",
           "position": "位置",
-          "control": "就绪"
+          "control": "就绪",
+          "connection": "连接"
         },
         "noBuilding": "无楼栋",
         "noFloor": "无楼层",
@@ -1365,8 +1375,10 @@
             "variant": "客房使用的控制方案。相同的客房（通常上下对齐）共用一个方案。",
             "pin": "客房是否有有效的 PIN 供客人进入客房控制。",
             "problems": "阻碍客房的最重要原因。所有原因见客房卡片。",
-            "occupancy": "已入住、空闲、清洁中。接入酒店预订系统后显示。"
-          }
+            "occupancy": "已入住、空闲、清洁中。接入酒店预订系统后显示。",
+            "connection": "房间通过哪个控制服务器。一家酒店可以有多个连接，例如演示用的模拟器和酒店的 iRidi。未单独分配的房间使用默认连接。"
+          },
+          "connection": "连接"
         },
         "control": {
           "ok": "一切正常",
@@ -1450,7 +1462,8 @@
           "noVariant": "未分配",
           "yes": "有",
           "no": "无",
-          "open": "点击打开客房"
+          "open": "点击打开客房",
+          "connection": "连接"
         },
         "place": {
           "title": "楼层内位置",
@@ -1470,7 +1483,8 @@
           "variant": "方案",
           "pin": "PIN",
           "control": "就绪",
-          "problem": "阻碍"
+          "problem": "阻碍",
+          "connection": "连接"
         },
         "part": "位置 {{from}}–{{to}}",
         "tile": {
@@ -1675,7 +1689,8 @@
             "category": "类别…",
             "building": "楼栋…",
             "state": "状态…",
-            "delete": "删除…"
+            "delete": "删除…",
+            "connection": "连接…"
           },
           "title": {
             "variant": "控制方案 — 客房：{{count}}",
@@ -1683,7 +1698,8 @@
             "category": "类别 — 客房：{{count}}",
             "building": "楼栋 — 客房：{{count}}",
             "state": "状态 — 客房：{{count}}",
-            "delete": "删除客房 — {{count}}"
+            "delete": "删除客房 — {{count}}",
+            "connection": "连接——房间：{{count}}"
           },
           "subtitle": "先显示每间客房将发生的变化。只执行显示的内容，一步完成。",
           "help": {
@@ -1692,7 +1708,8 @@
             "category": "客房类别，来自酒店目录。",
             "building": "客房所在楼栋。“移除楼栋”后客房将无楼栋。",
             "state": "“停售”是给酒店的标记。“客人进入”——客房是否允许客人扫码进入。",
-            "delete": "删除为软删除：重新添加即可恢复客房。"
+            "delete": "删除为软删除：重新添加即可恢复客房。",
+            "connection": "为所选房间分配连接，即其命令经过哪个控制服务器。“默认”会取消单独分配：房间跟随默认连接。"
           },
           "variantSet": "分配方案",
           "variantClear": "移除方案",
@@ -1764,8 +1781,14 @@
             "out_of_service": "已更改停售状态",
             "active": "已更改客人进入",
             "delete": "客房已删除"
-          }
-        }
+          },
+          "connectionLead": "所选房间的命令经过哪个连接。",
+          "connectionByDefault": "默认",
+          "noConnections": "酒店还没有连接——请在“连接”选项卡中添加。"
+        },
+        "noConnection": "无连接",
+        "connectionByDefault": "默认",
+        "connectionDefaultShort": "默认"
       },
       "journal": {
         "support": "支持登录",
@@ -1927,7 +1950,10 @@
           "timeoutHelp": "连接器等待服务器对一条指令回复的时间。500 到 30 000。",
           "enabled": "已启用",
           "enabledHelp": "停用的服务器不会发送给连接器——连接器使用其文件中的地址。",
-          "save": "保存"
+          "save": "保存",
+          "name": "连接名称",
+          "nameHelp": "连接在界面上的名称：“模拟器（演示）”、“酒店 iRidi”。留空则使用连接器名称。",
+          "namePlaceholder": "例如：酒店 iRidi"
         },
         "wiz": {
           "title": "连接客房控制",
@@ -1980,7 +2006,9 @@
           "done1": "已连接：",
           "doneConnector": "连接器“{{name}}”在线；",
           "doneServer": "控制服务器——",
-          "doneRooms": "已就绪客房：{{ready}} / {{total}}。"
+          "doneRooms": "已就绪客房：{{ready}} / {{total}}。",
+          "titleNew": "新的房间控制连接",
+          "noRoomsConnection": "此连接还没有房间。请在“房间”中分配：选择房间并选择“连接”。"
         }
       }
     },

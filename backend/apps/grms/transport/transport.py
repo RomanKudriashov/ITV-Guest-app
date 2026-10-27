@@ -20,7 +20,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 from apps.grms.transport import adapter
-from apps.grms.consumers import group_name
+from apps.grms.consumers import node_group
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +35,30 @@ def _offline(request_id: str) -> dict:
     }
 
 
-def node_is_online(hotel) -> bool:
+def resolve_node(hotel, *, room=None, number: str = "", server=None):
+    """
+    Коннектор для задания (партия 65): подключения номера, либо указанного
+    подключения, либо «по умолчанию». Правило — `services.links`.
+    """
+    from apps.core.context import tenant_context
+    from apps.grms.services import links
+
+    with tenant_context(hotel):
+        if server is not None:
+            return links.node_for_server(server)
+        return links.node_for_room(room, number=number)
+
+
+def node_is_online(hotel, *, room=None, number: str = "", server=None, node=None) -> bool:
     """
     «Онлайн» = узел отмечался недавно. Дозвониться до него мы не можем в
     принципе, поэтому других определений тут быть не может.
-    """
-    from apps.core.context import tenant_context
-    from apps.hotels.services.onprem import hotel_node
 
-    # Узел выбирает одно правило на все места (`onprem.pick_node`): живой
-    # рядом с ни разу не подключавшимся — живой.
-    with tenant_context(hotel):
-        node = hotel_node()
+    Узел — того подключения, через которое идёт номер (партия 65). Без номера
+    и подключения — коннектор подключения «по умолчанию», как раньше.
+    """
+    if node is None:
+        node = resolve_node(hotel, room=room, number=number, server=server)
     # Ровно `is_online` модели, а не своя копия порога: у OnPremNode уже есть
     # и порог, и корректная обработка «ни разу не отмечался». Своя копия здесь
     # успела родить ошибку — `seconds_since_seen or ...` считал ТОЛЬКО ЧТО
@@ -54,7 +66,7 @@ def node_is_online(hotel) -> bool:
     return node is not None and node.is_online
 
 
-async def asend(hotel_id, envelope: dict, *, ttl_ms: int) -> dict:
+async def asend(hotel_id, envelope: dict, *, ttl_ms: int, node_id) -> dict:
     """
     Асинхронная отправка. Возвращает ответ коннектора либо синтетический
     отказ — исключений не бросает: вызывающий ждёт ответ по requestID.
@@ -63,8 +75,12 @@ async def asend(hotel_id, envelope: dict, *, ttl_ms: int) -> dict:
     layer = get_channel_layer()
     reply_to = await layer.new_channel()
 
+    # Ровно своему коннектору, а не всем коннекторам отеля: у отеля их может
+    # быть несколько, и команда номера на эмуляторе не должна уходить в
+    # настоящий iRidi (партия 65). Ответ «нет такого устройства» от чужого
+    # обогнал бы ответ своего.
     await layer.group_send(
-        group_name(hotel_id),
+        node_group(node_id),
         {"type": "connector.dispatch", "envelope": envelope, "reply_to": reply_to},
     )
 
@@ -88,7 +104,9 @@ async def _receive_within(layer, channel: str, seconds: float):
     return await asyncio.wait_for(layer.receive(channel), timeout=seconds)
 
 
-def send(hotel, envelope: dict, *, ttl_ms: int | None = None) -> dict:
+def send(
+    hotel, envelope: dict, *, ttl_ms: int | None = None, room=None, number: str = "", server=None, node=None
+) -> dict:
     """
     Синхронная обёртка для прикладного кода.
 
@@ -98,8 +116,10 @@ def send(hotel, envelope: dict, *, ttl_ms: int | None = None) -> dict:
     заведомо известного ответа.
     """
     request_id = str(envelope.get("requestID"))
-    if not node_is_online(hotel):
+    if node is None:
+        node = resolve_node(hotel, room=room, number=number, server=server)
+    if node is None or not node.is_online:
         return _offline(request_id)
 
     ttl = ttl_ms or int(envelope.get("ttl_ms") or 5000)
-    return async_to_sync(asend)(str(hotel.pk), envelope, ttl_ms=ttl)
+    return async_to_sync(asend)(str(hotel.pk), envelope, ttl_ms=ttl, node_id=str(node.pk))

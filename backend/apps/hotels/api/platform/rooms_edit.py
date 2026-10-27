@@ -33,6 +33,8 @@ class RoomPatchIn(Schema):
     out_of_service: bool | None = None
     # Код варианта; пустая строка — снять вариант.
     variant: str | None = None
+    # Подключение номера (партия 65): id подключения, пусто — «по умолчанию».
+    connection: str | None = None
     # Имя устройства руками; пустая строка — по шаблону варианта.
     device_name: str | None = Field(default=None, max_length=255)
 

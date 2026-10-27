@@ -386,7 +386,7 @@ def build_state(hotel, session, *, language: str = "", room_id=None) -> dict:
     if context is None:
         return _unavailable(session, reason, language=language, verified=verified)
 
-    reason = _link_reason(hotel)
+    reason = _link_reason(context)
     if reason:
         return _unavailable(session, reason, language=language, verified=verified, context=context)
 
@@ -435,14 +435,20 @@ def _plan(context: RoomContext | None) -> dict:
     return {"plan": plan} if plan else {}
 
 
-def _link_reason(hotel) -> str:
-    """Узел и endpoint — до всякого чтения."""
-    if not transport.node_is_online(hotel):
+def _room_node(context: RoomContext):
+    """Коннектор подключения номера (партия 65): у отеля их может быть несколько."""
+    return transport.resolve_node(context.hotel, room=context.room)
+
+
+def _link_reason(context: RoomContext) -> str:
+    """Узел и endpoint ПОДКЛЮЧЕНИЯ НОМЕРА — до всякого чтения."""
+    node = _room_node(context)
+    if node is None or not node.is_online:
         return REASON_NODE_OFFLINE
     # None — «узел ещё не присылал heartbeat с пробами». Это НЕ отказ:
     # коннектор, подключившийся секунду назад, просто не успел. Реальную
     # недоступность поймает чтение, и элементы уйдут в offline честно.
-    if liveness.endpoint_reachable(hotel.pk) is False:
+    if liveness.endpoint_reachable(node.pk) is False:
         return REASON_ENDPOINT_UNREACHABLE
     return ""
 
@@ -541,7 +547,10 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     # подтверждаем живость канала: раз ответило одно устройство, endpoint жив,
     # и это уже законное утверждение про весь отель.
     liveness.forget_silent_reads(context.hotel.pk, context.room.pk)
-    liveness.observe(context.hotel.pk, True)
+    # Живость — коннектора ЭТОГО номера (партия 65), а не отеля.
+    node = _room_node(context)
+    if node is not None:
+        liveness.observe(node.pk, True)
 
     if all(result.is_dead_sentinel for result in successful):
         return results, REASON_FEEDBACK_DEAD
@@ -778,7 +787,7 @@ def submit_command(hotel, session, *, control_id: str, capability: str = "", val
     capability = _resolve_capability(control, capability)
     sent_value = _validate_value(control, capability, value)
 
-    link_reason = _link_reason(hotel)
+    link_reason = _link_reason(context)
     if link_reason:
         raise RoomControlUnavailable(_neutral_unavailable(session), code="room_unavailable")
 

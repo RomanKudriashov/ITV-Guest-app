@@ -161,13 +161,22 @@ def compute(hotel: Hotel) -> dict[str, Any]:
         if "room_control" in modules and nodes and link_state(nodes) == "online":
             from apps.grms.services import liveness
 
-            if liveness.endpoint_reachable(hotel.pk) is False:
-                node = pick_node(nodes)
-                problems.append(_problem(
-                    "control_server_silent",
-                    "Сервер управления не отвечает",
-                    key="iridi", node=node.name if node else "",
-                ))
+            from apps.grms.services import links
+
+            # По каждому подключению (партия 65): у отеля их может быть
+            # несколько, и молчит обычно одно.
+            # Подключения в Control нет, а адрес у коннектора в его файле —
+            # сервер всё равно есть, и про его молчание надо сказать.
+            pairs = [(server, links.node_for_server(server)) for server in links.servers()] or [(None, pick_node(nodes))]
+            for server, link_node in pairs:
+                if link_node is None or not link_node.is_online:
+                    continue
+                if liveness.endpoint_reachable(link_node.pk) is False:
+                    problems.append(_problem(
+                        "control_server_silent",
+                        f"Сервер управления не отвечает: «{server.label}»" if server else "Сервер управления не отвечает",
+                        key=str(server.pk) if server else "iridi", node=link_node.name,
+                    ))
         else:
             skipped.add("control_server_silent")
 

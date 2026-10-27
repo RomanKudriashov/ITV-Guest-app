@@ -671,7 +671,7 @@ def test_a_silent_channel_does_not_hold_the_whole_snapshot(guest, monkeypatch):
     from apps.grms.transport import transport
     from apps.grms.services import commands
 
-    async def never_answers(hotel_id, envelope, ttl_ms):
+    async def never_answers(hotel_id, envelope, ttl_ms, node_id=None):
         await __import__("asyncio").sleep(30)
         return {"ok": False}
 

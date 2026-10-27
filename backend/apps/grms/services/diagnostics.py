@@ -253,20 +253,23 @@ def link_state(hotel) -> dict:
     опросом: открытие экрана диагностики не должно ходить в оборудование
     живого отеля. Поэтому у неё своё время — видно, насколько сведения свежи.
     """
-    from apps.grms.services import liveness
-    from apps.grms.transport import transport
-    from apps.hotels.services.onprem import hotel_node
+    from apps.grms.services import links, liveness
 
     with tenant_context(hotel):
-        node = hotel_node()
+        # Звенья подключения «по умолчанию» — как до партии 65; остальные
+        # подключения — списком ниже, каждое со своими звеньями.
+        node = links.node_for_server(links.default_server())
+        connections = [
+            (server, links.node_for_server(server)) for server in links.servers()
+        ]
         last_read = (
             AuditLog.objects.filter(action=ACTION_READ, hotel_id=hotel.pk)
             .order_by("-created_at")
             .first()
         )
 
-    reachable = liveness.endpoint_reachable(hotel.pk)
-    connector_online = transport.node_is_online(hotel)
+    reachable = liveness.endpoint_reachable(node.pk) if node is not None else None
+    connector_online = node is not None and node.is_online
 
     if last_read is None:
         readable = {"state": "unknown", "reason": "", "reason_label": "", "at": None}
@@ -295,5 +298,21 @@ def link_state(hotel) -> dict:
             "state": "unknown" if reachable is None else ("reachable" if reachable else "unreachable"),
         },
         "state_readable": readable,
+        # Все подключения отеля порознь (партия 65): у каждого свой коннектор
+        # и свой сервер, и обрыв одного не говорит ничего о другом.
+        "connections": [
+            {
+                "id": str(server.pk),
+                "name": server.label,
+                "default": server.is_default,
+                "connector": "unknown" if link is None else ("online" if link.is_online else "offline"),
+                "iridi_endpoint": _endpoint_state(liveness.endpoint_reachable(link.pk) if link is not None else None),
+            }
+            for server, link in connections
+        ],
         "checked_at": timezone.now().isoformat(),
     }
+
+
+def _endpoint_state(reachable) -> str:
+    return "unknown" if reachable is None else ("reachable" if reachable else "unreachable")
