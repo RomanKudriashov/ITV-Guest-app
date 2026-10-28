@@ -25,7 +25,11 @@ import type {
 
 export function createSession(payload: CreateSessionPayload): Promise<GuestSessionCreated> {
   // No token yet, and a 404 (`room_not_found`) is a scenario branch, not a bounce.
-  return guestApi.post<GuestSessionCreated>('/guest/session', payload, {
+  // Язык и в адресе (партия 65): поле `language` сервер пишет в сессию, а
+  // название отеля в ответе переводит по языку ЗАПРОСА — без `lang` оно
+  // приходило на языке отеля по умолчанию.
+  const query = payload.language ? `?lang=${encodeURIComponent(payload.language)}` : '';
+  return guestApi.post<GuestSessionCreated>(`/guest/session${query}`, payload, {
     skipAuthRedirect: true,
   });
 }
