@@ -111,6 +111,7 @@ def home_payload(hotel, *, language: str, room: str | None, unread_chat: int) ->
     from apps.integrations.weather import service as weather
 
     home_settings = (hotel.settings or {}).get("home") or {}
+    current_weather = weather.current_for(hotel)
 
     return {
         "hotel": {
@@ -126,7 +127,12 @@ def home_payload(hotel, *, language: str, room: str | None, unread_chat: int) ->
         "room": room,
         # Погода приезжает ГОТОВОЙ и только с сервера: адреса провайдера
         # витрина не знает и в него не ходит. `None` — показывать нечего.
-        "weather": weather.current_for(hotel),
+        "weather": current_weather,
+        # Погода включена, а в кэше пусто (отель долго никто не открывал —
+        # данные протухли, обновление только что поставлено в очередь). Без
+        # этого флага первый гость видел главную без погоды до перезагрузки
+        # (партия 65): витрина переспрашивает главную через пару секунд.
+        "weather_pending": current_weather is None and weather.is_enabled(hotel),
         # Показывать ли на главной строку состояния номера. Данные для неё
         # витрина берёт из своего снимка номера — отсюда едет только разрешение.
         "room_status": bool(home_settings.get("room_status", True)),

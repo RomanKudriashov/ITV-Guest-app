@@ -229,8 +229,18 @@ export function useGuestHome() {
     queryFn: () => fetchHome(language),
     enabled: isReady,
     staleTime: 30_000,
+    // Погода у отеля включена, но ещё едет (холодный кэш): переспросить через
+    // пару секунд, а не ждать, пока гость перезагрузит страницу (партия 65).
+    // Не дольше WEATHER_RETRIES раз — провайдер может и молчать.
+    refetchInterval: (query) =>
+      query.state.data?.weather_pending && query.state.dataUpdateCount <= WEATHER_RETRIES
+        ? WEATHER_RETRY_MS
+        : false,
   });
 }
+
+const WEATHER_RETRY_MS = 2_500;
+const WEATHER_RETRIES = 6;
 
 /**
  * The guest's chat thread. While the socket is up it is kept fresh by snapshots

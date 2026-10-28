@@ -723,6 +723,8 @@ export interface GuestHome {
   room: string | null;
   /** Погода или ничего. Устаревшего здесь не бывает — сервер его не отдаёт. */
   weather?: GuestWeather | null;
+  /** Погода включена, но ещё едет с провайдера — главную стоит переспросить. */
+  weather_pending?: boolean;
   /** Разрешение отеля показывать на главной строку состояния номера. */
   room_status?: boolean;
   /** Bento showcase of hotel services, ordered by the server. */
