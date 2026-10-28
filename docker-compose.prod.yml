@@ -300,6 +300,22 @@ services:
       iridi-emulator: {condition: service_started}
     networks: [internal]
 
+  # Коннектор iRidi объекта PWV (партия 65): проброс 80.64.105.68:1085, наш
+  # адрес 147.45.245.172 в его белом списке. Профиль pwv — выкатка его не
+  # поднимает; ключ ITV_CONNECTOR_KEY_PWV — из мастера подключения.
+  connector-pwv:
+    profiles: ["pwv"]
+    build: ./connector
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY_PWV:-}"
+    volumes:
+      - ./connector/config.pwv.stand.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
 volumes:
   mailpit_data:
   postgres_data:

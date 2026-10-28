@@ -339,6 +339,22 @@ services:
       - backend
       - iridi-emulator
 
+  # Коннектор iRidi ОБЪЕКТА PWV (партия 65): номер 100 — на настоящем iRidi
+  # через проброс 80.64.105.68:1085 (белый список: стенд и выход lumina; с мака
+  # — через туннель Clash). Свой ключ — свой узел, своё подключение в Control.
+  # Локально: docker compose --profile grms --profile pwv up -d connector-pwv
+  connector-pwv:
+    profiles: ["pwv"]
+    build: ./connector
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY_PWV:-}"
+    volumes:
+      - ./connector/config.pwv.dev.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   minio_data:
