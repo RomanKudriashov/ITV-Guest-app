@@ -162,6 +162,12 @@ def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> di
         subdevice=context.payload.get("subdevice") or "",
         room=context.room.number,
         element=control_id,
+        # Климат на объекте подтверждается дольше света — своё окно (партия 65).
+        confirm_delays=(
+            commands.CONFIRM_DELAYS_CLIMATE_S
+            if control.get("kind") in commands.CLIMATE_KINDS
+            else commands.CONFIRM_DELAYS_S
+        ),
     )
 
     # Схлопывание одновременных чтений сбрасывается СРАЗУ после команды: после
