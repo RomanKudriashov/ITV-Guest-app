@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -64,6 +65,9 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
   const [isBootstrapping, setBootstrapping] = useState<boolean>(() =>
     Boolean(guestTokenStorage.get()),
   );
+  const language = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
+  // Язык, на котором пришли данные отеля из сессии. Сменился — перечитать.
+  const hotelLanguageRef = useRef<string | null>(null);
 
   const applyHotel = useCallback(
     (next: GuestHotel | undefined | null) => {
@@ -99,13 +103,15 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
     }
     let cancelled = false;
     setBootstrapping(true);
-    fetchSession()
+    const asked = language;
+    fetchSession(asked)
       .then((restored) => {
         if (cancelled) return;
         if (!isAlive(restored)) {
           guestTokenStorage.clear();
           return;
         }
+        hotelLanguageRef.current = asked;
         setSession(restored);
         applyHotel(restored.hotel);
       })
@@ -129,13 +135,40 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // Язык намеренно не в зависимостях: смену языка у живой сессии ведёт
+    // отдельный эффект ниже, здесь — только восстановление.
   }, [session, applyHotel]);
+
+  /*
+    СМЕНА ЯЗЫКА НА ЛЕТУ (партия 65). Название отеля, город и прочее из сессии
+    приходят на языке запроса; без перечтения шапка и «Инфо» оставались на
+    прежнем языке, пока гость не перезагрузит страницу.
+  */
+  useEffect(() => {
+    if (!session || !isAlive(session) || hotelLanguageRef.current === language) return;
+    let cancelled = false;
+    const asked = language;
+    fetchSession(asked)
+      .then((fresh) => {
+        if (cancelled || !isAlive(fresh)) return;
+        hotelLanguageRef.current = asked;
+        setSession(fresh);
+        applyHotel(fresh.hotel);
+      })
+      .catch(() => {
+        // Не вышло — останется прежний язык названия; сессия от этого не ломается.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [language, session, applyHotel]);
 
   const start = useCallback(
     async (roomNumber: string | null) => {
       const language = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
       try {
         const created = await createSession({ room_number: roomNumber, language });
+        hotelLanguageRef.current = language;
         guestTokenStorage.set(created.token, created.session_id);
         const { token: _token, ...rest } = created;
         void _token;

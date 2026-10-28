@@ -35,8 +35,14 @@ export function fetchPublicHotel(): Promise<GuestHotel> {
   return guestApi.get<GuestHotel>('/guest/hotel');
 }
 
-export function fetchSession(): Promise<GuestSession> {
-  return guestApi.get<GuestSession>('/guest/session', { skipAuthRedirect: true });
+/**
+ * Язык — ЯВНО (партия 65): без `lang` сервер брал язык браузера, и название
+ * отеля в сессии не совпадало с языком витрины, а при смене языка на лету
+ * оставалось прежним.
+ */
+export function fetchSession(language?: string): Promise<GuestSession> {
+  const query = language ? `?lang=${encodeURIComponent(language)}` : '';
+  return guestApi.get<GuestSession>(`/guest/session${query}`, { skipAuthRedirect: true });
 }
 
 /**
