@@ -90,6 +90,29 @@ def _rect(raw: object) -> dict | None:
     return rect
 
 
+TAPER_SIDES = ("start", "end")
+TAPER_MAX = 45.0
+
+
+def _taper(raw: object) -> dict:
+    """
+    Перспектива окна (партия 65): кадр снят сверху под углом, и проём на нём —
+    трапеция, а не прямоугольник. Одна длинная сторона окна (`side`: start —
+    левая/верхняя, end — правая/нижняя) короче: от её начала и конца срезано
+    `start`/`end` процентов длины окна. Полотна обрезаются по этой трапеции и
+    закрывают ровно стекло. Нет поля или оно битое — окно прямоугольное.
+    """
+    if not isinstance(raw, dict) or raw.get("side") not in TAPER_SIDES:
+        return {}
+    try:
+        start, end = (round(float(raw.get(key) or 0), 3) for key in ("start", "end"))
+    except (TypeError, ValueError):
+        return {}
+    if not (0 <= start <= TAPER_MAX and 0 <= end <= TAPER_MAX) or start == end == 0:
+        return {}
+    return {"taper": {"side": raw["side"], "start": start, "end": end}}
+
+
 def _point(raw: object) -> tuple[float, float] | None:
     if not isinstance(raw, dict):
         return None
@@ -160,6 +183,7 @@ def normalize(raw: object, *, control_ids: set[str]) -> dict:
                 # Блэкаут — отдельный слой на том же окне и отдельный элемент.
                 # Его может не быть, и это не мешает окну существовать.
                 "blackoutId": blackout_id if blackout_id in control_ids else "",
+                **_taper(window.get("taper")),
             }
         )
 

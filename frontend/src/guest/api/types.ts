@@ -934,6 +934,12 @@ export interface RoomPlanWindow extends RoomPlanRect {
   curtainId: string;
   /** Отдельный слой на том же окне. Пусто — блэкаута на этом окне нет. */
   blackoutId: string;
+  /**
+   * Перспектива: проём на кадре — трапеция. Сторона `side` (start — левая или
+   * верхняя, end — правая или нижняя) короче на `start`/`end` процентов длины
+   * окна от её начала и конца. Нет — окно прямоугольное.
+   */
+  taper?: { side: 'start' | 'end'; start: number; end: number };
 }
 
 /** Точка на плане: пока это выход воздуха фанкойла. */

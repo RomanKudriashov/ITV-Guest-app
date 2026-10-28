@@ -770,7 +770,8 @@ function PlanWindow({
         aria-hidden
         data-testid={`room-plan-window-${window.code}`}
         data-open={curtain === null ? 'unknown' : String(open)}
-        style={pct(window)}
+        data-taper={window.taper ? window.taper.side : undefined}
+        style={{ ...pct(window), clipPath: taperClip(window) }}
         sx={{ position: 'absolute', overflow: 'hidden', pointerEvents: 'none' }}
       >
         {curtain === null ? (
@@ -818,6 +819,25 @@ function PlanWindow({
       </Box>
     </>
   );
+}
+
+/**
+ * Трапеция проёма (партия 65): полотна режутся по ней и закрывают ровно стекло,
+ * как оно снято на кадре под углом, а не прямоугольник поверх стены.
+ */
+function taperClip(window: RoomPlanWindow): string | undefined {
+  const taper = window.taper;
+  if (!taper) return undefined;
+  const a = `${taper.start}%`;
+  const b = `${100 - taper.end}%`;
+  if (window.orientation === 'vertical') {
+    return taper.side === 'end'
+      ? `polygon(0 0, 100% ${a}, 100% ${b}, 0 100%)`
+      : `polygon(0 ${a}, 100% 0, 100% 100%, 0 ${b})`;
+  }
+  return taper.side === 'end'
+    ? `polygon(0 0, 100% 0, ${b} 100%, ${a} 100%)`
+    : `polygon(${a} 0, ${b} 0, 100% 100%, 0 100%)`;
 }
 
 /* ── Поток воздуха ────────────────────────────────────────────────────────── */
