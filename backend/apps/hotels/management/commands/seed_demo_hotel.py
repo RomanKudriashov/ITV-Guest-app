@@ -2006,10 +2006,10 @@ class Command(BaseCommand):
         from apps.catalog.models import Badge, Item, ItemBadge
 
         presets = [
-            ("hit", {"ru": "Хит", "en": "Hit"}, Badge.ColorRole.ACCENT, 0),
-            ("new", {"ru": "Новинка", "en": "New"}, Badge.ColorRole.INFO, 1),
-            ("chef_choice", {"ru": "Выбор шефа", "en": "Chef's choice"}, Badge.ColorRole.GOLD, 2),
-            ("recommended", {"ru": "Рекомендуем", "en": "Recommended"}, Badge.ColorRole.SUCCESS, 3),
+            ("hit", {"ru": "Хит", "en": "Hit", "zh": "热卖", "ar": "الأكثر طلباً"}, Badge.ColorRole.ACCENT, 0),
+            ("new", {"ru": "Новинка", "en": "New", "zh": "新品", "ar": "جديد"}, Badge.ColorRole.INFO, 1),
+            ("chef_choice", {"ru": "Выбор шефа", "en": "Chef's choice", "zh": "主厨推荐", "ar": "اختيار الشيف"}, Badge.ColorRole.GOLD, 2),
+            ("recommended", {"ru": "Рекомендуем", "en": "Recommended", "zh": "推荐", "ar": "نوصي به"}, Badge.ColorRole.SUCCESS, 3),
         ]
         badges = {}
         for code, label, role, order in presets:
@@ -2017,6 +2017,13 @@ class Command(BaseCommand):
                 preset=code,
                 defaults={"label": label, "color_role": role, "sort_order": order},
             )
+            # Повторный сев ДОПОЛНЯЕТ недостающие языки (партия 65): бейджи,
+            # заведённые раньше только на ru/en, гость с китайским или арабским
+            # видел по-русски. Заданное отелем не перетирается.
+            missing = {lang: text for lang, text in label.items() if not (badge.label or {}).get(lang)}
+            if missing:
+                badge.label = {**(badge.label or {}), **missing}
+                badge.save(update_fields=["label", "updated_at"])
             badges[code] = badge
 
         # Отельная метка: заведена отелем, правится и удаляется им же.
@@ -2026,7 +2033,7 @@ class Command(BaseCommand):
         if own is None:
             own = Badge.objects.create(
                 preset="",
-                label={"ru": "Острое", "en": "Spicy"},
+                label={"ru": "Острое", "en": "Spicy", "zh": "辣", "ar": "حار"},
                 color_role=Badge.ColorRole.GOLD,
                 sort_order=4,
             )
