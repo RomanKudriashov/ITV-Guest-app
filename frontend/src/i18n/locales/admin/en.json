@@ -513,7 +513,9 @@
           "rooms_rule_set": "Room number rule changed",
           "room_place_set": "Room position set",
           "control_server_set": "Control server changed",
-          "control_server_removed": "Control server address — from the connector file"
+          "control_server_removed": "Control server address — from the connector file",
+          "control_server_default": "Default connection changed",
+          "rooms_connection_set": "Connection assigned to rooms"
         },
         "node": {
           "registered": "Node registered",
@@ -617,7 +619,8 @@
         "deleted": "Room deleted",
         "variant_set": "Room variant changed",
         "device_set": "Room device name changed",
-        "batch": "Action on rooms"
+        "batch": "Action on rooms",
+        "connection_set": "Room connection changed"
       },
       "notification": {
         "event_settings_changed": "Notification settings changed",

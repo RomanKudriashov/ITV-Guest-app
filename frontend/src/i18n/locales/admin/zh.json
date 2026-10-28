@@ -511,7 +511,9 @@
           "rooms_rule_set": "房号规则已修改",
           "room_place_set": "已设置客房位置",
           "control_server_set": "已修改控制服务器",
-          "control_server_removed": "控制服务器地址——使用连接器文件中的地址"
+          "control_server_removed": "控制服务器地址——使用连接器文件中的地址",
+          "control_server_default": "已更改默认连接",
+          "rooms_connection_set": "已为客房分配连接"
         },
         "node": {
           "registered": "注册节点",
@@ -615,7 +617,8 @@
         "deleted": "已删除客房",
         "variant_set": "已更改客房方案",
         "device_set": "已更改客房设备名称",
-        "batch": "对客房的操作"
+        "batch": "对客房的操作",
+        "connection_set": "已更改客房连接"
       },
       "notification": {
         "event_settings_changed": "通知设置已更改",

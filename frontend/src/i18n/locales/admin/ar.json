@@ -517,7 +517,9 @@
           "rooms_rule_set": "تم تغيير قاعدة أرقام الغرف",
           "room_place_set": "تم تحديد موضع الغرفة",
           "control_server_set": "تغيّر خادم التحكم",
-          "control_server_removed": "عنوان خادم التحكم — من ملف الموصل"
+          "control_server_removed": "عنوان خادم التحكم — من ملف الموصل",
+          "control_server_default": "تم تغيير الاتصال الافتراضي",
+          "rooms_connection_set": "تم تعيين اتصال للغرف"
         },
         "node": {
           "registered": "تم تسجيل عقدة",
@@ -621,7 +623,8 @@
         "deleted": "حُذفت غرفة",
         "variant_set": "تغيّر نموذج الغرفة",
         "device_set": "تغيّر اسم جهاز الغرفة",
-        "batch": "إجراء على الغرف"
+        "batch": "إجراء على الغرف",
+        "connection_set": "تم تغيير اتصال الغرفة"
       },
       "notification": {
         "event_settings_changed": "تم تغيير إعدادات الإشعار",
