@@ -103,7 +103,7 @@ export function GuestTopBar({
             src={logo}
             alt={hotelName}
             data-testid="guest-topbar-logo"
-            sx={{ height: 22, width: 'auto', maxWidth: 180, objectFit: 'contain' }}
+            sx={{ height: 30, width: 'auto', maxWidth: 220, objectFit: 'contain' }}
           />
         ) : (
           <Typography

@@ -145,7 +145,16 @@ export function RoomMenu({
           aria-hidden
           sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main', flex: 'none' }}
         />
-        <Typography component="span" sx={{ fontSize: fontPx(12.5), fontWeight: 700, lineHeight: 1 }}>
+        {/*
+          С `lineHeight: 1` центр строки — середина между верхом и низом шрифта,
+          а не между верхом заглавных и базовой линией: «Room 100» без выносных
+          вниз садился на ~1 px выше середины чипа (партия 65). Сдвиг на
+          0,07 em ставит заглавные по центру.
+        */}
+        <Typography
+          component="span"
+          sx={{ fontSize: fontPx(12.5), fontWeight: 700, lineHeight: 1, transform: 'translateY(.07em)' }}
+        >
           {variant === 'bar'
             ? t('guest.home.room', { room })
             : t('guest.common.roomShort', { room })}
