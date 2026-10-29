@@ -52,6 +52,18 @@ const SPILL = { along: 3, depth: 3.2, sideDepth: 4.5 } as const;
 const ZONE_FADE_MS = 600;
 
 /**
+ * Фильтр экспозиции (партия 65): поднять кадр до целевой яркости, не выше
+ * потолка. Яркость кадра (0…255) считает сервер при обработке медиа и отдаёт в
+ * плане: читать пиксели в браузере нельзя — кадры лежат на другом адресе, и
+ * холст «заражается». Нет значения — прежний подъём до потолка.
+ */
+function exposure(rest: string, target: number | null, max: number, mean: number | null | undefined): string {
+  if (target === null) return rest;
+  const gain = mean == null ? max : Math.min(max, Math.max(1, target / Math.max(mean, 1)));
+  return `brightness(${gain.toFixed(2)})${rest && rest !== 'none' ? ` ${rest}` : ''}`;
+}
+
+/**
  * Сколько кадра плита обязана показывать, упершись в потолок высоты.
  *
  * Обрезка — размен, и у него есть дно. Ниже примерно шести седьмых кадра
@@ -181,6 +193,8 @@ export function RoomPlanPlate({
     `confirmed`, `unconfirmed`, `accepted` и `failed` его снимают.
   */
   const [pressing, setPressing] = useState<string>('');
+  const litMean = plan.image_luma;
+  const offMean = plan.image_off_luma;
 
   // Пропорция приезжает с сервером и нужна ДО загрузки кадра: без неё плита
   // схлопывается в ноль, а потом прыгает на высоту картинки — ровно в тот
@@ -310,7 +324,12 @@ export function RoomPlanPlate({
             //
             // Экспозиция кадра — из словаря: на светлой теме ночной кадр
             // поднимается, чтобы плита не была чёрным пятном на белой странице.
-            filter: neutral && !twoFrames ? 'grayscale(1)' : tokens.framesOff,
+            filter:
+              neutral && !twoFrames
+                ? 'grayscale(1)'
+                : twoFrames
+                  ? exposure(tokens.framesOff, tokens.framesOffTarget, tokens.framesOffMax, offMean)
+                  : exposure(tokens.framesOff, tokens.framesOffTarget, tokens.framesOffMax, litMean),
           }}
         />
 
@@ -337,7 +356,7 @@ export function RoomPlanPlate({
               data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
               style={{
                 opacity: on ? 1 : 0,
-                filter: tokens.framesOn,
+                filter: exposure(tokens.framesOn, tokens.framesOnTarget, tokens.framesOnMax, litMean),
                 ...zoneWindowStyle(zone.hit, zone.mask, tokens.zoneWindowInk, tokens.zoneWindowEdge),
               }}
               sx={{

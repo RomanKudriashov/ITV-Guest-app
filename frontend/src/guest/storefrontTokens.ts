@@ -142,6 +142,18 @@ export interface StorefrontTokens {
      */
     framesOff: string;
     framesOn: string;
+    /**
+     * ЦЕЛЕВАЯ ЯРКОСТЬ, А НЕ МНОЖИТЕЛЬ (партия 65). Множитель ×1.7 подбирался под
+     * тёмные рендеры (в среднем 54 из 255); рендеры Сиалии — 74…99, и тот же
+     * множитель их выжигал. Плита меряет среднюю яркость своего кадра и поднимает
+     * его ровно до цели, не выше потолка: тёмный рендер получает прежние ×1.7 и
+     * ×2.1, светлый — сколько нужно, вплоть до «как снят». `null` — не поднимать.
+     * `framesOn`/`framesOff` — остальная часть фильтра (цветность, контраст).
+     */
+    framesOnTarget: number | null;
+    framesOffTarget: number | null;
+    framesOnMax: number;
+    framesOffMax: number;
     /** Маска выключенной зоны — только для плиты БЕЗ ночного кадра. */
     maskOff: string;
     /*
@@ -315,6 +327,10 @@ const ROOM_PLATE = {
   // и есть ночь — трогать его нечем и незачем.
   framesOff: 'none',
   framesOn: 'none',
+  framesOnTarget: null,
+  framesOffTarget: null,
+  framesOnMax: 1,
+  framesOffMax: 1,
   // Растушёванный радиальный градиент: у выключенного света нет прямоугольной
   // границы, и маска с чёткими краями читается как заплата поверх кадра.
   maskOff:
@@ -537,8 +553,13 @@ const LIGHT: StorefrontTokens = {
       (эффект Пуркинье — ночью глаз видит холодное), и поднятый без этого он
       читается как лунная ночь, а не как день.
     */
-    framesOff: 'brightness(2.1) contrast(.9) saturate(.5)',
-    framesOn: 'brightness(1.7) saturate(1.05)',
+    // 54→92 и 27→57 — те же уровни, что давали прежние ×1.7 и ×2.1.
+    framesOff: 'contrast(.9) saturate(.5)',
+    framesOn: 'saturate(1.05)',
+    framesOnTarget: 92,
+    framesOffTarget: 57,
+    framesOnMax: 1.7,
+    framesOffMax: 2.1,
     // Подложка до загрузки кадра — светлая: иначе плита успевает мигнуть
     // чёрным прямоугольником на белой странице.
     fallback: '#DCE3EC',

@@ -318,12 +318,26 @@ def for_guest(plan: object) -> dict:
         # Снимок старой версии поля не несёт — тогда падаем на прежнее правило,
         # и откат к v2 продолжает работать.
         "level": plan.get("level") or ("full" if image_off else "simple"),
+        # Средняя яркость кадров 0…255 (партия 65): по ней светлая тема поднимает
+        # кадр ровно до цели, а не фиксированным множителем, который выжигал
+        # светлые рендеры. Считается сервером при обработке медиа (`luminance`,
+        # WCAG) и переводится в гамма-шкалу; нет значения — `None`.
+        "image_luma": _luma(asset),
+        "image_off_luma": _luma(off_asset) if image_off else None,
         "aspect": aspect or None,
         "mirrored": bool(plan.get("mirrored")),
         "zones": plan.get("zones") or [],
         "windows": plan.get("windows") or [],
         "points": plan.get("points") or [],
     }
+
+
+def _luma(asset) -> int | None:
+    """Яркость ассета в гамма-шкале 0…255 из линейной `luminance` (0…1)."""
+    value = getattr(asset, "luminance", None) if asset is not None else None
+    if value is None:
+        return None
+    return round(255 * max(0.0, min(1.0, float(value))) ** (1 / 2.2))
 
 
 def _asset(asset_id: object):

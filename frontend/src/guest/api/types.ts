@@ -987,6 +987,9 @@ export interface RoomPlan {
   zones: RoomPlanZone[];
   windows: RoomPlanWindow[];
   points: RoomPlanPoint[];
+  /** Средняя яркость кадров 0…255 — для экспозиции светлой темы; нет — `null`. */
+  image_luma?: number | null;
+  image_off_luma?: number | null;
 }
 
 /**

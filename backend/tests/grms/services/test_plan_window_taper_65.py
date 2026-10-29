@@ -31,3 +31,16 @@ def test_bite_taper_reaches_the_snapshot():
 )
 def test_broken_taper_leaves_a_plain_window(taper):
     assert "taper" not in _window(taper)
+
+
+def test_luma_is_gamma_scaled_luminance_and_none_without_value():
+    """Яркость кадра для экспозиции светлой темы (партия 65): 0…255 в гамма-шкале."""
+    from types import SimpleNamespace
+
+    from apps.grms.services.plan import _luma
+
+    assert _luma(None) is None
+    assert _luma(SimpleNamespace(luminance=None)) is None
+    assert _luma(SimpleNamespace(luminance=0.0)) == 0
+    assert _luma(SimpleNamespace(luminance=1.0)) == 255
+    assert 90 <= _luma(SimpleNamespace(luminance=0.11)) <= 95, "средний светлый рендер ~92"
