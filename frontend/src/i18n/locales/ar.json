@@ -976,7 +976,12 @@
         "s": "{{value}} ث",
         "ugm3": "{{value}} ميكروغرام/م³",
         "duration": "{{h}} س {{m}} د"
-      }
+      },
+      "backToHotel": "طقس الفندق",
+      "searchPlaceholder": "ابحث عن مدينة",
+      "searchHint": "ابدأ بكتابة اسم المدينة",
+      "searchNothing": "لم يتم العثور على المدينة",
+      "searchFailed": "البحث غير متاح الآن"
     }
   },
   "tracker": {

@@ -313,3 +313,43 @@ def detail_for(hotel) -> tuple[dict | None, bool]:
         return None, True
     units = getattr(hotel, "temperature_units", "c") or "c"
     return {**_present(entry, units), "units": units}, False
+
+
+# --- Погода выбранного города (партия 65) -------------------------------------
+#
+# Гость нашёл город поиском — тот же экран, те же источники, та же схема: сбор в
+# фоне, гость читает кэш. Ключ — точка, округлённая до сотых (~1 км): у тысячи
+# гостей, смотрящих Москву, один кэш, а не тысяча. Часовой пояс точки
+# определяет сам провайдер (`timezone=auto`).
+
+
+def point_of(latitude, longitude) -> tuple[float, float] | None:
+    try:
+        lat, lon = round(float(latitude), 2), round(float(longitude), 2)
+    except (TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return None
+    return lat, lon
+
+
+def _point_id(point: tuple[float, float]) -> str:
+    return f"pt:{point[0]:.2f},{point[1]:.2f}"
+
+
+def detail_for_point(point: tuple[float, float], units: str) -> tuple[dict | None, bool]:
+    subject = _point_id(point)
+    entry = cache.get(_detail_key(subject))
+    due = entry is None or cache.get(_detail_fresh_key(subject)) is None
+    if due and cache.add(_detail_queued_key(subject), "1", RETRY_AFTER_FAILURE):
+        from apps.integrations.weather.tasks import refresh_point_weather_detail
+
+        refresh_point_weather_detail.delay(point[0], point[1])
+    if entry is None:
+        return None, True
+    units = units or "c"
+    return {**_present(entry, units), "units": units}, False
+
+
+def store_point_detail(point: tuple[float, float], detail: dict) -> None:
+    store_detail(_point_id(point), detail)

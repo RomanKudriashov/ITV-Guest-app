@@ -5,6 +5,8 @@ import { guestApi } from './client';
 import type {
   CartQuote,
   GuestWeatherScreen,
+  WeatherCity,
+  WeatherPlace,
   ChatSnapshot,
   CreateOrderPayload,
   CreateSessionPayload,
@@ -158,8 +160,17 @@ export function cancelOrder(
  * the given order — there is no hard-coded list of tiles.
  */
 /** Подробная погода (партия 65): только из кэша сервера, `pending` — ещё едет. */
-export function fetchWeather(language?: string): Promise<GuestWeatherScreen> {
-  return guestApi.get<GuestWeatherScreen>('/guest/weather', { query: { lang: language } });
+export function fetchWeather(language?: string, place?: WeatherPlace | null): Promise<GuestWeatherScreen> {
+  return guestApi.get<GuestWeatherScreen>('/guest/weather', {
+    query: place
+      ? { lang: language, lat: String(place.latitude), lon: String(place.longitude), name: place.name }
+      : { lang: language },
+  });
+}
+
+/** Поиск города (партия 65): только города, по миру; `cities: null` — провайдер молчит. */
+export function fetchWeatherCities(query: string, language?: string): Promise<{ available: boolean; cities: WeatherCity[] | null }> {
+  return guestApi.get('/guest/weather/cities', { query: { q: query, lang: language } });
 }
 
 export function fetchHome(language?: string): Promise<GuestHome> {

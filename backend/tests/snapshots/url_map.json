@@ -571,6 +571,9 @@
   "/api/v1/guest/weather": [
     "GET"
   ],
+  "/api/v1/guest/weather/cities": [
+    "GET"
+  ],
   "/api/v1/health": [
     "GET"
   ],

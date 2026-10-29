@@ -1192,4 +1192,24 @@ export interface GuestWeatherScreen {
   city: string;
   timezone: string;
   weather: WeatherDetail | null;
+  /** Поиск города настроен (есть ключ DaData). */
+  search?: boolean;
+  /** Погода выбранного города, а не отеля; `null` — погода отеля. */
+  point?: { latitude: number; longitude: number } | null;
+}
+
+/** Город из поиска на экране погоды (партия 65). */
+export interface WeatherCity {
+  id: string;
+  name: string;
+  region: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface WeatherPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
 }

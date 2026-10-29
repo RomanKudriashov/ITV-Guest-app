@@ -966,7 +966,12 @@
         "s": "{{value}} с",
         "ugm3": "{{value}} мкг/м³",
         "duration": "{{h}} ч {{m}} мин"
-      }
+      },
+      "backToHotel": "Погода в отеле",
+      "searchPlaceholder": "Найти город",
+      "searchHint": "Начните вводить название города",
+      "searchNothing": "Город не найден",
+      "searchFailed": "Поиск сейчас недоступен"
     }
   },
   "tracker": {

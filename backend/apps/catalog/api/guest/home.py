@@ -41,16 +41,45 @@ def guest_home(request: HttpRequest):
     )
 
 
+@router.get("/weather/cities", auth=guest_auth, summary="Поиск города для экрана погоды (подсказки DaData)")
+def guest_weather_cities(request: HttpRequest, q: str = ""):
+    """
+    Только города, по всему миру. `available: false` — поиск не настроен (нет
+    ключа). `cities: null` — провайдер не ответил, это не «ничего не найдено».
+    """
+    from apps.integrations.geo import dadata
+
+    return {"available": dadata.available(), "cities": dadata.suggest_cities(q[:64], current_language())}
+
+
 @router.get("/weather", auth=guest_auth, summary="Подробная погода отеля: сейчас, по часам, дни, месяцы, море, воздух")
-def guest_weather(request: HttpRequest):
+def guest_weather(request: HttpRequest, lat: float | None = None, lon: float | None = None, name: str = ""):
     """
     Экран погоды гостя (партия 65). Данные — только из кэша: собирает их фоновая
     задача, гость провайдера не ждёт. `pending` — погода включена, но ещё едет:
     экран переспрашивает. Погода у отеля выключена — `enabled: false`.
     """
     hotel = request.hotel
+    from apps.integrations.geo import dadata
+
+    point = weather.point_of(lat, lon) if lat is not None and lon is not None else None
+    if point is not None:
+        # Город, найденный гостем: погода точки в единицах отеля. Название —
+        # то, что гость выбрал в подсказке; сервер его не переводит.
+        detail, pending = weather.detail_for_point(point, getattr(hotel, "temperature_units", "c"))
+        return {
+            "enabled": True,
+            "pending": pending,
+            "city": name[:80],
+            "timezone": "",
+            "weather": detail,
+            "search": dadata.available(),
+            "point": {"latitude": point[0], "longitude": point[1]},
+        }
     detail, pending = weather.detail_for(hotel)
     return {
+        "search": dadata.available(),
+        "point": None,
         "enabled": weather.is_enabled(hotel),
         "pending": pending,
         "city": translate(hotel.city, current_language()),

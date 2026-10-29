@@ -950,7 +950,12 @@
         "s": "{{value}} 秒",
         "ugm3": "{{value}} 微克/立方米",
         "duration": "{{h}} 小时 {{m}} 分"
-      }
+      },
+      "backToHotel": "酒店天气",
+      "searchPlaceholder": "查找城市",
+      "searchHint": "请输入城市名称",
+      "searchNothing": "未找到城市",
+      "searchFailed": "搜索暂时不可用"
     }
   },
   "tracker": {

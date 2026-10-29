@@ -66,3 +66,18 @@ def refresh_hotel_weather_detail(hotel_id: str) -> None:
         logger.info("Погода: подробности отеля %s не получены", hotel_id)
         return
     service.store_detail(hotel.pk, detail)
+
+
+@shared_task(acks_late=True, max_retries=0, ignore_result=True)
+def refresh_point_weather_detail(latitude: float, longitude: float) -> None:
+    """Подробная погода города, найденного гостем (партия 65): пояс — `auto`."""
+    from apps.integrations.weather import service
+
+    point = service.point_of(latitude, longitude)
+    if point is None:
+        return
+    detail = service.get_provider().detail(point[0], point[1], "auto")
+    if detail is None:
+        logger.info("Погода: подробности точки %s не получены", point)
+        return
+    service.store_point_detail(point, detail)

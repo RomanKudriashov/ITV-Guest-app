@@ -9,6 +9,7 @@ import {
   fetchChat,
   fetchHome,
   fetchWeather,
+  fetchWeatherCities,
   fetchItem,
   fetchLocations,
   fetchOrder,
@@ -22,6 +23,7 @@ import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
   GuestWeatherScreen,
+  WeatherPlace,
   CartQuote,
   ChatSnapshot,
   CreateOrderPayload,
@@ -249,12 +251,26 @@ const WEATHER_RETRIES = 6;
  * сбор) — переспрашиваем, как главная; дальше — раз в десять минут, пока экран
  * открыт: прогноз меняется медленно, а кэш сервера всё равно общий.
  */
-export function useGuestWeather() {
+/** Подсказки городов (партия 65): с двух букв, сервер кэширует их на сутки. */
+export function useWeatherCities(query: string) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: guestKeys.weatherCities(trimmed.toLocaleLowerCase(), language),
+    queryFn: () => fetchWeatherCities(trimmed, language),
+    enabled: isReady && trimmed.length >= 2,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useGuestWeather(place?: WeatherPlace | null) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();
   return useQuery<GuestWeatherScreen>({
-    queryKey: guestKeys.weather(language),
-    queryFn: () => fetchWeather(language),
+    queryKey: guestKeys.weather(language, place ? `${place.latitude},${place.longitude}` : ''),
+    queryFn: () => fetchWeather(language, place),
+    placeholderData: undefined,
     enabled: isReady,
     staleTime: 60_000,
     refetchInterval: (query) =>

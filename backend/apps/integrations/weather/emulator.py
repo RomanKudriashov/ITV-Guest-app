@@ -229,6 +229,30 @@ class Handler(BaseHTTPRequestHandler):
 
         return self._send(404, {"error": True, "reason": "unknown path"})
 
+    def do_POST(self) -> None:  # noqa: N802
+        # ПОДСКАЗКИ DADATA (партия 65): поиск города на экране погоды. Та же
+        # форма ответа, что у suggestions.dadata.ru, на тех же городах.
+        url = urlparse(self.path)
+        if url.path != "/suggestions/api/4_1/rs/suggest/address":
+            return self._send(404, {"error": True, "reason": "unknown path"})
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            return self._send(400, {"error": True})
+        needle = str(body.get("query", "")).strip().lower()
+        language = "ru" if body.get("language", "ru") == "ru" else "en"
+        found = []
+        for city in CITIES:
+            if needle and any(name.lower().startswith(needle) for name in city["names"].values()):
+                name, country, region = city["names"][language], city["country"][language], city["admin1"][language]
+                found.append({
+                    "value": f"{country}, {region}, {name}",
+                    "data": {"city": name, "region": region, "country": country, "city_fias_id": str(city["id"]),
+                             "geo_lat": str(city["latitude"]), "geo_lon": str(city["longitude"])},
+                })
+        return self._send(200, {"suggestions": found})
+
     def log_message(self, *_args) -> None:  # тишина: запросов много, смысла в них нет
         return
 

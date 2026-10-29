@@ -1,5 +1,8 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Autocomplete from '@mui/material/Autocomplete';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -13,9 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/EmptyState';
 import { IconBack, IconMoon } from '@/icons';
 import { fontPx } from '@/theme/fontPx';
-import type { WeatherDay, WeatherDetail, WeatherHour, WeatherMonth, WeatherOutlookDay } from '../api/types';
+import type { WeatherCity, WeatherDay, WeatherDetail, WeatherHour, WeatherMonth, WeatherOutlookDay, WeatherPlace } from '../api/types';
 import { conditionOf } from '../components/HomeWeather';
-import { useGuestWeather } from '../hooks/useGuestQueries';
+import { useGuestWeather, useWeatherCities } from '../hooks/useGuestQueries';
 import { cardSurfaceCss, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
@@ -38,10 +41,27 @@ import { useStorefront } from '../useStorefront';
 type Range = 'now' | 'week' | 'fortnight' | 'month' | 'season';
 const RANGES: Range[] = ['now', 'week', 'fortnight', 'month', 'season'];
 
+/**
+ * ВЫБРАННЫЙ ГОРОД — В АДРЕСЕ СТРАНИЦЫ (партия 65): `?city=…&lat=…&lon=…`.
+ * Так работают «назад» и обновление страницы, а ссылкой можно поделиться.
+ * Нет параметров — погода отеля.
+ */
+function usePlace(): [WeatherPlace | null, (next: WeatherPlace | null) => void] {
+  const [params, setParams] = useSearchParams();
+  const lat = Number(params.get('lat'));
+  const lon = Number(params.get('lon'));
+  const name = params.get('city') ?? '';
+  const place = params.has('lat') && params.has('lon') && Number.isFinite(lat) && Number.isFinite(lon) ? { name, latitude: lat, longitude: lon } : null;
+  const set = (next: WeatherPlace | null) =>
+    setParams(next ? { city: next.name, lat: String(next.latitude), lon: String(next.longitude) } : {}, { replace: false });
+  return [place, set];
+}
+
 export function WeatherPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useGuestWeather();
+  const [place, setPlace] = usePlace();
+  const { data, isLoading } = useGuestWeather(place);
   const [range, setRange] = useState<Range>('now');
 
   const header = (
@@ -58,19 +78,30 @@ export function WeatherPage() {
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
           {t('guest.weatherPage.title')}
         </Typography>
-        {data?.city ? (
+        {data?.city || place?.name ? (
           <Typography variant="body2" color="text.secondary" data-testid="guest-weather-city">
-            {data.city}
+            {place?.name || data?.city}
           </Typography>
         ) : null}
       </Box>
     </Stack>
   );
+  const search = data?.search ? (
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} sx={{ mb: 2 }}>
+      <CitySearch onPick={(city) => setPlace({ name: city.name, latitude: city.latitude, longitude: city.longitude })} />
+      {place ? (
+        <Button variant="outlined" onClick={() => setPlace(null)} data-testid="guest-weather-hotel" sx={{ flex: 'none' }}>
+          {t('guest.weatherPage.backToHotel')}
+        </Button>
+      ) : null}
+    </Stack>
+  ) : null;
 
   if (isLoading || (data?.pending && !data.weather)) {
     return (
       <Container maxWidth="md" sx={{ py: 2 }} data-testid="guest-weather">
         {header}
+        {search}
         <Stack alignItems="center" spacing={1.5} sx={{ py: 6 }} data-testid="guest-weather-pending">
           <CircularProgress size={28} />
           <Typography variant="body2" color="text.secondary">
@@ -85,6 +116,7 @@ export function WeatherPage() {
     return (
       <Container maxWidth="md" sx={{ py: 2 }} data-testid="guest-weather">
         {header}
+        {search}
         <EmptyState
           title={t('guest.weatherPage.emptyTitle')}
           description={t('guest.weatherPage.emptyHint')}
@@ -98,6 +130,7 @@ export function WeatherPage() {
   return (
     <Container maxWidth="md" sx={{ py: 2, pb: { xs: 6, md: 8 } }} data-testid="guest-weather">
       {header}
+      {search}
       <Now weather={weather} />
       <Tabs
         value={range}
@@ -130,6 +163,66 @@ export function WeatherPage() {
       {range === 'season' ? <Months months={weather.months} units={weather.units} /> : null}
       <Updated at={weather.fetched_at} />
     </Container>
+  );
+}
+
+/* ── Поиск города ─────────────────────────────────────────────────────────── */
+
+/**
+ * Только города, по всему миру — подсказки DaData через наш сервер (ключ
+ * в браузер не попадает). Запрос уходит с двух букв и после паузы в наборе.
+ */
+function CitySearch({ onPick }: { onPick: (city: WeatherCity) => void }) {
+  const { t } = useTranslation();
+  const [text, setText] = useState('');
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    const id = window.setTimeout(() => setQuery(text), 300);
+    return () => window.clearTimeout(id);
+  }, [text]);
+  const { data, isFetching } = useWeatherCities(query);
+  const options = data?.cities ?? [];
+  const failed = data?.cities === null;
+  return (
+    <Autocomplete<WeatherCity, false, false, false>
+      fullWidth
+      size="small"
+      options={options}
+      filterOptions={(items) => items}
+      getOptionLabel={(city) => city.name}
+      isOptionEqualToValue={(a, b) => a.id === b.id}
+      loading={isFetching}
+      inputValue={text}
+      onInputChange={(_event, value) => setText(value)}
+      onChange={(_event, city) => {
+        if (city) {
+          onPick(city);
+          setText('');
+        }
+      }}
+      value={null}
+      noOptionsText={query.trim().length < 2 ? t('guest.weatherPage.searchHint') : failed ? t('guest.weatherPage.searchFailed') : t('guest.weatherPage.searchNothing')}
+      loadingText={t('guest.common.loading')}
+      renderOption={(props, city) => (
+        <Box component="li" {...props} key={city.id} data-testid="guest-weather-city-option">
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {city.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {[city.region, city.country].filter(Boolean).join(', ')}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          placeholder={t('guest.weatherPage.searchPlaceholder')}
+          inputProps={{ ...params.inputProps, 'data-testid': 'guest-weather-search' }}
+        />
+      )}
+    />
   );
 }
 

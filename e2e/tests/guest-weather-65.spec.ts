@@ -69,3 +69,30 @@ test('провайдер молчит — честное «погоды пока
   await page.goto('/weather')
   await expect(page.getByTestId('guest-weather-empty')).toBeVisible({ timeout: 20_000 })
 })
+
+test('поиск города: только города, погода выбранного города и возврат к отелю', async ({ page }) => {
+  test.setTimeout(120_000)
+  await enterRoom(page)
+  await page.goto('/weather')
+  await expect(page.getByTestId('guest-weather-now')).toBeVisible({ timeout: 60_000 })
+  const hotelCity = await page.getByTestId('guest-weather-city').innerText()
+
+  // Подсказки — через наш сервер (ключ DaData в браузер не попадает).
+  const cities = page.waitForRequest((request) => request.url().includes('/guest/weather/cities'))
+  await page.getByTestId('guest-weather-search').fill('Дуб')
+  expect((await cities).url()).not.toContain('dadata')
+  const option = page.getByTestId('guest-weather-city-option').first()
+  await expect(option).toContainText('Дубай', { timeout: 15_000 })
+  await option.click()
+
+  // Город — в адресе страницы: «назад» и обновление показывают его же.
+  await expect(page).toHaveURL(/[?&]lat=25\.\d+&lon=55\.\d+/)
+  await expect(page.getByTestId('guest-weather-city')).toHaveText('Дубай')
+  await expect(page.getByTestId('guest-weather-now')).toBeVisible({ timeout: 60_000 })
+  await page.reload()
+  await expect(page.getByTestId('guest-weather-city')).toHaveText('Дубай', { timeout: 20_000 })
+
+  await page.getByTestId('guest-weather-hotel').click()
+  await expect(page.getByTestId('guest-weather-city')).toHaveText(hotelCity)
+  await expect(page.getByTestId('guest-weather-hotel')).toHaveCount(0)
+})

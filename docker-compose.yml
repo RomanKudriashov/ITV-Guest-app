@@ -96,6 +96,8 @@ services:
       WEATHER_SEASONAL_URL: http://weather-emulator:1086
       WEATHER_MARINE_URL: http://weather-emulator:1086
       WEATHER_AIR_URL: http://weather-emulator:1086
+      DADATA_SUGGEST_URL: http://weather-emulator:1086/suggestions/api/4_1/rs/suggest/address
+      DADATA_API_KEY: emulator
       # Telegram (партия 28): по умолчанию — эмулятор Bot API, а не настоящий
       # Telegram: у бота один токен и один опрашивающий, и машина разработчика,
       # опрашивая боевого бота, выбила бы стенд ответом 409. Живой бот локально —
@@ -162,6 +164,8 @@ services:
       WEATHER_SEASONAL_URL: http://weather-emulator:1086
       WEATHER_MARINE_URL: http://weather-emulator:1086
       WEATHER_AIR_URL: http://weather-emulator:1086
+      DADATA_SUGGEST_URL: http://weather-emulator:1086/suggestions/api/4_1/rs/suggest/address
+      DADATA_API_KEY: emulator
       # Telegram (партия 28): по умолчанию — эмулятор Bot API, а не настоящий
       # Telegram: у бота один токен и один опрашивающий, и машина разработчика,
       # опрашивая боевого бота, выбила бы стенд ответом 409. Живой бот локально —
@@ -206,6 +210,8 @@ services:
       WEATHER_SEASONAL_URL: http://weather-emulator:1086
       WEATHER_MARINE_URL: http://weather-emulator:1086
       WEATHER_AIR_URL: http://weather-emulator:1086
+      DADATA_SUGGEST_URL: http://weather-emulator:1086/suggestions/api/4_1/rs/suggest/address
+      DADATA_API_KEY: emulator
       MINIO_ENDPOINT: minio:9000
       MINIO_PUBLIC_ENDPOINT: ${DEV_HOST:-localhost}:${MINIO_HOST_PORT:-59000}
       # Сид и миграции делает backend — служба только читает и выполняет.

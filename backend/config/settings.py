@@ -282,6 +282,10 @@ WEATHER_GEOCODER_URL = os.getenv("WEATHER_GEOCODER_URL", "https://geocoding-api.
 WEATHER_SEASONAL_URL = os.getenv("WEATHER_SEASONAL_URL", "https://seasonal-api.open-meteo.com")
 WEATHER_MARINE_URL = os.getenv("WEATHER_MARINE_URL", "https://marine-api.open-meteo.com")
 WEATHER_AIR_URL = os.getenv("WEATHER_AIR_URL", "https://air-quality-api.open-meteo.com")
+# Поиск городов на экране погоды гостя (партия 65) — подсказки DaData. Ключ
+# живёт только на сервере; пусто — поиска нет, экран показывает погоду отеля.
+DADATA_API_KEY = os.getenv("DADATA_API_KEY", "")
+DADATA_SUGGEST_URL = os.getenv("DADATA_SUGGEST_URL", "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address")
 # Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
 # первого с запасом на одну пропущенную попытку.
 WEATHER_REFRESH_SECONDS = int(os.getenv("WEATHER_REFRESH_SECONDS", "1200"))

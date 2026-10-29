@@ -956,7 +956,12 @@
         "s": "{{value}} s",
         "ugm3": "{{value}} µg/m³",
         "duration": "{{h}} h {{m}} min"
-      }
+      },
+      "backToHotel": "Hotel weather",
+      "searchPlaceholder": "Find a city",
+      "searchHint": "Start typing a city name",
+      "searchNothing": "City not found",
+      "searchFailed": "Search is unavailable right now"
     }
   },
   "tracker": {
