@@ -90,3 +90,13 @@ def test_residence_all_off_covers_ten_groups(emulator: IridiEmulator):
         emulator.set_value(RESIDENCE, f"C_Light {i}", 1)
     emulator.set_value(RESIDENCE, "C_Scene_1", 1)
     assert all(_read(emulator, RESIDENCE, f"Light {i}") == "0" for i in range(10))
+
+
+def test_showroom_residence_101_has_ten_groups_and_its_own_state(emulator: IridiEmulator):
+    """Номер 101 (шоурум «Резиденция», партия 65) — свой профиль резиденции и своё состояние."""
+    showroom = DEVICE_TEMPLATE.format(room="S101")
+    assert [_read(emulator, showroom, f"Light {i}") for i in range(10)] == ["0"] * 10
+    assert _read(emulator, showroom, "Light 10") is None
+    emulator.set_value(showroom, "C_Light 4", 1)
+    assert _read(emulator, showroom, "Light 4") == "1"
+    assert _read(emulator, RESIDENCE, "Light 4") == "0", "101 и 204 делят состояние"

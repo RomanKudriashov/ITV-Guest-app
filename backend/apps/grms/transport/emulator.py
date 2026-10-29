@@ -119,7 +119,9 @@ ROOM_PROFILES.update({room: SIALIA_HOTEL_ROOM for room in _SIALIA_HOTEL_ROOMS})
 # «СИАЛИЯ», РЕЗИДЕНЦИЯ (64-1): десять групп света C_Light 0…9 = гр. 2.3.1…2.3.10
 # из проекта шоурума «Резиденция»; штора, фанкойл 0 — как у отельного номера.
 SIALIA_RESIDENCE = {"lights": 10, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0}
-_SIALIA_RESIDENCES = ["S204"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in (7, 8)]
+# S101 — шоурум 1_2.3 «Резиденция» (партия 65): номер 101 управляется через
+# наше подключение, пока на объекте не соберут и не настроят его iRidi.
+_SIALIA_RESIDENCES = ["S204", "S101"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in (7, 8)]
 ROOM_PROFILES.update({room: SIALIA_RESIDENCE for room in _SIALIA_RESIDENCES})
 # Комнаты, за которые эмулятор отвечает.
 #
