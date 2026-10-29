@@ -41,6 +41,24 @@ def guest_home(request: HttpRequest):
     )
 
 
+@router.get("/weather", auth=guest_auth, summary="Подробная погода отеля: сейчас, по часам, дни, месяцы, море, воздух")
+def guest_weather(request: HttpRequest):
+    """
+    Экран погоды гостя (партия 65). Данные — только из кэша: собирает их фоновая
+    задача, гость провайдера не ждёт. `pending` — погода включена, но ещё едет:
+    экран переспрашивает. Погода у отеля выключена — `enabled: false`.
+    """
+    hotel = request.hotel
+    detail, pending = weather.detail_for(hotel)
+    return {
+        "enabled": weather.is_enabled(hotel),
+        "pending": pending,
+        "city": translate(hotel.city, current_language()),
+        "timezone": hotel.timezone,
+        "weather": detail,
+    }
+
+
 @router.get("/venues", auth=guest_auth, summary="Уровень 2: заведения группы")
 def guest_venues(request: HttpRequest, group: str):
     hotel = request.hotel

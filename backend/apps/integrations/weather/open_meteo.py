@@ -48,6 +48,24 @@ class OpenMeteoProvider:
 
         return _Geocoding(getattr(settings, "WEATHER_GEOCODER_URL", "https://geocoding-api.open-meteo.com"))
 
+    def detail(self, latitude: float, longitude: float, timezone_name: str) -> dict | None:
+        """Подробная погода для экрана гостя (партия 65) — см. open_meteo_detail."""
+        from django.conf import settings
+
+        from .open_meteo_detail import fetch_detail
+
+        return fetch_detail(
+            latitude,
+            longitude,
+            timezone_name=timezone_name,
+            urls={
+                "forecast": self.base_url,
+                "seasonal": getattr(settings, "WEATHER_SEASONAL_URL", "https://seasonal-api.open-meteo.com").rstrip("/"),
+                "marine": getattr(settings, "WEATHER_MARINE_URL", "https://marine-api.open-meteo.com").rstrip("/"),
+                "air": getattr(settings, "WEATHER_AIR_URL", "https://air-quality-api.open-meteo.com").rstrip("/"),
+            },
+        )
+
     def current(self, latitude: float, longitude: float) -> CurrentWeather | None:
         import requests
 

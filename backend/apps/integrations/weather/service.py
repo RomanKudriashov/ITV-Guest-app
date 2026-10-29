@@ -238,3 +238,78 @@ def city_in_languages(city_id: int, languages) -> dict[str, str]:
         if row and row.get("name"):
             names[language] = row["name"]
     return names
+
+
+# --- Подробная погода (партия 65) ------------------------------------------------
+#
+# Экран погоды гостя: сейчас, по часам, 16 дней, ориентир до 46 дней, полгода по
+# месяцам, море и воздух. Пять запросов к провайдеру — поэтому только в фоне и
+# только по кэшу: гость никогда не ждёт провайдера, а частота не зависит от
+# числа гостей. Свежесть мягче, чем у строки на главной: прогноз на две недели
+# за полчаса не меняется, а данные часовой давности честно подписаны временем.
+
+DETAIL_REFRESH_AFTER = int(getattr(settings, "WEATHER_DETAIL_REFRESH_SECONDS", 30 * 60))
+DETAIL_FRESH_FOR = int(getattr(settings, "WEATHER_DETAIL_FRESH_SECONDS", 3 * 60 * 60))
+
+
+def _detail_key(hotel_id) -> str:
+    return f"{CACHE_PREFIX}:detail:{hotel_id}"
+
+
+def _detail_fresh_key(hotel_id) -> str:
+    """Есть — данные моложе DETAIL_REFRESH_AFTER, обновлять рано."""
+    return f"{CACHE_PREFIX}:detail-fresh:{hotel_id}"
+
+
+def _detail_queued_key(hotel_id) -> str:
+    """Обновление уже поставлено — второе не ставим (атомарно через `add`)."""
+    return f"{CACHE_PREFIX}:detail-queued:{hotel_id}"
+
+
+def store_detail(hotel_id, detail: dict) -> None:
+    cache.set(_detail_key(hotel_id), detail, DETAIL_FRESH_FOR)
+    cache.set(_detail_fresh_key(hotel_id), "1", DETAIL_REFRESH_AFTER)
+
+
+def _to_units(value, units: str, *, delta: bool = False):
+    if value is None or units != "f":
+        return value
+    return round(value * 9 / 5 + (0 if delta else 32), 1)
+
+
+def _present(node, units: str):
+    """Цельсий → единицы отеля во всех полях `*_c` (отклонение — без сдвига)."""
+    if isinstance(node, list):
+        return [_present(item, units) for item in node]
+    if not isinstance(node, dict):
+        return node
+    out = {}
+    for key, value in node.items():
+        if key.endswith("_c") and (value is None or isinstance(value, (int, float))):
+            out[key] = _to_units(value, units, delta=key == "anomaly_c")
+        else:
+            out[key] = _present(value, units)
+    return out
+
+
+def detail_for(hotel) -> tuple[dict | None, bool]:
+    """
+    Подробная погода для экрана гостя: (данные, «в пути»).
+
+    Нет в кэше — ставим одно обновление на отель и честно говорим «в пути»:
+    экран переспросит через пару секунд. Погода выключена — (None, False).
+    """
+    if not is_enabled(hotel):
+        return None, False
+    entry = cache.get(_detail_key(hotel.pk))
+    due = entry is None or cache.get(_detail_fresh_key(hotel.pk)) is None
+    # Кулдаун попытки — минута, как у строки на главной: не ответил провайдер —
+    # следующий гость через минуту получит новую попытку, а не пустой экран.
+    if due and cache.add(_detail_queued_key(hotel.pk), "1", RETRY_AFTER_FAILURE):
+        from apps.integrations.weather.tasks import refresh_hotel_weather_detail
+
+        refresh_hotel_weather_detail.delay(str(hotel.pk))
+    if entry is None:
+        return None, True
+    units = getattr(hotel, "temperature_units", "c") or "c"
+    return {**_present(entry, units), "units": units}, False

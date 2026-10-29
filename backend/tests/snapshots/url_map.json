@@ -568,6 +568,9 @@
   "/api/v1/guest/venues": [
     "GET"
   ],
+  "/api/v1/guest/weather": [
+    "GET"
+  ],
   "/api/v1/health": [
     "GET"
   ],

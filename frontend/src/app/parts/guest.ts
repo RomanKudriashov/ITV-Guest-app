@@ -10,6 +10,7 @@ export { GuestRoot } from '@/guest/GuestRoot';
 export { GuestLayout } from '@/guest/layout/GuestLayout';
 export { EntryPage } from '@/guest/pages/EntryPage';
 export { HomePage } from '@/guest/pages/HomePage';
+export { WeatherPage } from '@/guest/pages/WeatherPage';
 export { CatalogPage } from '@/guest/pages/CatalogPage';
 export { VenuePage } from '@/guest/pages/VenuePage';
 export { VenueListPage } from '@/guest/pages/VenueListPage';

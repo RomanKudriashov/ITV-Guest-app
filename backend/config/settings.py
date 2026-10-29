@@ -276,6 +276,12 @@ WEATHER_API_URL = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com")
 # Справочник городов ТОГО ЖЕ провайдера: у Open-Meteo он живёт своим хостом.
 # Лицензия общая с погодой — см. docs/ops/weather.md.
 WEATHER_GEOCODER_URL = os.getenv("WEATHER_GEOCODER_URL", "https://geocoding-api.open-meteo.com")
+# Подробная погода (партия 65): у Open-Meteo это отдельные сервисы — сезонный
+# прогноз (ансамбль до 46 дней и по месяцам), море, качество воздуха. Свой
+# экземпляр или эмулятор подставляется адресом, как и основной прогноз.
+WEATHER_SEASONAL_URL = os.getenv("WEATHER_SEASONAL_URL", "https://seasonal-api.open-meteo.com")
+WEATHER_MARINE_URL = os.getenv("WEATHER_MARINE_URL", "https://marine-api.open-meteo.com")
+WEATHER_AIR_URL = os.getenv("WEATHER_AIR_URL", "https://air-quality-api.open-meteo.com")
 # Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
 # первого с запасом на одну пропущенную попытку.
 WEATHER_REFRESH_SECONDS = int(os.getenv("WEATHER_REFRESH_SECONDS", "1200"))

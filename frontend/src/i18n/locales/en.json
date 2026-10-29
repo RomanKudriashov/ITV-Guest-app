@@ -370,7 +370,8 @@
       "loading": "Loading…",
       "retry": "Retry",
       "close": "Close",
-      "roomShort": "Room {{room}}"
+      "roomShort": "Room {{room}}",
+      "back": "Back"
     },
     "nav": {
       "home": "Home",
@@ -855,6 +856,107 @@
     "closed": {
       "title": "The hotel is not taking orders right now",
       "body": "We will be back soon. If you are already at the hotel, please contact the front desk."
+    },
+    "weatherPage": {
+      "title": "Weather",
+      "open": "Detailed weather",
+      "loading": "Getting the forecast…",
+      "emptyTitle": "No weather yet",
+      "emptyHint": "The forecast hasn't arrived from the provider. Please check back a little later.",
+      "range": {
+        "now": "Now",
+        "week": "7 days",
+        "fortnight": "16 days",
+        "month": "46 days",
+        "season": "6 months"
+      },
+      "feels": "Feels like {{value}}",
+      "feelsShort": "Feels like",
+      "maxMin": "high {{max}}, low {{min}}",
+      "hourly": "Hourly",
+      "details": "Details",
+      "wind": "Wind",
+      "gusts": "gusts up to {{value}}",
+      "humidity": "Humidity",
+      "dewPoint": "dew point {{value}}",
+      "pressure": "Pressure",
+      "uv": "UV index",
+      "clouds": "Cloud cover",
+      "visibility": "Visibility",
+      "precipitation": "Precipitation",
+      "chance": "{{value}}% chance",
+      "sun": "Sunrise – sunset",
+      "daylight": "daylight {{value}}",
+      "sunshine": "sunshine {{value}}",
+      "today": "Today",
+      "sea": "Sea",
+      "water": "Water",
+      "waves": "Waves",
+      "wavePeriod": "Wave period",
+      "air": "Air",
+      "aqi": "Air quality index",
+      "usAqi": "US AQI",
+      "ozone": "Ozone",
+      "no2": "Nitrogen dioxide",
+      "pollen": "Pollen",
+      "pollenKind": {
+        "alder": "alder",
+        "birch": "birch",
+        "grass": "grass",
+        "mugwort": "mugwort",
+        "olive": "olive",
+        "ragweed": "ragweed"
+      },
+      "uvLevel": {
+        "low": "low",
+        "moderate": "moderate",
+        "high": "high",
+        "veryHigh": "very high",
+        "extreme": "extreme"
+      },
+      "aqiLevel": {
+        "good": "good",
+        "fair": "fair",
+        "moderate": "moderate",
+        "poor": "poor",
+        "veryPoor": "very poor",
+        "extremelyPoor": "extremely poor"
+      },
+      "daysTitle_one": "{{count}} day",
+      "daysTitle_other": "{{count}} days",
+      "outlookTitle_one": "{{count}} more day — outlook",
+      "outlookTitle_other": "{{count}} more days — outlook",
+      "outlookHint": "There is no precise forecast beyond 16 days: this is the average of 51 model runs and the range of daytime temperature. On the right — the share of runs with precipitation.",
+      "outlookRow": "day ≈{{max}} ({{low}} to {{high}}), night ≈{{min}}",
+      "monthsTitle": "By month",
+      "monthsHint": "Seasonal forecast: average monthly temperature and its difference from what is usual here.",
+      "anomaly": "{{value}} vs normal",
+      "monthRain": "precipitation {{value}}",
+      "monthSea": "water {{value}}",
+      "monthSun": "sunshine {{value}} h",
+      "updated": "Updated at {{time}}",
+      "dir": {
+        "n": "N",
+        "ne": "NE",
+        "e": "E",
+        "se": "SE",
+        "s": "S",
+        "sw": "SW",
+        "w": "W",
+        "nw": "NW"
+      },
+      "unit": {
+        "ms": "{{value}} m/s",
+        "kmh": "{{value}} km/h",
+        "mmhg": "{{value}} mmHg",
+        "hpa": "{{value}} hPa",
+        "mm": "{{value}} mm",
+        "km": "{{value}} km",
+        "m": "{{value}} m",
+        "s": "{{value}} s",
+        "ugm3": "{{value}} µg/m³",
+        "duration": "{{h}} h {{m}} min"
+      }
     }
   },
   "tracker": {

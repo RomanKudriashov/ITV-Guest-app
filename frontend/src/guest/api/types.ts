@@ -1075,3 +1075,121 @@ export interface GuestSearchResult {
   /** Заготовки отеля для пустого поля. Пусто — значит отель их не завёл. */
   suggestions?: string[];
 }
+
+
+/* ── Подробная погода (партия 65) ──────────────────────────────────────────────
+ * Температуры (`*_c`) уже в единицах отеля (`units`), остальное — СИ: ветер м/с,
+ * давление гПа, осадки мм, видимость м, длительности с. Время и даты — местные
+ * для отеля, без пояса: «2026-10-29T14:00», «2026-10-29».
+ */
+export interface WeatherNow {
+  time?: string;
+  temperature_c: number | null;
+  apparent_c: number | null;
+  humidity: number | null;
+  dew_point_c: number | null;
+  pressure_hpa: number | null;
+  wind_ms: number | null;
+  wind_dir: number | null;
+  gusts_ms: number | null;
+  cloud_cover: number | null;
+  visibility_m: number | null;
+  uv_index: number | null;
+  precipitation_mm: number | null;
+  code: number | null;
+  is_day: boolean;
+}
+
+export interface WeatherHour {
+  time: string;
+  temperature_c: number | null;
+  code: number | null;
+  is_day: boolean;
+  precipitation_probability: number | null;
+  precipitation_mm: number | null;
+  wind_ms: number | null;
+}
+
+export interface WeatherDay {
+  date: string;
+  code: number | null;
+  max_c: number | null;
+  min_c: number | null;
+  apparent_max_c: number | null;
+  apparent_min_c: number | null;
+  sunrise: string | null;
+  sunset: string | null;
+  daylight_s: number | null;
+  sunshine_s: number | null;
+  uv_max: number | null;
+  precipitation_mm: number | null;
+  precipitation_hours: number | null;
+  precipitation_probability: number | null;
+  wind_max_ms: number | null;
+  gusts_max_ms: number | null;
+  wind_dir: number | null;
+}
+
+/** Ориентир по ансамблю (дни 17…46): среднее и разброс 10–90 %. */
+export interface WeatherOutlookDay {
+  date: string;
+  max_c: number;
+  min_c: number;
+  max_low_c: number;
+  max_high_c: number;
+  precipitation_mm: number | null;
+  precipitation_probability: number | null;
+  sea_c: number | null;
+}
+
+export interface WeatherMonth {
+  month: string;
+  temperature_c: number;
+  anomaly_c: number | null;
+  precipitation_mm: number | null;
+  precipitation_anomaly_mm: number | null;
+  sea_c: number | null;
+  sunshine_h: number | null;
+}
+
+export interface WeatherMarine {
+  sea_c: number | null;
+  wave_m: number | null;
+  wave_period_s: number | null;
+  wave_dir: number | null;
+  daily: { date: string; wave_max_m: number | null; wave_dir: number | null; wave_period_s: number | null }[];
+}
+
+export interface WeatherAir {
+  european_aqi: number | null;
+  us_aqi: number | null;
+  pm2_5: number | null;
+  pm10: number | null;
+  ozone: number | null;
+  nitrogen_dioxide: number | null;
+  sulphur_dioxide: number | null;
+  carbon_monoxide: number | null;
+  dust: number | null;
+  uv_index: number | null;
+  pollen: Record<string, number> | null;
+}
+
+export interface WeatherDetail {
+  units: 'c' | 'f';
+  fetched_at: string;
+  current?: WeatherNow;
+  hourly: WeatherHour[];
+  daily: WeatherDay[];
+  outlook: WeatherOutlookDay[];
+  months: WeatherMonth[];
+  marine: WeatherMarine | null;
+  air: WeatherAir | null;
+}
+
+export interface GuestWeatherScreen {
+  enabled: boolean;
+  pending: boolean;
+  city: string;
+  timezone: string;
+  weather: WeatherDetail | null;
+}

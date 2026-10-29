@@ -43,3 +43,26 @@ def refresh_hotel_weather(hotel_id: str) -> None:
         return
     service.store(hotel.pk, observation)
     service.mark_refreshed(hotel.pk)
+
+
+@shared_task(acks_late=True, max_retries=0, ignore_result=True)
+def refresh_hotel_weather_detail(hotel_id: str) -> None:
+    """
+    Подробная погода отеля (партия 65): пять запросов к провайдеру и запись в
+    кэш. Без ретраев, как и строка на главной: не ответил — экран останется с
+    прежними данными (если были), следующая попытка — по кулдауну.
+    """
+    from apps.hotels.models import Hotel
+    from apps.integrations.weather import service
+
+    hotel = Hotel.all_objects.filter(pk=hotel_id).first()
+    if hotel is None:
+        return
+    point = service.coordinates_of(hotel)
+    if point is None:
+        return
+    detail = service.get_provider().detail(*point, hotel.timezone or "UTC")
+    if detail is None:
+        logger.info("Погода: подробности отеля %s не получены", hotel_id)
+        return
+    service.store_detail(hotel.pk, detail)

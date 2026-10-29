@@ -82,11 +82,98 @@ def _row(city: dict, language: str) -> dict:
     }
 
 
-def _forecast(latitude: float) -> dict:
+def _forecast(latitude: float, query: dict | None = None) -> dict:
     # Погода детерминирована от широты: проверки видят одно и то же число в
     # каждом прогоне, а города различимы между собой.
     temperature = round(30 - abs(latitude) * 0.4, 1)
-    return {"current": {"temperature_2m": temperature, "weather_code": 1, "is_day": 1, "time": "2026-01-01T12:00"}}
+    body: dict = {"current": {"temperature_2m": temperature, "weather_code": 1, "is_day": 1, "time": "2026-01-01T12:00"}}
+    query = query or {}
+    # ПОДРОБНАЯ ПОГОДА (партия 65): те поля, что просит экран погоды, той же
+    # формы, что у Open-Meteo. Значения — простые детерминированные ряды.
+    if "relative_humidity_2m" in query.get("current", ""):
+        body["current"].update({
+            "relative_humidity_2m": 60, "apparent_temperature": temperature + 0.5, "precipitation": 0.0,
+            "cloud_cover": 30, "pressure_msl": 1015.0, "wind_speed_10m": 3.0, "wind_direction_10m": 200,
+            "wind_gusts_10m": 6.0, "uv_index": 3.0, "visibility": 30000.0, "dew_point_2m": temperature - 8,
+        })
+    if query.get("hourly"):
+        hours = [f"2026-01-{1 + h // 24:02d}T{h % 24:02d}:00" for h in range(72)]
+        body["hourly"] = {
+            "time": hours,
+            "temperature_2m": [round(temperature - 4 + 4 * ((h % 24) in range(10, 18)), 1) for h in range(72)],
+            "weather_code": [1 if h % 24 < 18 else 3 for h in range(72)],
+            "is_day": [1 if 7 <= h % 24 < 19 else 0 for h in range(72)],
+            "precipitation_probability": [(h * 7) % 60 for h in range(72)],
+            "precipitation": [0.0] * 72,
+            "wind_speed_10m": [3.0] * 72,
+        }
+    if query.get("daily"):
+        days = int(query.get("forecast_days", 7))
+        dates = [f"2026-01-{1 + d:02d}" for d in range(days)]
+        body["daily"] = {
+            "time": dates,
+            "weather_code": [(0, 2, 3, 61, 80)[d % 5] for d in range(days)],
+            "temperature_2m_max": [round(temperature + (d % 4), 1) for d in range(days)],
+            "temperature_2m_min": [round(temperature - 6 + (d % 3), 1) for d in range(days)],
+            "apparent_temperature_max": [round(temperature + (d % 4) + 1, 1) for d in range(days)],
+            "apparent_temperature_min": [round(temperature - 7 + (d % 3), 1) for d in range(days)],
+            "sunrise": [f"{x}T07:30" for x in dates],
+            "sunset": [f"{x}T17:10" for x in dates],
+            "daylight_duration": [34800.0] * days,
+            "sunshine_duration": [25200.0] * days,
+            "uv_index_max": [3.5] * days,
+            "precipitation_sum": [(0.0, 0.0, 1.2, 6.5, 3.0)[d % 5] for d in range(days)],
+            "precipitation_hours": [(0, 0, 2, 6, 3)[d % 5] for d in range(days)],
+            "precipitation_probability_max": [(5, 10, 40, 80, 60)[d % 5] for d in range(days)],
+            "wind_speed_10m_max": [5.0] * days,
+            "wind_gusts_10m_max": [9.0] * days,
+            "wind_direction_10m_dominant": [200] * days,
+        }
+    return body
+
+
+def _seasonal(latitude: float, query: dict) -> dict:
+    base = round(30 - abs(latitude) * 0.4, 1)
+    if query.get("monthly"):
+        months = ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"]
+        return {"monthly": {
+            "time": months,
+            "temperature_2m_mean": [round(base - 4 + 2 * m, 1) for m in range(6)],
+            "temperature_2m_anomaly": [0.5, -0.3, 1.1, 0.0, 0.8, 1.4],
+            "precipitation_mean": [120.0, 90.0, 80.0, 70.0, 60.0, 50.0],
+            "precipitation_anomaly": [10.0, -5.0, 0.0, 4.0, -12.0, 3.0],
+            # В кельвинах — как у настоящего сервиса (см. open_meteo_detail).
+            "sea_surface_temperature_mean": [round(273.15 + 12 + m, 1) for m in range(6)],
+            "sunshine_duration_mean": [360000.0, 432000.0, 540000.0, 648000.0, 756000.0, 864000.0],
+        }}
+    days = int(query.get("forecast_days", 46))
+    daily: dict = {"time": [f"2026-{1 + d // 28:02d}-{1 + d % 28:02d}" for d in range(days)]}
+    for name, shift in (("temperature_2m_max", 2), ("temperature_2m_min", -5), ("precipitation_sum", 0), ("sea_surface_temperature_mean", 0)):
+        def value(d, member):
+            if name == "precipitation_sum":
+                return float((d + member) % 4)
+            if name == "sea_surface_temperature_mean":
+                return round(14.0 + 0.01 * member, 2)
+            return round(base + shift + (member % 5) - 2 + (d % 3), 1)
+        daily[name] = [value(d, 0) for d in range(days)]
+        for member in range(1, 11):
+            daily[f"{name}_member{member:02d}"] = [value(d, member) for d in range(days)]
+    return {"daily": daily}
+
+
+def _marine(latitude: float) -> dict:
+    return {
+        "current": {"wave_height": 0.6, "wave_direction": 180, "wave_period": 5.0, "sea_surface_temperature": 14.5},
+        "daily": {"time": [f"2026-01-{1 + d:02d}" for d in range(8)], "wave_height_max": [0.6 + 0.1 * d for d in range(8)],
+                  "wave_direction_dominant": [180] * 8, "wave_period_max": [6.0] * 8},
+    }
+
+
+def _air() -> dict:
+    return {"current": {"european_aqi": 35, "us_aqi": 48, "pm10": 18.0, "pm2_5": 9.0, "ozone": 60.0,
+                        "nitrogen_dioxide": 12.0, "sulphur_dioxide": 2.0, "carbon_monoxide": 180.0, "dust": 1.0,
+                        "uv_index": 3.0, "alder_pollen": None, "birch_pollen": None, "grass_pollen": None,
+                        "mugwort_pollen": None, "olive_pollen": None, "ragweed_pollen": None}}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -108,7 +195,16 @@ class Handler(BaseHTTPRequestHandler):
                 latitude = float(query["latitude"])
             except (KeyError, ValueError):
                 return self._send(400, {"error": True, "reason": "latitude required"})
-            return self._send(200, _forecast(latitude))
+            return self._send(200, _forecast(latitude, query))
+
+        if url.path in ("/v1/seasonal", "/v1/marine", "/v1/air-quality"):
+            try:
+                latitude = float(query["latitude"])
+            except (KeyError, ValueError):
+                return self._send(400, {"error": True, "reason": "latitude required"})
+            if url.path == "/v1/seasonal":
+                return self._send(200, _seasonal(latitude, query))
+            return self._send(200, _marine(latitude) if url.path == "/v1/marine" else _air())
 
         if url.path == "/v1/search":
             needle = query.get("name", "").strip().lower()

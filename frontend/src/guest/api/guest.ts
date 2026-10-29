@@ -4,6 +4,7 @@ import type { OfferingType } from '@/offerings/behaviour';
 import { guestApi } from './client';
 import type {
   CartQuote,
+  GuestWeatherScreen,
   ChatSnapshot,
   CreateOrderPayload,
   CreateSessionPayload,
@@ -156,6 +157,11 @@ export function cancelOrder(
  * offers (contract §1). The storefront draws only the sections it receives, in
  * the given order — there is no hard-coded list of tiles.
  */
+/** Подробная погода (партия 65): только из кэша сервера, `pending` — ещё едет. */
+export function fetchWeather(language?: string): Promise<GuestWeatherScreen> {
+  return guestApi.get<GuestWeatherScreen>('/guest/weather', { query: { lang: language } });
+}
+
 export function fetchHome(language?: string): Promise<GuestHome> {
   return guestApi.get<GuestHome>('/guest/home', { query: { lang: language } });
 }

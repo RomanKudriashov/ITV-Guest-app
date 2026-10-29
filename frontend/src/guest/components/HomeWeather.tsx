@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import { useNavigate } from 'react-router-dom';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -7,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   IconCloudy,
+  IconForward,
   IconFog,
   IconMoon,
   IconPartlyCloudy,
@@ -144,6 +147,7 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
   const { t, i18n } = useTranslation();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
   const clock = useHotelClock(timezone, i18n.language);
+  const navigate = useNavigate();
 
   /*
     Часы БЕЗ погоды показываются только тогда, когда они что-то говорят: гостю
@@ -166,7 +170,18 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
   return (
     <Box
       data-testid="guest-home-weather"
+      /*
+        ВЕСЬ БЛОК — ПЕРЕХОД НА ЭКРАН ПОГОДЫ (партия 65), но только когда погода
+        есть: часы без погоды вести некуда.
+      */
+      component={weather ? ButtonBase : 'div'}
+      onClick={weather ? () => navigate('/weather') : undefined}
+      aria-label={weather ? t('guest.weatherPage.open') : undefined}
       sx={(theme) => ({
+        width: '100%',
+        justifyContent: 'flex-start',
+        textAlign: 'start',
+        ...(weather ? { cursor: 'pointer', '&.Mui-focusVisible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 } } : {}),
         // Поверхность — стилем отеля, как у всех карточек витрины (партия 25):
         // здесь было всегда стекло, какой бы стиль отель ни выбрал.
         ...cardSurfaceCss(cardSurface, theme),
@@ -251,6 +266,11 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
         Тише — кеглем, а не прозрачностью: `opacity: .7` поверх вторичного
         цвета давала 3.07 на светлой и 3.77 на тёмной (партия 56).
       */}
+      {weather ? (
+        <Box aria-hidden sx={{ ml: 'auto', display: 'flex', color: 'text.secondary' }} data-testid="guest-home-weather-more">
+          <IconForward size={18} />
+        </Box>
+      ) : null}
       {weather ? (
         <Typography
           variant="caption"

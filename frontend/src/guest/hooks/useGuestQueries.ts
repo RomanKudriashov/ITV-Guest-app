@@ -8,6 +8,7 @@ import {
   fetchBanner,
   fetchChat,
   fetchHome,
+  fetchWeather,
   fetchItem,
   fetchLocations,
   fetchOrder,
@@ -20,6 +21,7 @@ import {
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
+  GuestWeatherScreen,
   CartQuote,
   ChatSnapshot,
   CreateOrderPayload,
@@ -241,6 +243,26 @@ export function useGuestHome() {
 
 const WEATHER_RETRY_MS = 2_500;
 const WEATHER_RETRIES = 6;
+
+/**
+ * Экран погоды (партия 65). Пока данные «в пути» (сервер только поставил
+ * сбор) — переспрашиваем, как главная; дальше — раз в десять минут, пока экран
+ * открыт: прогноз меняется медленно, а кэш сервера всё равно общий.
+ */
+export function useGuestWeather() {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestWeatherScreen>({
+    queryKey: guestKeys.weather(language),
+    queryFn: () => fetchWeather(language),
+    enabled: isReady,
+    staleTime: 60_000,
+    refetchInterval: (query) =>
+      query.state.data?.pending && query.state.dataUpdateCount <= WEATHER_RETRIES * 2
+        ? WEATHER_RETRY_MS
+        : 10 * 60_000,
+  });
+}
 
 /**
  * The guest's chat thread. While the socket is up it is kept fresh by snapshots

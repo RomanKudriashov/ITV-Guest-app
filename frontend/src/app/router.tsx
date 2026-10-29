@@ -30,6 +30,7 @@ const GuestRoot = lazyFrom(guestPart, 'GuestRoot');
 const GuestLayout = lazyFrom(guestPart, 'GuestLayout');
 const EntryPage = lazyFrom(guestPart, 'EntryPage');
 const HomePage = lazyFrom(guestPart, 'HomePage');
+const WeatherPage = lazyFrom(guestPart, 'WeatherPage');
 const CatalogPage = lazyFrom(guestPart, 'CatalogPage');
 const VenuePage = lazyFrom(guestPart, 'VenuePage');
 const VenueListPage = lazyFrom(guestPart, 'VenueListPage');
@@ -302,6 +303,7 @@ export const guestBranch: RouteObject =
         element: part(<GuestLayout />),
         children: [
           { path: 'home', element: part(<HomePage />) },
+          { path: 'weather', element: part(<WeatherPage />) },
           // Every catalog is the same screen with a different offering type;
           // there is deliberately no separate page component per type.
           // Плоских каталогов отеля больше нет: и блюда, и заявки, и слоты
