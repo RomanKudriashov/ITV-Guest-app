@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 5
 CACHE_SECONDS = 24 * 60 * 60
-CACHE_PREFIX = "dadata:cities:v1"
+CACHE_PREFIX = "dadata:cities:v2"  # v2 — после отсева округов (старые ответы не читать)
 COUNT = 10
 
 
