@@ -45,6 +45,7 @@ def test_bite_districts_are_dropped_and_only_cities_are_asked(monkeypatch):
         return _Response({"suggestions": [
             _suggestion("Париж", "Иль-де-Франс", "Франция", 48.85341, 2.3488, "1"),
             _suggestion("Париж 15 Вожирар", "Иль-де-Франс", "Франция", 48.8412, 2.3003, "2"),
+            _suggestion("Париж, 13-й округ", "Иль-де-Франс", "Франция", 48.8322, 2.3561, "3"),
             {"value": "без координат", "data": {"city": "Нигде"}},
         ]})
 
@@ -97,3 +98,16 @@ def test_point_weather_pending_then_units(monkeypatch):
     service.store_point_detail(point, {"current": {"temperature_c": 30.0}})
     detail, pending = service.detail_for_point(point, "f")
     assert not pending and detail["current"]["temperature_c"] == 86.0 and detail["units"] == "f"
+
+
+def test_districts_of_a_city_by_region_are_dropped(monkeypatch):
+    """Живая выдача на «Dubai»: районы с регионом «Dubai» — не города."""
+    import requests
+
+    monkeypatch.setattr(requests, "post", lambda *a, **k: _Response({"suggestions": [
+        _suggestion("Dubai", "Dubai", "United Arab Emirates", 25.07, 55.30, "1"),
+        _suggestion("Bur Dubai", "Dubai", "United Arab Emirates", 25.25, 55.30, "2"),
+        _suggestion("Downtown Dubai", "Dubai", "United Arab Emirates", 25.19, 55.27, "3"),
+        _suggestion("Sochi", "Krasnodar", "Russia", 43.58, 39.72, "4"),
+    ]}))
+    assert [row["name"] for row in dadata.suggest_cities("Dub", "en")] == ["Dubai", "Sochi"]

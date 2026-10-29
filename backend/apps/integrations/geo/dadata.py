@@ -5,9 +5,11 @@
 (`from_bound`/`to_bound` = city): ни улиц, ни посёлков, ни районов. По всему
 миру (`country_iso_code: *`) — гость в Сочи может смотреть погоду дома, в Дубае.
 
-РАЙОНЫ-«ГОРОДА» ОТСЕКАЕМ. Зарубежная база отдаёт округа как города: на «Париж»
-приходят «Париж 15 Вожирар», «Париж 13 Гобелен». Если в выдаче есть город,
-название которого — начало другого («Париж» → «Париж 15 …»), второй убираем.
+РАЙОНЫ-«ГОРОДА» ОТСЕКАЕМ. Зарубежная база отдаёт округа и районы как города:
+на «Париж» приходят «Париж, 13-й округ» (или «Париж 15 Вожирар»), на «Dubai» —
+«Bur Dubai» и «Downtown Dubai» с регионом «Dubai». Убираем подсказку, если её
+название продолжает название другого города из выдачи («Париж» → «Париж, …»,
+«Париж 15 …») или если её регион — другой город из той же выдачи.
 
 ЯЗЫК — только ru и en: других у DaData нет; zh и ar получают английский.
 
@@ -59,8 +61,15 @@ def _row(suggestion: dict) -> dict | None:
 
 
 def _drop_districts(rows: list[dict]) -> list[dict]:
-    names = [row["name"] for row in rows]
-    return [row for row in rows if not any(other != row["name"] and row["name"].startswith(other + " ") for other in names)]
+    names = {row["name"] for row in rows}
+
+    def district(row: dict) -> bool:
+        name = row["name"]
+        if any(other != name and (name.startswith(other + " ") or name.startswith(other + ",")) for other in names):
+            return True
+        return bool(row["region"]) and row["region"] in names and row["region"] != name
+
+    return [row for row in rows if not district(row)]
 
 
 def suggest_cities(query: str, language: str | None) -> list[dict] | None:
