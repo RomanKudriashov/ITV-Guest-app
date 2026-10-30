@@ -820,7 +820,15 @@
         "dry": "تجفيف"
       },
       "confirmOk": "اطلب",
-      "confirmCancel": "إلغاء"
+      "confirmCancel": "إلغاء",
+      "climate": {
+        "cooling": "يبرّد: في الغرفة {{current}}، الهدف {{setpoint}}",
+        "heating": "يدفّئ: في الغرفة {{current}}، الهدف {{setpoint}}",
+        "idle-cool": "لا حاجة للتبريد: في الغرفة {{current}}، وهي ليست أعلى من {{setpoint}}",
+        "idle-heat": "لا حاجة للتدفئة: في الغرفة {{current}}، وهي ليست أدنى من {{setpoint}}",
+        "holding": "يحافظ على {{setpoint}}: يختار التدفئة أو التبريد تلقائيًا",
+        "fan": "تهوية فقط — لا تتغير الحرارة"
+      }
     },
     "weather": {
       "title": "الطقس",

@@ -47,9 +47,11 @@ import {
   IconSofa,
   IconSunrise,
   IconSwitch,
+  IconThermostat,
   IconWardrobe,
 } from '@/icons';
 import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
+import { climateAction } from '../climate';
 import { planShape } from './roomPlanShape';
 import { RoomStatusPills } from '../components/RoomStatusPills';
 import {
@@ -1077,6 +1079,26 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
         </Stack>
       ) : null}
 
+      {/*
+        ЧТО ПРОИСХОДИТ НА САМОМ ДЕЛЕ (партия 65). Режим — не действие:
+        охлаждение с уставкой 30° при 23° в номере ничего не охлаждает, и гость
+        должен это видеть, а не гадать, почему «не дует холодом».
+      */}
+      {power === true && currentMode ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          data-testid={`room-climate-action-${control.controlId}`}
+          data-action={climateAction(currentMode, confirmedSetpoint, current)}
+          sx={{ display: 'block', mt: -0.5 }}
+        >
+          {t(`guest.roomControl.climate.${climateAction(currentMode, confirmedSetpoint, current)}`, {
+            current: current == null ? '—' : `${Math.round(current)}°`,
+            setpoint: confirmedSetpoint == null ? '—' : `${Math.round(confirmedSetpoint)}°`,
+          })}
+        </Typography>
+      ) : null}
+
       {fanOptions.length > 0 ? (
         <Stack direction="row" alignItems="center" spacing={1.5} data-swipe-guard>
           <Typography variant="body2" sx={{ width: 96, flex: 'none', color: 'text.secondary', fontWeight: 600 }}>
@@ -1484,6 +1506,7 @@ const GLYPHS: Record<string, (size: number) => ReactNode> = {
 function modeGlyph(mode: string | null | undefined, size: number): ReactNode {
   if (mode === 'cool') return <IconModeCool size={size} />;
   if (mode === 'heat') return <IconModeHeat size={size} />;
+  if (mode === 'auto') return <IconThermostat size={size} />;
   return <IconModeFan size={size} />;
 }
 

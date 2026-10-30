@@ -10,6 +10,7 @@ import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../a
 import { surfaceRadius } from '../storefrontTokens';
 import { zoneWindowStyle } from '../roomPlanMask';
 import { commandSpinSx } from './roomKit';
+import { climateAction, climateEffort } from '../climate';
 
 /**
  * План-двойник номера: ДВА СОВМЕЩЁННЫХ КАДРА, следующих ПОДТВЕРЖДЁННОМУ
@@ -912,31 +913,24 @@ function mixTint(from: string, to: string, share: number): string {
 }
 
 /**
- * ЦВЕТ ПОТОКА (партия 65). Охлаждение — синий, нагрев — красный, вентилятор —
- * серый; режима нет (у отеля нет такого канала) — прежний цвет темы.
+ * ЦВЕТ ПОТОКА (партия 65) — по тому, что фанкойл ДЕЛАЕТ, а не по режиму:
+ * охлаждает — синий, греет — красный, только вентилирует или ждёт (режим
+ * охлаждения при прохладном номере, нагрева при тёплом) — серый. Режима нет
+ * (у отеля нет такого канала) — прежний цвет темы.
  *
- * Градация — по тому, НАСКОЛЬКО кондиционер работает: разница между уставкой и
- * температурой в номере, 5° и больше — самый глубокий цвет. Номер уже остыл
- * (или прогрелся) — поток мягкий. Нет текущей температуры — по самой уставке:
- * чем она ниже (выше), тем холоднее (горячее) цвет.
+ * Градация — по тому, НАСКОЛЬКО кондиционер работает: разница уставки и
+ * температуры в номере, 5° и больше — самый глубокий цвет.
  */
 export function flowTint(
   reading: PlanReading,
   palette: { tint: string; cool: [string, string]; heat: [string, string]; fan: string },
 ): string {
-  const { mode, setpoint, current } = reading;
-  if (mode === 'fan') return palette.fan;
-  if (mode !== 'cool' && mode !== 'heat') return palette.tint;
-  const clamp = (value: number) => Math.max(0, Math.min(1, value));
-  let share = 0.5;
-  if (setpoint != null && current != null) {
-    share = clamp((mode === 'cool' ? current - setpoint : setpoint - current) / 5);
-  } else if (setpoint != null) {
-    share = clamp(mode === 'cool' ? (26 - setpoint) / 8 : (setpoint - 20) / 8);
-  }
+  const action = climateAction(reading.mode, reading.setpoint, reading.current);
+  if (action === 'unknown') return palette.tint;
+  if (action !== 'cooling' && action !== 'heating') return palette.fan;
   // Даже «почти дошёл» — не белый: режим должен читаться всегда.
-  share = 0.25 + share * 0.75;
-  const [soft, deep] = mode === 'cool' ? palette.cool : palette.heat;
+  const share = 0.25 + climateEffort(reading.setpoint, reading.current) * 0.75;
+  const [soft, deep] = action === 'cooling' ? palette.cool : palette.heat;
   return mixTint(soft, deep, share);
 }
 

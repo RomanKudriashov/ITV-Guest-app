@@ -808,7 +808,15 @@
         "dry": "Dry"
       },
       "confirmOk": "Call",
-      "confirmCancel": "Cancel"
+      "confirmCancel": "Cancel",
+      "climate": {
+        "cooling": "Cooling: {{current}} in the room, target {{setpoint}}",
+        "heating": "Heating: {{current}} in the room, target {{setpoint}}",
+        "idle-cool": "No cooling needed: {{current}} in the room, not above the {{setpoint}} setpoint",
+        "idle-heat": "No heating needed: {{current}} in the room, not below the {{setpoint}} setpoint",
+        "holding": "Holding {{setpoint}}: heats or cools as needed",
+        "fan": "Ventilation only — temperature is not changed"
+      }
     },
     "weather": {
       "title": "Weather",

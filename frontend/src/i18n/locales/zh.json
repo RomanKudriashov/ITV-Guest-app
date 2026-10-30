@@ -804,7 +804,15 @@
         "dry": "除湿"
       },
       "confirmOk": "呼叫",
-      "confirmCancel": "取消"
+      "confirmCancel": "取消",
+      "climate": {
+        "cooling": "制冷中：室内 {{current}}，目标 {{setpoint}}",
+        "heating": "制热中：室内 {{current}}，目标 {{setpoint}}",
+        "idle-cool": "无需制冷：室内 {{current}}，不高于设定 {{setpoint}}",
+        "idle-heat": "无需制热：室内 {{current}}，不低于设定 {{setpoint}}",
+        "holding": "保持 {{setpoint}}：自动选择制热或制冷",
+        "fan": "仅送风——不改变温度"
+      }
     },
     "weather": {
       "title": "天气",

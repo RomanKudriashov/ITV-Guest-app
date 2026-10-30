@@ -814,7 +814,15 @@
         "dry": "Осушение"
       },
       "confirmOk": "Вызвать",
-      "confirmCancel": "Отмена"
+      "confirmCancel": "Отмена",
+      "climate": {
+        "cooling": "Охлаждает: в номере {{current}}, цель {{setpoint}}",
+        "heating": "Нагревает: в номере {{current}}, цель {{setpoint}}",
+        "idle-cool": "Охлаждать не нужно: в номере {{current}}, это не выше уставки {{setpoint}}",
+        "idle-heat": "Нагревать не нужно: в номере {{current}}, это не ниже уставки {{setpoint}}",
+        "holding": "Держит {{setpoint}}: сам выбирает нагрев или охлаждение",
+        "fan": "Только вентиляция — температуру не меняет"
+      }
     },
     "weather": {
       "title": "Погода",
