@@ -1336,6 +1336,10 @@ function planReadings(readings: Readings): Record<string, PlanReading> {
       on: readingOn(reading),
       fan: reading.values.fan_speed ?? null,
       air: reading.control.capabilities.includes('fan_speed'),
+      // Цвет потока по режиму и его градация по температуре (партия 65).
+      mode: reading.control.range?.mode?.modes?.find((item) => item.value === reading.values.mode)?.mode ?? null,
+      setpoint: reading.values.setpoint ?? null,
+      current: reading.values.current_temp ?? null,
       pending: reading.busy,
       disabled: reading.busy || reading.unreadable || reading.readonly,
     };

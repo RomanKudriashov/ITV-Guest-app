@@ -113,6 +113,11 @@ export interface PlanReading {
   on: boolean | null;
   /** Скорость вентилятора для точки воздуха. */
   fan: number | null;
+  /** Режим кондиционера (партия 65): цвет потока. Нет режима — прежний цвет. */
+  mode?: 'cool' | 'heat' | 'fan' | 'auto' | 'dry' | null;
+  /** Уставка и температура в номере — для градации цвета потока. */
+  setpoint?: number | null;
+  current?: number | null;
   /**
    * Точка этого элемента — ПОТОК ВОЗДУХА, а не лампа.
    *
@@ -441,7 +446,12 @@ export function RoomPlanPlate({
           />
         ))}
 
-        <Airflow points={plan.points} readings={neutral ? {} : readings} tint={tokens.airflowTint} calm={calm} />
+        <Airflow
+          points={plan.points}
+          readings={neutral ? {} : readings}
+          palette={{ tint: tokens.airflowTint, cool: tokens.airflowCool, heat: tokens.airflowHeat, fan: tokens.airflowFan }}
+          calm={calm}
+        />
 
         {/*
           Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
@@ -870,6 +880,8 @@ interface Particle {
   span: number;
   /** Пройденный путь: им гасим струю, а не координатой — сторона у неё своя. */
   travel: number;
+  /** Цвет своего источника: у двух кондиционеров в разных режимах он разный. */
+  tint: string;
 }
 
 interface AirflowSource {
@@ -877,6 +889,43 @@ interface AirflowSource {
   y: number;
   dir: 'up' | 'down' | 'left' | 'right';
   level: number;
+  tint: string;
+}
+
+/** Смешать два цвета «R,G,B» в доле `share` (0 — первый, 1 — второй). */
+function mixTint(from: string, to: string, share: number): string {
+  const a = from.split(',').map(Number);
+  const b = to.split(',').map(Number);
+  return a.map((value, index) => Math.round(value + (b[index] - value) * share)).join(',');
+}
+
+/**
+ * ЦВЕТ ПОТОКА (партия 65). Охлаждение — синий, нагрев — красный, вентилятор —
+ * серый; режима нет (у отеля нет такого канала) — прежний цвет темы.
+ *
+ * Градация — по тому, НАСКОЛЬКО кондиционер работает: разница между уставкой и
+ * температурой в номере, 5° и больше — самый глубокий цвет. Номер уже остыл
+ * (или прогрелся) — поток мягкий. Нет текущей температуры — по самой уставке:
+ * чем она ниже (выше), тем холоднее (горячее) цвет.
+ */
+export function flowTint(
+  reading: PlanReading,
+  palette: { tint: string; cool: [string, string]; heat: [string, string]; fan: string },
+): string {
+  const { mode, setpoint, current } = reading;
+  if (mode === 'fan') return palette.fan;
+  if (mode !== 'cool' && mode !== 'heat') return palette.tint;
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  let share = 0.5;
+  if (setpoint != null && current != null) {
+    share = clamp((mode === 'cool' ? current - setpoint : setpoint - current) / 5);
+  } else if (setpoint != null) {
+    share = clamp(mode === 'cool' ? (26 - setpoint) / 8 : (setpoint - 20) / 8);
+  }
+  // Даже «почти дошёл» — не белый: режим должен читаться всегда.
+  share = 0.25 + share * 0.75;
+  const [soft, deep] = mode === 'cool' ? palette.cool : palette.heat;
+  return mixTint(soft, deep, share);
 }
 
 /**
@@ -891,12 +940,12 @@ interface AirflowSource {
 function Airflow({
   points,
   readings,
-  tint,
+  palette,
   calm,
 }: {
   points: RoomPlanPoint[];
   readings: Record<string, PlanReading>;
-  tint: string;
+  palette: { tint: string; cool: [string, string]; heat: [string, string]; fan: string };
   calm: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -925,16 +974,17 @@ function Airflow({
             y: point.y,
             dir: point.dir ?? 'down',
             level: Math.min(level, AIRFLOW_DENSITY.length - 1),
+            tint: flowTint(reading, palette),
           };
         })
         .filter(Boolean) as AirflowSource[],
-    [points, readings],
+    [points, readings, palette.tint, palette.fan, palette.cool, palette.heat],
   );
 
   // Цикл перезапускается по СОДЕРЖИМОМУ источников, а не по ссылке: снимок
   // приезжает раз в минуту и по каждому событию, и на каждой новой ссылке
   // поток начинался бы с нуля — воздух дёргался бы в такт опросу.
-  const signature = sources.map((s) => `${s.x}:${s.y}:${s.dir}:${s.level}`).join('|');
+  const signature = sources.map((s) => `${s.x}:${s.y}:${s.dir}:${s.level}:${s.tint}`).join('|');
   const sourcesRef = useRef(sources);
   sourcesRef.current = sources;
 
@@ -992,6 +1042,7 @@ function Airflow({
         // Путь считаем сами: гасить по координате нельзя — у каждой стороны
         // она своя, и правило «ниже середины» работало только вниз.
         travel: 0,
+        tint: source.tint,
       };
     };
 
@@ -1019,6 +1070,7 @@ function Airflow({
           particle.y,
           radius,
         );
+        const tint = particle.tint;
         gradient.addColorStop(0, `rgba(${tint},${alpha})`);
         gradient.addColorStop(0.55, `rgba(${tint},${alpha * 0.45})`);
         gradient.addColorStop(1, `rgba(${tint},0)`);
@@ -1089,7 +1141,7 @@ function Airflow({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [signature, tint, calm]);
+  }, [signature, calm]);
 
   return (
     <Box

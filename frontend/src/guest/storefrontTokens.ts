@@ -204,6 +204,15 @@ export interface StorefrontTokens {
      * считается по её возрасту.
      */
     airflowTint: string;
+    /**
+     * ЦВЕТ ПОТОКА ПО РЕЖИМУ (партия 65): охлаждение — синий, нагрев — красный,
+     * вентилятор — серый. У охлаждения и нагрева пара «мягкий → глубокий»:
+     * насыщенность растёт с разницей между уставкой и температурой в номере —
+     * чем сильнее кондиционер работает, тем глубже цвет. R,G,B без альфы.
+     */
+    airflowCool: [string, string];
+    airflowHeat: [string, string];
+    airflowFan: string;
   };
   /**
    * Экран управления номером.
@@ -358,6 +367,9 @@ const ROOM_PLATE = {
   zoneHover: 'rgba(255,255,255,.06)',
   zonePending: 'rgba(91,147,240,.16)',
   airflowTint: '150,195,255',
+  airflowCool: ['200,228,255', '25,105,255'] as [string, string],
+  airflowHeat: ['255,190,150', '255,70,50'] as [string, string],
+  airflowFan: '196,202,212',
 } as const;
 
 const DARK: StorefrontTokens = {
