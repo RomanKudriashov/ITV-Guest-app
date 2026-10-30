@@ -9,6 +9,7 @@ import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
 import { zoneWindowStyle } from '../roomPlanMask';
+import { commandSpinSx } from './roomKit';
 
 /**
  * План-двойник номера: ДВА СОВМЕЩЁННЫХ КАДРА, следующих ПОДТВЕРЖДЁННОМУ
@@ -180,7 +181,7 @@ export function RoomPlanPlate({
   onToggle,
 }: RoomPlanPlateProps) {
   const { t } = useTranslation();
-  const { roomPlan: tokens } = useStorefront();
+  const { roomPlan: tokens, roomControl: control } = useStorefront();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
   /*
     ОБВОДКА ЖИВЁТ РОВНО СТОЛЬКО, СКОЛЬКО ИДЁТ ВЗАИМОДЕЙСТВИЕ.
@@ -544,6 +545,15 @@ export function RoomPlanPlate({
                 border: 'none',
                 cursor: 'pointer',
                 background: reading?.pending ? tokens.zonePending : 'transparent',
+                // Команда в пути (партия 65): по зоне проходит полоса сканирования.
+                ...(reading?.pending && !calm
+                  ? {
+                      backgroundImage: `linear-gradient(100deg, transparent 35%, ${control.cold}38 50%, transparent 65%)`,
+                      backgroundSize: '260% 100%',
+                      animation: 'zoneSweep 1.3s linear infinite',
+                      '@keyframes zoneSweep': { from: { backgroundPosition: '130% 0' }, to: { backgroundPosition: '-30% 0' } },
+                    }
+                  : {}),
                 borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
                 // Обводка — ответ на «куда я нажал» и «команда ещё идёт», а не
                 // состояние света: состояние говорит сам кадр.
@@ -622,7 +632,9 @@ export function RoomPlanPlate({
                 // Свет не щёлкает: метка разгорается и гаснет тем же временем,
                 // что и окно зоны на кадре.
                 transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
-                '&:disabled': { cursor: 'default', opacity: 0.5 },
+                '&:disabled': { cursor: 'default', opacity: reading.pending ? 1 : 0.5 },
+                // Команда в пути (партия 65): дуга бежит вокруг метки.
+                ...(reading.pending ? commandSpinSx(control.cold, '50%', { keepPosition: true }) : {}),
               }}
             >
               <IconLightGroup size={14} />

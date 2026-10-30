@@ -121,6 +121,57 @@ export interface ControlRowProps {
 }
 
 /**
+ * КОМАНДА В ПУТИ (партия 65): по рамке бежит светящаяся дуга-комета, от плитки
+ * расходится волна сигнала — «номер принимает команду». Цвет — `cold` словаря
+ * (тот же, что у подписи «выполняется»). Орбита — круг вокруг носителя.
+ * Прошу меньше движения — статичная подсвеченная рамка, без вращения.
+ *
+ * Возвращает стили ДЛЯ НОСИТЕЛЯ: ему нужен `position: relative`, а псевдо-
+ * элементы `::before`/`::after` заняты этим индикатором.
+ */
+export function commandSpinSx(color: string, radius: string | number, { keepPosition = false } = {}) {
+  return {
+    ...(keepPosition ? {} : { position: 'relative' as const }),
+    // ОРБИТА — КРУГ, а не рамка по форме носителя: вращается сам слой (крутить
+    // градиент без @property нельзя), и скруглённый квадрат при вращении
+    // «кувыркался» углами. Круг вращается на месте — спутник на орбите.
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      inset: '-5px',
+      borderRadius: '50%',
+      padding: '2px',
+      background: `conic-gradient(from 0deg, transparent 0deg, transparent 150deg, ${color}33 230deg, ${color} 330deg, ${color} 360deg)`,
+      // Только рамка: середина вырезается маской, иконка остаётся видна.
+      WebkitMask: 'linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0)',
+      WebkitMaskComposite: 'xor',
+      mask: 'linear-gradient(currentColor 0 0) content-box exclude, linear-gradient(currentColor 0 0)',
+      animation: 'commandSpin 1.05s linear infinite',
+      filter: `drop-shadow(0 0 4px ${color})`,
+      pointerEvents: 'none',
+    },
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      inset: 0,
+      borderRadius: radius,
+      border: `1.5px solid ${color}`,
+      animation: 'commandPing 1.6s cubic-bezier(.2,.6,.3,1) infinite',
+      pointerEvents: 'none',
+    },
+    '@keyframes commandSpin': { to: { transform: 'rotate(360deg)' } },
+    '@keyframes commandPing': {
+      '0%': { transform: 'scale(1)', opacity: 0.7 },
+      '100%': { transform: 'scale(1.55)', opacity: 0 },
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      '&::before': { animation: 'none', background: color, opacity: 0.6 },
+      '&::after': { animation: 'none', opacity: 0 },
+    },
+  };
+}
+
+/**
  * Строка списка — основная единица экрана: иконка, название, подпись
  * состояния, действие справа. Плитки, которыми экран был собран раньше,
  * заменены именно на неё: подпись состояния в плитку не помещалась, и «что
@@ -181,7 +232,9 @@ export function ControlRow({
           boxShadow: on ? t.accentGlow : 'none',
           transition: 'background .35s, color .35s, box-shadow .35s',
           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+          ...(busy ? commandSpinSx(t.cold, surfaceRadius.inner(theme.palette.brand.radius)) : {}),
         }}
+        data-busy={busy || undefined}
       >
         {icon}
       </Box>
