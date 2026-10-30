@@ -255,7 +255,7 @@ export function Segmented({
   testId = 'room-segmented',
 }: {
   value: number | null;
-  options: { value: number; label: string }[];
+  options: { value: number; label: ReactNode; ariaLabel?: string }[];
   onChange?: (next: number) => void;
   disabled?: boolean;
   /** Занять остаток строки — иначе сегменты сжимаются до нечитаемых. */
@@ -288,6 +288,7 @@ export function Segmented({
             key={option.value}
             type="button"
             aria-pressed={active}
+            aria-label={option.ariaLabel}
             disabled={disabled}
             onClick={() => onChange?.(option.value)}
             data-testid={`${testId}-${option.value}`}

@@ -87,6 +87,7 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                     or kind.icon
                 ),
                 "states": kind.states,
+                "confirm": kind.confirm,
                 # Подпись элемента — оттуда же, откуда глиф: с сервера. Пусто у
                 # большинства элементов, и это нормально — карточка обходится
                 # названием.
@@ -117,6 +118,10 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                     speeds = catalog.parse_speeds(variable.description)
                     if speeds:
                         control["range"]["fan_speed"]["speeds"] = speeds
+                # Таблица режимов (партия 65): какое значение — охлаждение,
+                # нагрев, вентилятор. Гость выбирает режим, а не число.
+                if binding.capability == "mode":
+                    control["range"]["mode"]["modes"] = catalog.parse_modes(variable.description)
             zone["controls"].append(control)
 
         published = sorted(zones.values(), key=lambda z: (z["sort_order"], z["code"]))

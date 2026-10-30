@@ -533,6 +533,61 @@ export const IconAirConditioner = createIcon(
   </>,
 );
 
+/*
+  РЕЖИМЫ КОНДИЦИОНЕРА, ПРАЧЕЧНАЯ, SOS (партия 65). Той же линией, что и весь
+  набор: минимум штрихов, читается в 16 px. «Вентилятор» — глиф кондиционера по
+  умолчанию, пока режим не известен.
+*/
+export const IconModeCool = createIcon(
+  'mode-cool',
+  <>
+    <path d="M12 3v18" />
+    <path d="M4.2 7.5l15.6 9" />
+    <path d="M4.2 16.5l15.6-9" />
+    <path d="M9.6 4.6L12 6.2l2.4-1.6" />
+    <path d="M9.6 19.4L12 17.8l2.4 1.6" />
+  </>,
+);
+
+export const IconModeHeat = createIcon(
+  'mode-heat',
+  <>
+    <path d="M7 20c-1.6-1.8 1.6-3.6 0-5.4s1.6-3.6 0-5.4" />
+    <path d="M12 18.5c-1.6-1.8 1.6-3.6 0-5.4s1.6-3.6 0-5.4S13.6 4.1 12 2.3" />
+    <path d="M17 20c-1.6-1.8 1.6-3.6 0-5.4s1.6-3.6 0-5.4" />
+  </>,
+);
+
+export const IconModeFan = createIcon(
+  'mode-fan',
+  <>
+    <circle cx="12" cy="12" r="1.6" />
+    <path d="M12 10.4C11 7.6 11.4 4 14 4c2.2 0 2 3.2-2 6.4z" />
+    <path d="M12 10.4C11 7.6 11.4 4 14 4c2.2 0 2 3.2-2 6.4z" transform="rotate(120 12 12)" />
+    <path d="M12 10.4C11 7.6 11.4 4 14 4c2.2 0 2 3.2-2 6.4z" transform="rotate(240 12 12)" />
+  </>,
+);
+
+export const IconLaundry = createIcon(
+  'laundry',
+  <>
+    <path d="M10 6a2 2 0 1 1 2 2v1.5" />
+    <path d="M12 9.5l-8.4 6.2c-.7.5-.3 1.6.5 1.6h15.8c.8 0 1.2-1.1.5-1.6L12 9.5z" />
+  </>,
+);
+
+export const IconSos = createIcon(
+  'sos',
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M9.5 9.5L6 6" />
+    <path d="M14.5 9.5L18 6" />
+    <path d="M9.5 14.5L6 18" />
+    <path d="M14.5 14.5L18 18" />
+  </>,
+);
+
 export const IconDoNotDisturb = createIcon(
   'do-not-disturb',
   <>

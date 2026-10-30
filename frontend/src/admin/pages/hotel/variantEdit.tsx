@@ -56,7 +56,7 @@ import { Help, Pill } from '../hotels/hotelsUi';
  * предмет разговора (обёрнуты `data-words="data"`).
  */
 
-export const KINDS = ['light_group', 'curtain', 'curtain_blackout', 'air_conditioner', 'heating', 'scene', 'dnd', 'mur', 'master_switch'] as const;
+export const KINDS = ['light_group', 'curtain', 'curtain_blackout', 'air_conditioner', 'heating', 'scene', 'dnd', 'mur', 'laundry', 'sos', 'master_switch'] as const;
 export const pick = (title: Record<string, string> | undefined, lang: string) => (title ? title[lang] || title.ru || Object.values(title)[0] || '' : '');
 
 /** Слово ошибки по коду сервера; незнакомый код — фраза сервера как есть. */

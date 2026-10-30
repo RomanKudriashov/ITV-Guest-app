@@ -7,6 +7,9 @@ import {
 } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -30,6 +33,11 @@ import {
   IconLightGroup,
   IconLock,
   IconMakeUpRoom,
+  IconModeCool,
+  IconModeFan,
+  IconModeHeat,
+  IconLaundry,
+  IconSos,
   IconMoon,
   IconMovie,
   IconOffline,
@@ -971,6 +979,27 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
   const setpoint = setpointDraft.shown;
   const power = readingOn(reading);
   const fan = reading?.values.fan_speed ?? null;
+  const modeRange = control.range?.mode;
+  const mode = reading?.values.mode ?? null;
+  const currentMode = modeRange?.modes?.find((item) => item.value === mode)?.mode ?? null;
+  // Режимы объекта (партия 65): гость выбирает охлаждение, нагрев или
+  // вентилятор — значения берутся из таблицы объекта, не из порядка кнопок.
+  const modeOptions = useMemo(
+    () =>
+      (modeRange?.modes ?? []).map((item) => ({
+        value: item.value,
+        ariaLabel: t(`guest.roomControl.modes.${item.mode}`),
+        label: (
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.6} component="span">
+            {modeGlyph(item.mode, 16)}
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              {t(`guest.roomControl.modes.${item.mode}`)}
+            </Box>
+          </Stack>
+        ),
+      })),
+    [modeRange, t],
+  );
 
   const fanOptions = useMemo(() => {
     if (!fanRange) return [];
@@ -1025,8 +1054,27 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
           reading={reading}
           canCommand={canCommand}
           onCommand={onCommand}
-          icon={glyph(control)}
+          // Глиф кондиционера — его ТЕКУЩИЙ режим; режима нет или он не
+          // прочитан — простой вентилятор (решение Олега, партия 65).
+          icon={modeGlyph(currentMode, 18)}
         />
+      ) : null}
+
+      {modeOptions.length > 0 ? (
+        <Stack direction="row" alignItems="center" spacing={1.5} data-swipe-guard>
+          <Typography variant="body2" sx={{ width: 96, flex: 'none', color: 'text.secondary', fontWeight: 600 }}>
+            {t('guest.roomControl.mode')}
+          </Typography>
+          <Segmented
+            fullWidth
+            value={mode}
+            options={modeOptions}
+            disabled={locked || power !== true}
+            label={t('guest.roomControl.mode')}
+            onChange={(next) => onCommand({ controlId: control.controlId, capability: 'mode', value: next })}
+            testId={`room-mode-${control.controlId}`}
+          />
+        </Stack>
       ) : null}
 
       {fanOptions.length > 0 ? (
@@ -1199,8 +1247,37 @@ function ToggleRow({
   const { t } = useTranslation();
   const on = readingOn(reading);
   const locked = isLocked(reading, canCommand);
+  const [asking, setAsking] = useState(false);
+  const send = (value: number) => onCommand({ controlId: control.controlId, capability: 'toggle', value });
 
   return (
+    <>
+    {/*
+      ВОПРОС ПЕРЕД ВКЛЮЧЕНИЕМ (партия 65): у SOS случайное касание вызывает
+      персонал. Текст — с сервера; у остальных элементов его нет, и тумблер
+      срабатывает сразу. Выключить можно без вопроса.
+    */}
+    <Dialog open={asking} onClose={() => setAsking(false)} data-testid={`room-confirm-${control.controlId}`}>
+      <DialogContent>
+        <Typography variant="body1">{control.confirm}</Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setAsking(false)} data-testid="room-confirm-cancel">
+          {t('guest.roomControl.confirmCancel')}
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => {
+            setAsking(false);
+            send(1);
+          }}
+          data-testid="room-confirm-ok"
+        >
+          {t('guest.roomControl.confirmOk')}
+        </Button>
+      </DialogActions>
+    </Dialog>
     <ControlRow
       testId={`room-control-${control.controlId}`}
       icon={icon}
@@ -1219,9 +1296,10 @@ function ToggleRow({
             ? t('guest.roomControl.offline')
             : stateWord(control, on, t)
       }
-      onClick={() => onCommand({ controlId: control.controlId, capability: 'toggle', value: on ? 0 : 1 })}
+      onClick={() => (!on && control.confirm ? setAsking(true) : send(on ? 0 : 1))}
       action={<RowSwitch on={on === true} dimmed={reading?.busy || on === null} />}
     />
+    </>
   );
 }
 
@@ -1388,6 +1466,8 @@ const GLYPHS: Record<string, (size: number) => ReactNode> = {
   heating: (size) => <IconHeating size={size} />,
   'do-not-disturb': (size) => <IconDoNotDisturb size={size} />,
   'make-up-room': (size) => <IconMakeUpRoom size={size} />,
+  laundry: (size) => <IconLaundry size={size} />,
+  sos: (size) => <IconSos size={size} />,
   power: (size) => <IconPower size={size} />,
   scene: (size) => <IconScene size={size} />,
   moon: (size) => <IconMoon size={size} />,
@@ -1395,6 +1475,13 @@ const GLYPHS: Record<string, (size: number) => ReactNode> = {
   movie: (size) => <IconMovie size={size} />,
   book: (size) => <IconBook size={size} />,
 };
+
+/** Глиф режима кондиционера; неизвестный или не прочитанный режим — вентилятор. */
+function modeGlyph(mode: string | null | undefined, size: number): ReactNode {
+  if (mode === 'cool') return <IconModeCool size={size} />;
+  if (mode === 'heat') return <IconModeHeat size={size} />;
+  return <IconModeFan size={size} />;
+}
 
 function glyph(control: RoomControl, size = 18): ReactNode {
   const draw = GLYPHS[control.icon ?? ''];

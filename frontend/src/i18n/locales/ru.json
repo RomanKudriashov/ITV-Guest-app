@@ -804,7 +804,17 @@
       "panelLit": "{{lit}} из {{total}} горит",
       "panelSetpoint": "уставка {{min}}–{{max}}°",
       "panelCurtain": "открыть / закрыть",
-      "panelScene": "без подтверждения"
+      "panelScene": "без подтверждения",
+      "mode": "Режим",
+      "modes": {
+        "cool": "Охлаждение",
+        "heat": "Нагрев",
+        "fan": "Вентилятор",
+        "auto": "Авто",
+        "dry": "Осушение"
+      },
+      "confirmOk": "Вызвать",
+      "confirmCancel": "Отмена"
     },
     "weather": {
       "title": "Погода",

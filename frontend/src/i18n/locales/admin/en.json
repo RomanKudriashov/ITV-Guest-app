@@ -2555,7 +2555,9 @@
         "air_conditioner": "Air conditioner",
         "heating": "Heating",
         "scene": "Scene",
-        "other": "Button"
+        "other": "Button",
+        "laundry": "Laundry",
+        "sos": "Call for help (SOS)"
       },
       "close": "Close",
       "cancel": "Cancel",
@@ -2626,7 +2628,8 @@
         "setpoint": "Set temperature",
         "current_temp": "Current temperature",
         "position": "Position",
-        "level": "Level"
+        "level": "Level",
+        "mode": "Mode"
       },
       "subject": {
         "light": "light",
@@ -2636,7 +2639,9 @@
         "dnd": "“do not disturb”",
         "mur": "cleaning",
         "scene": "scene",
-        "master": "all off"
+        "master": "all off",
+        "laundry": "laundry",
+        "sos": "help call"
       },
       "channels": {
         "title": "{{button}}: channel for “{{ability}}”",

@@ -56,6 +56,9 @@ CAPABILITIES: dict[str, Capability] = {
         # 0 — это АВТО, а не «выключено». Выключение фанкойла — это toggle.
         Capability("fan_speed", ValueKind.ENUM),
         Capability("setpoint", ValueKind.RANGE),
+        # Режим кондиционера (партия 65): охлаждение / нагрев / вентилятор. Какое
+        # значение что значит — таблица из описания канала (`parse_modes`).
+        Capability("mode", ValueKind.ENUM),
         # Единственная read-only ручка: команда на неё отбивается 422.
         Capability("current_temp", ValueKind.RANGE, requires_command=False, readonly=True),
         Capability("position", ValueKind.RANGE),
@@ -97,6 +100,10 @@ class ElementKind:
     # спальне» читается кроватью, а не лампочкой. Штора в гостиной остаётся
     # шторой, и подставлять ей диван — терять смысл значка.
     prefers_zone_icon: bool = False
+    # Спросить гостя перед ВКЛЮЧЕНИЕМ (партия 65): у SOS случайное касание
+    # вызывает персонал. Текст — локализованный, с сервера, как и подписи
+    # состояний: экран не различает виды элементов, он показывает то, что дали.
+    confirm: dict[str, str] = field(default_factory=dict)
 
     @property
     def capabilities(self) -> tuple[str, ...]:
@@ -162,7 +169,7 @@ ELEMENTS: dict[str, ElementKind] = {
             "air_conditioner",
             "Кондиционер",
             ("toggle",),
-            ("fan_speed", "setpoint", "current_temp"),
+            ("fan_speed", "setpoint", "current_temp", "mode"),
             icon="air-conditioner",
             states={
                 "on": {"ru": "включён", "en": "on", "ar": "مشغّل", "zh": "已开启"},
@@ -178,6 +185,32 @@ ELEMENTS: dict[str, ElementKind] = {
             },
         ),
         ElementKind("scene", "Сцена", ("trigger",), icon="scene"),
+        # ПРАЧЕЧНАЯ И SOS (партия 65): каналы C_WAIT / C_SOS есть в ПНР Сиалии и
+        # в iRidi объекта. Обе — заявка персоналу флажком, как «Убрать номер».
+        ElementKind(
+            "laundry", "Забрать вещи в прачечную", ("toggle",),
+            icon="laundry",
+            states={
+                "on": {"ru": "заявка передана", "en": "request sent",
+                       "ar": "تم إرسال الطلب", "zh": "已发送请求"},
+                "off": {"ru": "выключено", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
+        ),
+        ElementKind(
+            "sos", "Вызов помощи (SOS)", ("toggle",),
+            icon="sos",
+            confirm={
+                "ru": "Вызвать помощь? Сотрудник отеля придёт в номер.",
+                "en": "Call for help? A hotel staff member will come to your room.",
+                "ar": "طلب المساعدة؟ سيأتي أحد موظفي الفندق إلى غرفتك.",
+                "zh": "呼叫求助？酒店工作人员将前往您的房间。",
+            },
+            states={
+                "on": {"ru": "помощь вызвана", "en": "help is on the way",
+                       "ar": "تم طلب المساعدة", "zh": "已呼叫求助"},
+                "off": {"ru": "не вызвана", "en": "not called", "ar": "لم يتم الطلب", "zh": "未呼叫"},
+            },
+        ),
     ]
 }
 
@@ -221,3 +254,36 @@ def parse_speeds(description: str) -> list[dict] | None:
         return None
     found.sort(key=lambda item: (item[0], item[1]))
     return [{"value": value, "auto": auto} for _, value, auto in found]
+
+
+# --- Режимы кондиционера из описания канала (партия 65) -----------------------
+#
+# У Сиалии в ПНР: «0 -Cold, 1 - Heat, 2 - Fan». У другого объекта порядок может
+# быть другим, поэтому таблица берётся из описания, как у скоростей. Описания
+# нет или оно не разобралось — соглашение Bittel (каналы Сиалии и iRidi PWV):
+# 0 — охлаждение, 1 — нагрев, 2 — вентилятор. Проверено на iRidi объекта 30.10.
+
+_MODE_WORDS = (
+    ("cool", ("cold", "cool", "охлажд", "холод")),
+    ("heat", ("heat", "warm", "нагрев", "тепл", "обогрев")),
+    ("fan", ("fan", "vent", "вентил")),
+    ("auto", ("auto", "авто")),
+    ("dry", ("dry", "осуш")),
+)
+DEFAULT_MODES = [{"value": 0, "mode": "cool"}, {"value": 1, "mode": "heat"}, {"value": 2, "mode": "fan"}]
+
+
+def parse_modes(description: str) -> list[dict]:
+    """«0 -Cold, 1 - Heat, 2 - Fan» → [{value: 0, mode: cool}, …]; не разобралось — DEFAULT_MODES."""
+    found: list[dict] = []
+    for raw_value, word in _SPEED_PAIR.findall(description or ""):
+        word = word.lower()
+        for name, marks in _MODE_WORDS:
+            if any(word.startswith(mark) for mark in marks):
+                found.append({"value": int(raw_value), "mode": name})
+                break
+    values = [item["value"] for item in found]
+    modes = [item["mode"] for item in found]
+    if len(found) < 2 or len(set(values)) != len(values) or len(set(modes)) != len(modes):
+        return [dict(item) for item in DEFAULT_MODES]
+    return found

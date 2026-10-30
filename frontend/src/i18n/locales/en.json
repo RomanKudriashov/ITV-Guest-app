@@ -798,7 +798,17 @@
       "panelLit": "{{lit}} of {{total}} on",
       "panelSetpoint": "setpoint {{min}}–{{max}}°",
       "panelCurtain": "open / close",
-      "panelScene": "no confirmation"
+      "panelScene": "no confirmation",
+      "mode": "Mode",
+      "modes": {
+        "cool": "Cooling",
+        "heat": "Heating",
+        "fan": "Fan",
+        "auto": "Auto",
+        "dry": "Dry"
+      },
+      "confirmOk": "Call",
+      "confirmCancel": "Cancel"
     },
     "weather": {
       "title": "Weather",

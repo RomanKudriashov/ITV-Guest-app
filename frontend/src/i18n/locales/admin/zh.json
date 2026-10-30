@@ -2496,7 +2496,9 @@
         "air_conditioner": "空调",
         "heating": "供暖",
         "scene": "场景",
-        "other": "按钮"
+        "other": "按钮",
+        "laundry": "洗衣",
+        "sos": "紧急呼叫 (SOS)"
       },
       "close": "关闭",
       "cancel": "取消",
@@ -2565,7 +2567,8 @@
         "setpoint": "设定温度",
         "current_temp": "当前温度",
         "position": "位置",
-        "level": "强度"
+        "level": "强度",
+        "mode": "模式"
       },
       "subject": {
         "light": "灯光",
@@ -2575,7 +2578,9 @@
         "dnd": "“请勿打扰”",
         "mur": "打扫",
         "scene": "场景",
-        "master": "全部关闭"
+        "master": "全部关闭",
+        "laundry": "洗衣",
+        "sos": "紧急呼叫"
       },
       "channels": {
         "title": "{{button}}：“{{ability}}”的通道",

@@ -794,7 +794,17 @@
       "panelLit": "{{total}} 组中 {{lit}} 组已开",
       "panelSetpoint": "设定 {{min}}–{{max}}°",
       "panelCurtain": "开启 / 关闭",
-      "panelScene": "无反馈确认"
+      "panelScene": "无反馈确认",
+      "mode": "模式",
+      "modes": {
+        "cool": "制冷",
+        "heat": "制热",
+        "fan": "送风",
+        "auto": "自动",
+        "dry": "除湿"
+      },
+      "confirmOk": "呼叫",
+      "confirmCancel": "取消"
     },
     "weather": {
       "title": "天气",

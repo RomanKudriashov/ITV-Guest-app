@@ -49,6 +49,9 @@ _SUBJECTS: list[tuple[str, tuple[str, ...]]] = [
     ("light", ("light", "свет", "lamp", "dimmer", "dali")),
     ("dnd", ("dnd", "disturb", "беспоко")),
     ("mur", ("mur", "makeup", "make_up", "clean", "уборк")),
+    # Прачечная и SOS (партия 65): C_WAIT — «забрать одежду в прачечную».
+    ("laundry", ("wait", "laundry", "прачеч", "стирк")),
+    ("sos", ("sos", "emergency", "помощ", "тревог")),
     ("scene", ("scene", "сцен")),
     ("master", ("master", "alloff", "all_off", "mainsw", "мастер")),
 ]
@@ -61,6 +64,8 @@ KIND_SUBJECTS: dict[str, set[str]] = {
     "heating": {"heating", "climate"},
     "dnd": {"dnd"},
     "mur": {"mur"},
+    "laundry": {"laundry"},
+    "sos": {"sos"},
     "scene": {"scene"},
     "master_switch": {"master", "scene"},
 }

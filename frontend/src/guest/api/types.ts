@@ -852,7 +852,9 @@ export type RoomCapability =
   | 'setpoint'
   | 'current_temp'
   | 'position'
-  | 'level';
+  | 'level'
+  /** Режим кондиционера (партия 65): значение из таблицы `range.mode.modes`. */
+  | 'mode';
 
 export type RoomControlState = 'confirmed' | 'pending' | 'offline';
 
@@ -865,6 +867,8 @@ export interface RoomRange {
    * от низкой к высокой. Нет — 0 считается «авто», остальные по номеру.
    */
   speeds?: Array<{ value: number; auto: boolean }>;
+  /** Режимы кондиционера объекта (партия 65): какое значение — какой режим. */
+  modes?: Array<{ value: number; mode: 'cool' | 'heat' | 'fan' | 'auto' | 'dry' }>;
 }
 
 export interface RoomControl {
@@ -891,6 +895,8 @@ export interface RoomControl {
    * сервер: глиф, название и эта строка. Пусто — карточка обходится названием.
    */
   hint?: string;
+  /** Вопрос перед включением (SOS), локализованный, с сервера; пусто — без вопроса. */
+  confirm?: string;
   capabilities: RoomCapability[];
   /**
    * Скаляр у простого элемента, объект у составного (кондиционер — ОДИН

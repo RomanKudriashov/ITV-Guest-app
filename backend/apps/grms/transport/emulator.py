@@ -54,7 +54,9 @@ DEFAULT_LATENCY_RANGE = (1.0, 3.0)
 DEVICE_TEMPLATE = "Modbus TCP Server (Slave mode) {room}"
 
 
-def _channels_for(lights: int, curtains: int, fcus: int, scenes: int, base: int = 1) -> dict[str, int]:
+def _channels_for(
+    lights: int, curtains: int, fcus: int, scenes: int, base: int = 1, extras: bool = False
+) -> dict[str, int]:
     """
     Набор каналов номера. Имена — РОВНО те, что найдены на боевом сервере
     (iridi-probe.md §6.3), включая пробел перед номером: «C_Light 1», а не
@@ -76,6 +78,15 @@ def _channels_for(lights: int, curtains: int, fcus: int, scenes: int, base: int 
         # Температура — только чтение: команды C_FCU_Temperature нет, но
         # feedback обязан существовать и отдавать число.
         state[f"FCU_Temperature {i}"] = 23
+        if extras:
+            # Режим фанкойла (партия 65): 0 — охлаждение, 1 — нагрев, 2 —
+            # вентилятор, как в ПНР Сиалии и на iRidi объекта. По умолчанию —
+            # вентилятор.
+            state[f"FCU_Mode {i}"] = 2
+    if extras:
+        # Прачечная и SOS (партия 65) — каналы ПНР Сиалии, есть и на iRidi.
+        state["WAIT"] = 0
+        state["SOS"] = 0
     for i in range(1, scenes + 1):
         # У сцены есть команда и НЕТ feedback — так на боевом сервере
         # (F_Scene_* не существует). Держим её отдельным множеством ниже.
@@ -112,13 +123,13 @@ ROOM_PROFILES: dict[str, dict[str, int]] = {
 # УСТРОЙСТВА СВОИ: «… S202», а не «… 202». Номер 202 есть и у «Азура», а
 # устройство адресуется только номером — без префикса два отеля делили бы одно
 # состояние: свет, включённый гостем «Азура», горел бы у гостя «Сиалии».
-SIALIA_HOTEL_ROOM = {"lights": 8, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0}
+SIALIA_HOTEL_ROOM = {"lights": 8, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0, "extras": True}
 _SIALIA_HOTEL_ROOMS = ["S202"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in range(1, 7)]
 ROOM_PROFILES.update({room: SIALIA_HOTEL_ROOM for room in _SIALIA_HOTEL_ROOMS})
 
 # «СИАЛИЯ», РЕЗИДЕНЦИЯ (64-1): десять групп света C_Light 0…9 = гр. 2.3.1…2.3.10
 # из проекта шоурума «Резиденция»; штора, фанкойл 0 — как у отельного номера.
-SIALIA_RESIDENCE = {"lights": 10, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0}
+SIALIA_RESIDENCE = {"lights": 10, "curtains": 1, "fcus": 1, "scenes": 1, "base": 0, "extras": True}
 # S101 — шоурум 1_2.3 «Резиденция» (партия 65): номер 101 управляется через
 # наше подключение, пока на объекте не соберут и не настроят его iRidi.
 _SIALIA_RESIDENCES = ["S204", "S101"] + [f"S1{floor}{index:02d}" for floor in range(1, 6) for index in (7, 8)]

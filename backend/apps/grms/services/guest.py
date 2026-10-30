@@ -686,6 +686,8 @@ def _serialize_control(control: dict, readings: dict, *, busy: dict, language: s
             for key, text in (control.get("states") or {}).items()
         },
         "capabilities": capabilities,
+        # Вопрос перед включением (SOS) — локализованный; пусто — без вопроса.
+        "confirm": translate(control.get("confirm"), language) if control.get("confirm") else "",
         "value": _value_for(capabilities, values, state),
         "state": state,
         "readonly": _is_readonly(capabilities),
@@ -739,6 +741,8 @@ def _ranges_for(capabilities: list[str], ranges: dict) -> dict:
         exposed[capability] = {"min": entry["min"], "max": entry["max"], "step": 1}
         if entry.get("speeds"):
             exposed[capability]["speeds"] = entry["speeds"]
+        if entry.get("modes"):
+            exposed[capability]["modes"] = entry["modes"]
     return exposed
 
 
@@ -876,6 +880,13 @@ def _validate_value(control: dict, capability: str, value):
             "Недопустимое значение", field="value", code="value_out_of_range"
         ) from None
 
+    # Режим с таблицей проверяется ТОЛЬКО по таблице (ниже): в ПНР Сиалии у
+    # C_FCU_Mode диапазон «16-33» — опечатка, скопированная с уставки, а режимы
+    # 0/1/2. Диапазон из такого файла отбил бы каждый режим.
+    if capability == "mode" and entry.get("modes"):
+        if number not in {item["value"] for item in entry["modes"]}:
+            raise ValidationError("Недопустимое значение", field="value", code="value_out_of_range")
+        return number
     low = entry.get("min", 0 if kind == catalog.ValueKind.BINARY else None)
     high = entry.get("max", 1 if kind == catalog.ValueKind.BINARY else None)
     if low is not None and number < low:

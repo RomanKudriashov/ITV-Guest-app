@@ -810,7 +810,17 @@
       "panelLit": "{{lit}} من {{total}} مضاء",
       "panelSetpoint": "الضبط {{min}}–{{max}}°",
       "panelCurtain": "فتح / إغلاق",
-      "panelScene": "بلا تأكيد"
+      "panelScene": "بلا تأكيد",
+      "mode": "الوضع",
+      "modes": {
+        "cool": "تبريد",
+        "heat": "تدفئة",
+        "fan": "مروحة",
+        "auto": "تلقائي",
+        "dry": "تجفيف"
+      },
+      "confirmOk": "اطلب",
+      "confirmCancel": "إلغاء"
     },
     "weather": {
       "title": "الطقس",
