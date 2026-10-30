@@ -190,6 +190,21 @@ services:
       backend: {condition: service_healthy}
     networks: [internal]
 
+  # НАБЛЮДЕНИЕ ЗА ОТКРЫТЫМИ НОМЕРАМИ (партия 65): пока у номера открыт экран,
+  # читает его раз в 2 с и будит экран при изменении не нашей командой
+  # (выключатель на стене, пульт). Состояния не держит.
+  roomwatch:
+    build: ./backend
+    command: ["roomwatch"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+      SEED_ON_START: "0"
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
   # БОТ ПЛАТФОРМЫ (партия 28). ОДИН ТОКЕН — ОДИН ОПРАШИВАЮЩИЙ: Telegram отдаёт
   # бота только одному серверу (второй получает 409). Перед запуском здесь
   # локальная служба с тем же токеном должна быть остановлена. Токен —

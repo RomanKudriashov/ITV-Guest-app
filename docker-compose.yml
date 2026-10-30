@@ -224,6 +224,41 @@ services:
       postgres:
         condition: service_healthy
 
+  # НАБЛЮДЕНИЕ ЗА ОТКРЫТЫМИ НОМЕРАМИ (партия 65): пока у номера открыт экран,
+  # читает его раз в 2 с и будит экран при изменении не нашей командой
+  # (выключатель на стене, пульт). Состояния не держит.
+  roomwatch:
+    build: ./backend
+    command: ["roomwatch"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      CACHE_URL: redis://redis:6379/4
+      # Погода и города — локальный эмулятор Open-Meteo, а не интернет (партия 25):
+      # из docker-сети этой машины TLS с api.open-meteo.com рвётся через раз, и
+      # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
+      WEATHER_API_URL: http://weather-emulator:1086
+      WEATHER_GEOCODER_URL: http://weather-emulator:1086
+      WEATHER_SEASONAL_URL: http://weather-emulator:1086
+      WEATHER_MARINE_URL: http://weather-emulator:1086
+      WEATHER_AIR_URL: http://weather-emulator:1086
+      DADATA_SUGGEST_URL: http://weather-emulator:1086/suggestions/api/4_1/rs/suggest/address
+      DADATA_API_KEY: emulator
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${DEV_HOST:-localhost}:${MINIO_HOST_PORT:-59000}
+      # Сид и миграции делает backend — служба только читает и выполняет.
+      SEED_ON_START: "0"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
   frontend:
     build: ./frontend
     command: npm run dev

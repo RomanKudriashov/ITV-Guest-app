@@ -91,6 +91,10 @@ case "$MODE" in
         # пропущенное она подхватит и честно пометит опоздание.
         exec python manage.py run_scheduler --interval "${SCHEDULER_INTERVAL:-60}"
         ;;
+    roomwatch)
+        # НАБЛЮДЕНИЕ ЗА ОТКРЫТЫМИ НОМЕРАМИ (партия 65): см. apps/grms/services/watch.py.
+        exec python manage.py run_room_watch --interval "${ROOMWATCH_INTERVAL:-2}"
+        ;;
     bot)
         # БОТ ПЛАТФОРМЫ (партия 28). Один токен — один опрашивающий: бота
         # Telegram может читать только ОДИН сервер, второй получит 409.

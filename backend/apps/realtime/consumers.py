@@ -19,10 +19,12 @@ REST, чтобы правила не разъехались.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from urllib.parse import parse_qs
 
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
@@ -626,6 +628,9 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
         self.room_id = str(session.room_id)
         self.group_name = f"room.{hotel.pk}.{self.room_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        # Экран открыт — служба наблюдения читает номер, пока сокет жив, и
+        # будит экран, если состояние изменилось не нашей командой (партия 65).
+        self._watch = asyncio.ensure_future(self._keep_watching(hotel.pk, self.room_id))
         await _join_hotel(self)
         await _join_guest(self, self.token)
         await self.accept()
@@ -637,7 +642,24 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
             {"type": "room.snapshot", "event": "connected", "command": None, "room": snapshot}
         )
 
+    async def _keep_watching(self, hotel_id, room_id):
+        """Продлевать отметку «экран открыт», пока сокет жив (партия 65)."""
+        from apps.grms.services import watch
+
+        try:
+            while True:
+                try:
+                    await sync_to_async(watch.mark_watched)(hotel_id, room_id)
+                except Exception:  # noqa: BLE001 — Redis моргнул: следующий раз продлит
+                    logger.warning("Наблюдение: отметка номера не продлена", exc_info=True)
+                await asyncio.sleep(watch.WATCH_RENEW_S)
+        except asyncio.CancelledError:
+            return
+
     async def disconnect(self, code):
+        watcher = getattr(self, "_watch", None)
+        if watcher is not None:
+            watcher.cancel()
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
